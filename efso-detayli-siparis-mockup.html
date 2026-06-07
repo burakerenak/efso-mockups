@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<!--
+  EFSO — Detaylı Sipariş (Accordion) MOCKUP
+  Kaynak: docs/analiz/efso-siparis-senaryolari-ve-ekran-tasarimi.md  §4.2/4.3/4.4/4.5
+  NOT: Bu yalnızca tasarım örneği (mockup). Üretim kodu DEĞİL — gerçek API/iş mantığı yok.
+  Tek dosya, bağımlılıksız. Çift tıkla → tarayıcıda açılır.
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EFSO — Detaylı Sipariş (Mockup)</title>
+<style>
+  :root{
+    --efso:#0ea5b7; --efso-dark:#0b7e8c; --ink:#0f172a; --muted:#64748b;
+    --line:#e2e8f0; --bg:#f1f5f9; --card:#ffffff; --soft:#f8fafc;
+    --green:#16a34a; --amber:#d97706; --red:#dc2626; --blue:#2563eb;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#dde3ea;
+       color:var(--ink);display:flex;justify-content:center;padding:24px 12px;min-height:100vh}
+  .phone{width:412px;max-width:100%;background:var(--bg);border-radius:34px;overflow:hidden;
+         box-shadow:0 30px 70px rgba(2,8,23,.35);border:10px solid #0f172a;position:relative}
+  .screen{height:860px;overflow-y:auto;scroll-behavior:smooth}
+  .screen::-webkit-scrollbar{width:0}
+
+  /* Header */
+  .appbar{position:sticky;top:0;z-index:20;background:linear-gradient(135deg,var(--efso),var(--efso-dark));
+          color:#fff;padding:14px 16px 16px}
+  .appbar .row1{display:flex;align-items:center;gap:12px}
+  .back{font-size:22px;line-height:1;cursor:pointer;opacity:.95}
+  .appbar h1{font-size:17px;margin:0;font-weight:700;flex:1}
+  .logo{font-weight:800;letter-spacing:.5px;font-size:13px;opacity:.9}
+  /* Mod toggle */
+  .toggle{margin-top:14px;background:rgba(255,255,255,.18);border-radius:999px;padding:4px;display:flex}
+  .toggle button{flex:1;border:0;background:transparent;color:#e7fdff;font-weight:600;font-size:13px;
+                 padding:8px;border-radius:999px;cursor:pointer;transition:.2s}
+  .toggle button.active{background:#fff;color:var(--efso-dark);box-shadow:0 2px 6px rgba(0,0,0,.15)}
+
+  .wrap{padding:14px 12px 130px}
+  .hint{font-size:11.5px;color:var(--muted);margin:2px 4px 12px}
+
+  /* Accordion */
+  .acc{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;
+       box-shadow:var(--shadow);overflow:hidden}
+  .acc-head{display:flex;align-items:center;gap:10px;padding:15px 14px;cursor:pointer;user-select:none}
+  .acc-head .num{width:24px;height:24px;border-radius:8px;background:#e0f7fa;color:var(--efso-dark);
+                 font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .acc-head .ttl{font-weight:700;font-size:14.5px;flex:1}
+  .acc-head .badge{background:#eef2ff;color:#4338ca;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px}
+  .acc-head .badge.ok{background:#dcfce7;color:#15803d}
+  .acc-head .chev{transition:.25s;color:var(--muted);font-size:13px}
+  .acc.open .chev{transform:rotate(90deg)}
+  .acc-body{display:none;padding:0 14px 16px;border-top:1px dashed var(--line)}
+  .acc.open .acc-body{display:block;animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+  /* Generic UI */
+  label.fld{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin:12px 2px 5px}
+  input,select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:11px;font-size:13.5px;
+               background:var(--soft);color:var(--ink);font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--efso);background:#fff}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+  .stop{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:12px;margin-top:10px;background:var(--soft)}
+  .stop .pin{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+  .pin.pick{background:#dbeafe}.pin.drop{background:#dcfce7}
+  .stop .meta{flex:1;min-width:0}
+  .stop .meta b{font-size:13px}.stop .meta span{display:block;font-size:11.5px;color:var(--muted)}
+  .stop .edit{color:var(--efso);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .addrow{display:flex;gap:8px;margin-top:10px}
+  .btn-ghost{flex:1;border:1px dashed var(--efso);color:var(--efso-dark);background:#f0fdff;border-radius:11px;
+             padding:10px;font-weight:600;font-size:12.5px;cursor:pointer}
+  .btn-ghost:active{transform:scale(.99)}
+
+  .item-card{border:1px solid var(--line);border-radius:13px;padding:12px;margin-top:12px;background:var(--soft)}
+  .item-card .h{display:flex;justify-content:space-between;align-items:center}
+  .item-card .h b{font-size:13px}
+  .item-card .rm{color:var(--red);font-size:11.5px;cursor:pointer;font-weight:600}
+  .dyn{border-top:1px dashed var(--line);margin-top:10px;padding-top:8px}
+  .dyn .tag{display:inline-block;font-size:10px;color:var(--amber);background:#fff7ed;border:1px solid #fed7aa;
+            padding:1px 7px;border-radius:6px;margin-bottom:4px}
+  .check{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-top:9px;cursor:pointer}
+  .check input{width:auto}
+
+  /* switch */
+  .switch{position:relative;display:inline-block;width:42px;height:24px;flex:0 0 auto}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.2s;cursor:pointer}
+  .slider:before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .switch input:checked + .slider{background:var(--efso)}
+  .switch input:checked + .slider:before{transform:translateX(18px)}
+  .switchrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}
+  .switchrow .lab{font-size:13px;font-weight:600}
+
+  .upload{display:flex;align-items:center;gap:10px;border:1px dashed var(--line);border-radius:11px;padding:11px;
+          background:#fff;margin-top:8px;font-size:12.5px;color:var(--muted);cursor:pointer}
+  .upload .ic{font-size:16px}
+  .req{color:var(--red);font-weight:700}
+  .note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.45}
+  .veh{display:flex;align-items:center;gap:12px;margin-top:6px}
+  .veh .ico{width:46px;height:46px;border-radius:12px;background:#ecfeff;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .bar{height:9px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin-top:8px}
+  .bar>i{display:block;height:100%;width:72%;background:linear-gradient(90deg,var(--efso),#22c55e);border-radius:999px}
+  .pill{display:inline-block;font-size:11px;font-weight:600;color:var(--efso-dark);background:#e0f7fa;padding:3px 9px;border-radius:999px}
+  .vendor{font-size:10.5px;color:var(--muted);margin-top:6px}
+
+  .pay-opt{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:11px;padding:11px;margin-top:8px;cursor:pointer;font-size:13px;background:var(--soft)}
+  .pay-opt.sel{border-color:var(--efso);background:#f0fdff}
+  .pay-opt .r{margin-left:auto;width:18px;height:18px;border-radius:50%;border:2px solid #cbd5e1}
+  .pay-opt.sel .r{border-color:var(--efso);background:radial-gradient(circle,#0ea5b7 0 5px,transparent 6px)}
+
+  /* sticky footer */
+  .footer{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);
+          padding:12px 14px 16px;box-shadow:0 -8px 24px rgba(15,23,42,.08)}
+  .total{display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+  .total .lbl{font-size:12px;color:var(--muted)}
+  .total .amt{font-size:21px;font-weight:800}
+  .total .dk{font-size:11.5px;color:var(--efso);font-weight:600}
+  .breakdown{display:none;font-size:12px;color:var(--muted);margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+  .breakdown.show{display:block}
+  .breakdown div{display:flex;justify-content:space-between;padding:2px 0}
+  .cta{margin-top:12px;width:100%;border:0;background:linear-gradient(135deg,var(--efso),var(--efso-dark));
+       color:#fff;font-weight:700;font-size:15px;padding:14px;border-radius:13px;cursor:pointer}
+  .cta:active{transform:scale(.995)}
+
+  .qm{display:none;padding:30px 18px;text-align:center;color:var(--muted)}
+  .qm h2{color:var(--ink);font-size:16px}
+  .demoflag{position:absolute;top:10px;right:-34px;transform:rotate(45deg);background:#f59e0b;color:#fff;
+            font-size:10px;font-weight:700;padding:3px 40px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+
+  /* Adres seçici (bottom sheet) */
+  .sheet-mask{position:absolute;inset:0;background:rgba(2,8,23,.45);display:none;z-index:40}
+  .sheet-mask.open{display:block}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:22px 22px 0 0;z-index:41;
+         transform:translateY(100%);transition:transform .28s ease;max-height:90%;overflow-y:auto;padding:16px 14px 22px}
+  .sheet.open{transform:translateY(0)}
+  .sheet .grab{width:42px;height:5px;border-radius:999px;background:#e2e8f0;margin:0 auto 8px}
+  .sheet h3{margin:2px 4px 2px;font-size:16px}
+  .sheet .sub{font-size:11.5px;color:var(--muted);margin:0 4px 8px}
+  .sheet .close{position:absolute;right:14px;top:14px;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+  .search{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:var(--soft);margin-top:6px}
+  .search input{border:0;background:transparent;padding:0;font-size:13.5px}
+  .search .g{font-size:11px;color:#4285F4;font-weight:700;white-space:nowrap}
+  .mapbtn{display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--efso);color:var(--efso-dark);
+          background:#f0fdff;border-radius:12px;padding:13px;font-weight:600;font-size:13px;cursor:pointer;margin-top:10px}
+  .sec-t{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin:16px 4px 2px;letter-spacing:.4px}
+  .addr-row{display:flex;align-items:center;gap:11px;padding:10px;border-radius:11px;cursor:pointer}
+  .addr-row:hover{background:var(--soft)}
+  .addr-row .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;background:#eef2ff}
+  .addr-row .ic.sv{background:#dcfce7}.addr-row .ic.rc{background:#fef9c3}.addr-row .ic.gg{background:#e8f0fe}
+  .addr-row .tx{min-width:0}.addr-row .tx b{font-size:13px;display:block}.addr-row .tx span{font-size:11.5px;color:var(--muted)}
+  .manual{border-top:1px dashed var(--line);margin-top:14px;padding-top:6px}
+  .manual .addbtn{width:100%;border:0;background:var(--efso);color:#fff;font-weight:700;font-size:13.5px;padding:12px;border-radius:11px;margin-top:10px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="demoflag">MOCKUP</div>
+  <div class="screen" id="screen">
+    <!-- Header -->
+    <div class="appbar">
+      <div class="row1">
+        <span class="back">&#8592;</span>
+        <h1>Yeni Sipariş</h1>
+        <span class="logo">EFSO</span>
+      </div>
+      <div class="toggle">
+        <button id="tbQuick" onclick="setMode('quick')">⚡ Hızlı</button>
+        <button id="tbDetail" class="active" onclick="setMode('detail')">⚙️ Detaylı</button>
+      </div>
+    </div>
+
+    <!-- DETAYLI -->
+    <div class="wrap" id="detailView">
+      <div class="hint">Bölümleri açıp kapatarak ilerle. Yıldızlı (<span class="req">*</span>) alanlar zorunlu; diğerleri ürün/taşıma türüne göre belirir.</div>
+
+      <!-- 1. GÜZERGAH -->
+      <div class="acc open" data-acc>
+        <div class="acc-head" onclick="toggle(this)">
+          <span class="num">1</span><span class="ttl">Güzergah (Duraklar)</span>
+          <span class="badge ok">1 alım · 1 teslim</span><span class="chev">&#9654;</span>
+        </div>
+        <div class="acc-body">
+          <div id="stops">
+            <div class="stop"><div class="pin pick">📍</div><div class="meta"><b>Alım 1 — Kadıköy</b><span>Caferağa Mah. Moda Cad. No:12</span></div><span class="edit">Düzenle</span></div>
+            <div class="stop"><div class="pin drop">🏁</div><div class="meta"><b>Teslim 1 — Beşiktaş</b><span>Sinanpaşa Mah. Barbaros Bul. No:5</span></div><span class="edit">Düzenle</span></div>
+          </div>
+          <div class="addrow">
+            <button class="btn-ghost" onclick="openPicker('pick')">+ Alım ekle</button>
+            <button class="btn-ghost" onclick="openPicker('drop')">+ Teslim ekle</button>
+          </div>
+          <div class="note">Birden fazla alım/teslim ekleyince sipariş otomatik olarak çoklu-durak (1→N / N→N) olur. Konum harita PIN ile seçilir <span style="color:var(--efso)">(Google Maps)</span>.</div>
+        </div>
+      </div>
+
+      <!-- 2. YÜK -->
+      <div class="acc" data-acc>
+        <div class="acc-head" onclick="toggle(this)">
+          <span class="num">2</span><span class="ttl">Yük / Ürünler</span>
+          <span class="badge" id="itemBadge">1 ürün</span><span class="chev">&#9654;</span>
+        </div>
+        <div class="acc-body">
+          <div id="items">
+            <!-- item template rendered by JS -->
+          </div>
+          <div class="addrow"><button class="btn-ghost" onclick="addItem()">+ Ürün ekle</button></div>
+        </div>
+      </div>
+
+      <!-- 3. ARAÇ & DOLULUK -->
+      <div class="acc" data-acc>
+        <div class="acc-head" onclick="toggle(this)">
+          <span class="num">3</span><span class="ttl">Araç &amp; Doluluk</span>
+          <span class="badge ok">Önerildi</span><span class="chev">&#9654;</span>
+        </div>
+        <div class="acc-body">
+          <label class="fld">Araç tipi</label>
+          <select>
+            <option>Transit (önerilen) — yüke göre</option>
+            <option>Moto</option><option>Küçük Van</option><option>Kamyonet</option>
+            <option>Kamyon</option><option>Tır</option>
+          </select>
+          <div class="veh">
+            <div class="ico">🚐</div>
+            <div style="flex:1">
+              <div><span class="pill">Tahmini doluluk %72</span></div>
+              <div class="bar"><i></i></div>
+            </div>
+          </div>
+          <div class="vendor">3D yerleşim / doluluk hesabı: <b>EasyCargo</b> (Faz 2+)</div>
+        </div>
+      </div>
+
+      <!-- 4. SİGORTA & BELGELER -->
+      <div class="acc" data-acc>
+        <div class="acc-head" onclick="toggle(this)">
+          <span class="num">4</span><span class="ttl">Sigorta &amp; Belgeler</span>
+          <span class="badge">Opsiyonel</span><span class="chev">&#9654;</span>
+        </div>
+        <div class="acc-body">
+          <div class="switchrow">
+            <span class="lab">Ürün sigortası istiyorum</span>
+            <label class="switch"><input type="checkbox" id="insToggle" onchange="toggleIns()"><span class="slider"></span></label>
+          </div>
+          <div id="insFields" style="display:none">
+            <label class="fld">Beyan değeri (anında zorunlu) <span class="req">*</span></label>
+            <input type="text" placeholder="₺ 0,00">
+            <div class="upload"><span class="ic">📎</span> Fatura / İrsaliye yükle <span style="margin-left:auto;font-size:11px">sonra da tamamlanabilir</span></div>
+            <div class="note">Poliçe belgesini sonradan tamamlayabilirsin; hızlı siparişi bloklamaz.</div>
+          </div>
+          <div class="check"><input type="checkbox" id="hazmat" onchange="toggleAdr()"><label for="hazmat">Tehlikeli madde içeriyor (ADR)</label></div>
+          <div id="adrBox" style="display:none">
+            <div class="upload" style="border-color:#fecaca;background:#fef2f2;color:var(--red)"><span class="ic">⚠️</span> ADR belgesi yükle <span class="req" style="margin-left:auto">ZORUNLU</span></div>
+            <div class="note">Tehlikeli madde seçilince ADR belgesi <b>sipariş anında zorunludur</b>, sonraya bırakılamaz.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. EK HİZMETLER -->
+      <div class="acc" data-acc>
+        <div class="acc-head" onclick="toggle(this)">
+          <span class="num">5</span><span class="ttl">Ek Hizmetler</span>
+          <span class="badge">Taşıma tipi</span><span class="chev">&#9654;</span>
+        </div>
+        <div class="acc-body">
+          <label class="fld">Taşıma tipi</label>
+          <select id="transType" onchange="toggleHome()">
+            <option value="std">Standart</option>
+            <option value="home">Ev taşıma</option>
+            <option value="cold">Soğuk zincir</option>
+          </select>
+          <div id="homeFields" style="display:none">
+            <div class="grid2">
+              <div><label class="fld">Çıkış katı</label><input type="number" value="3"></div>
+              <div><label class="fld">Varış katı</label><input type="number" value="5"></div>
+            </div>
+            <label class="check"><input type="checkbox" checked> Çıkışta asansör var</label>
+            <label class="check"><input type="checkbox"> Varışta asansör var</label>
+            <div class="upload"><span class="ic">🗒️</span> Eşya listesi düzenle</div>
+            <label class="check"><input type="checkbox" checked> Montaj / Demontaj hizmeti</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. ÖDEME -->
+      <div class="acc" data-acc>
+        <div class="acc-head" onclick="toggle(this)">
+          <span class="num">6</span><span class="ttl">Ödeme &amp; Fatura</span>
+          <span class="badge">Kart</span><span class="chev">&#9654;</span>
+        </div>
+        <div class="acc-body">
+          <label class="fld">Ödeme yöntemi</label>
+          <div class="pay-opt sel" onclick="selPay(this)">💳 Kayıtlı kart · **** 4242<span class="r"></span></div>
+          <div class="pay-opt" onclick="selPay(this)">🏦 Kurumsal cari / dönemsel fatura<span class="r"></span></div>
+          <div class="switchrow" style="margin-top:10px"><span class="lab">e-Fatura istiyorum</span>
+            <label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+          <div class="vendor">Ödeme: <b>iyzico</b> · e-Fatura: <b>Uyumsoft</b> (Faz 2)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIZLI (kısa) -->
+    <div class="qm" id="quickView">
+      <h2>⚡ Hızlı Sipariş</h2>
+      <p>Nereden · Nereye · Ne taşınıyor · Ne zaman → otomatik fiyat &amp; araç önerisi → tek tıkla sipariş.</p>
+      <p style="font-size:12px">(Bu mockup <b>Detaylı</b> akışı gösterir. Hızlı moda dönmek için üstteki "Detaylı"ya tıkla.)</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer" id="footer">
+    <div class="total" onclick="toggleBreakdown()">
+      <div><div class="lbl">Tahmini toplam</div><div class="amt" id="totalAmt">₺1.240</div></div>
+      <div class="dk" id="dkToggle">▾ döküm</div>
+    </div>
+    <div class="breakdown" id="breakdown">
+      <div><span>Taşıma (Transit, 8 km)</span><span>₺ 940</span></div>
+      <div><span>Ek hizmet (kat/asansör)</span><span>₺ 180</span></div>
+      <div><span>Sigorta</span><span>₺ 120</span></div>
+      <div style="font-weight:700;color:var(--ink)"><span>Toplam (KDV dahil)</span><span>₺ 1.240</span></div>
+    </div>
+    <button class="cta" onclick="alert('Mockup: Bu örnekte sipariş gönderilmez. Gerçekte Order API\\'ye POST edilir.')">Siparişi Onayla</button>
+  </div>
+
+  <!-- ADRES SEÇİCİ (bottom sheet) -->
+  <div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet">
+    <div class="grab"></div>
+    <span class="close" onclick="closeSheet()">&times;</span>
+    <h3 id="sheetTitle">Alım adresi seç</h3>
+    <div class="sub">Adres 4 yoldan gelir: harita PIN, kayıtlı, son kullanılan veya manuel.</div>
+
+    <div class="search">🔎 <input placeholder="Adres, cadde, işyeri ara…"><span class="g">Google</span></div>
+    <div class="mapbtn" onclick="pickFrom('📍','Haritadan seçilen konum','Pin: 41.0082, 28.9784 · Google')">🗺️ Haritadan seç (PIN bırak)</div>
+
+    <div class="sec-t">Arama sonuçları (Google Places)</div>
+    <div class="addr-row" onclick="pickFrom('📍','Migros Moda','Caferağa Mah., Kadıköy/İstanbul','gg')"><div class="ic gg">📍</div><div class="tx"><b>Migros Moda</b><span>Caferağa Mah., Kadıköy/İstanbul</span></div></div>
+    <div class="addr-row" onclick="pickFrom('📍','Beşiktaş Meydanı','Sinanpaşa Mah., Beşiktaş/İstanbul','gg')"><div class="ic gg">📍</div><div class="tx"><b>Beşiktaş Meydanı</b><span>Sinanpaşa Mah., Beşiktaş/İstanbul</span></div></div>
+
+    <div class="sec-t">Kayıtlı adreslerim</div>
+    <div class="addr-row" onclick="pickFrom('🏠','Ev','Acıbadem Mah. No:14 D:5, Üsküdar','sv')"><div class="ic sv">🏠</div><div class="tx"><b>Ev</b><span>Acıbadem Mah. No:14 D:5, Üsküdar</span></div></div>
+    <div class="addr-row" onclick="pickFrom('🏢','İş / Ofis','Levent Mah. Büyükdere Cad. No:201, Şişli','sv')"><div class="ic sv">🏢</div><div class="tx"><b>İş / Ofis</b><span>Levent Mah. Büyükdere Cad. No:201, Şişli</span></div></div>
+    <div class="addr-row" onclick="pickFrom('📦','Ana Depo','Dudullu OSB 2.Cad No:7, Ümraniye','sv')"><div class="ic sv">📦</div><div class="tx"><b>Ana Depo</b><span>Dudullu OSB 2.Cad No:7, Ümraniye</span></div></div>
+
+    <div class="sec-t">Son kullanılanlar</div>
+    <div class="addr-row" onclick="pickFrom('🕘','Bağcılar Şube','Merkez Mah. No:9, Bağcılar','rc')"><div class="ic rc">🕘</div><div class="tx"><b>Bağcılar Şube</b><span>Merkez Mah. No:9, Bağcılar</span></div></div>
+
+    <div class="manual">
+      <div class="sec-t" style="margin-top:4px">Manuel gir (Catalog: İl / İlçe / Mahalle)</div>
+      <div class="grid3" style="margin-top:6px">
+        <select><option>İstanbul</option><option>Ankara</option><option>İzmir</option></select>
+        <select><option>Kadıköy</option><option>Beşiktaş</option><option>Şişli</option></select>
+        <select><option>Caferağa</option><option>Fenerbahçe</option><option>Moda</option></select>
+      </div>
+      <input style="margin-top:8px" placeholder="Açık adres, kapı no, kat">
+      <button class="addbtn" onclick="pickFrom('✏️','Manuel adres','İstanbul / Kadıköy / Caferağa')">Bu adresi ekle</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Accordion ---
+  function toggle(head){ head.parentElement.classList.toggle('open'); }
+
+  // --- Mode toggle ---
+  function setMode(m){
+    var d=m==='detail';
+    document.getElementById('tbDetail').classList.toggle('active',d);
+    document.getElementById('tbQuick').classList.toggle('active',!d);
+    document.getElementById('detailView').style.display=d?'block':'none';
+    document.getElementById('quickView').style.display=d?'none':'block';
+    document.getElementById('footer').style.display=d?'block':'none';
+  }
+
+  // --- Conditional fields ---
+  function toggleIns(){ document.getElementById('insFields').style.display=document.getElementById('insToggle').checked?'block':'none'; }
+  function toggleAdr(){ document.getElementById('adrBox').style.display=document.getElementById('hazmat').checked?'block':'none'; }
+  function toggleHome(){ document.getElementById('homeFields').style.display=document.getElementById('transType').value==='home'?'block':'none'; }
+  function selPay(el){ document.querySelectorAll('.pay-opt').forEach(p=>p.classList.remove('sel')); el.classList.add('sel'); }
+  function toggleBreakdown(){ document.getElementById('breakdown').classList.toggle('show');
+    var t=document.getElementById('dkToggle'); t.textContent=document.getElementById('breakdown').classList.contains('show')?'▴ gizle':'▾ döküm'; }
+
+  // --- Stops + Adres seçici (bottom sheet) ---
+  var pickN=1, dropN=1, pickType='pick';
+  function openPicker(type){
+    pickType=type;
+    document.getElementById('sheetTitle').textContent=(type==='pick'?'Alım':'Teslim')+' adresi seç';
+    document.getElementById('sheetMask').classList.add('open');
+    document.getElementById('sheet').classList.add('open');
+  }
+  function closeSheet(){
+    document.getElementById('sheetMask').classList.remove('open');
+    document.getElementById('sheet').classList.remove('open');
+  }
+  function pickFrom(icon,title,sub){
+    var box=document.getElementById('stops');
+    var div=document.createElement('div'); div.className='stop';
+    if(pickType==='pick'){ pickN++;
+      div.innerHTML='<div class="pin pick">📍</div><div class="meta"><b>Alım '+pickN+' — '+title+'</b><span>'+sub+'</span></div><span class="edit">Düzenle</span>';
+    } else { dropN++;
+      div.innerHTML='<div class="pin drop">🏁</div><div class="meta"><b>Teslim '+dropN+' — '+title+'</b><span>'+sub+'</span></div><span class="edit">Düzenle</span>';
+    }
+    box.appendChild(div);
+    updateRouteBadge();
+    closeSheet();
+  }
+  function updateRouteBadge(){
+    var head=document.querySelectorAll('[data-acc]')[0].querySelector('.badge');
+    head.textContent=pickN+' alım · '+dropN+' teslim';
+  }
+
+  // --- Items (dynamic by category) ---
+  var itemCount=0;
+  var CATS={
+    'Beyaz eşya':{dims:true,fragile:true,cold:false},
+    'Koli / Paket':{dims:true,fragile:false,cold:false},
+    'Palet':{dims:true,fragile:false,cold:false},
+    'Gıda (soğuk)':{dims:false,fragile:false,cold:true},
+    'Evrak':{dims:false,fragile:false,cold:false}
+  };
+  function stopOptions(){
+    var o=''; for(var i=1;i<=pickN;i++) o+='<option>Alım '+i+'</option>'; return o;
+  }
+  function dropOptions(){
+    var o=''; for(var i=1;i<=dropN;i++) o+='<option>Teslim '+i+'</option>'; return o;
+  }
+  function addItem(){
+    itemCount++;
+    var id=itemCount;
+    var box=document.getElementById('items');
+    var c=document.createElement('div'); c.className='item-card'; c.id='item'+id;
+    var catOpts=Object.keys(CATS).map(k=>'<option>'+k+'</option>').join('');
+    c.innerHTML=
+      '<div class="h"><b>Ürün '+id+'</b>'+(id>1?'<span class="rm" onclick="rmItem('+id+')">Kaldır</span>':'')+'</div>'+
+      '<label class="fld">Kategori <span class="req">*</span></label>'+
+      '<select onchange="renderDyn('+id+',this.value)" id="cat'+id+'">'+catOpts+'</select>'+
+      '<div class="grid2"><div><label class="fld">Adet</label><input type="number" value="1"></div>'+
+      '<div><label class="fld">Ağırlık (kg)</label><input type="number" value="10"></div></div>'+
+      '<div class="dyn" id="dyn'+id+'"></div>'+
+      '<div class="grid2"><div><label class="fld">Hangi alımdan?</label><select>'+stopOptions()+'</select></div>'+
+      '<div><label class="fld">Hangi teslime?</label><select>'+dropOptions()+'</select></div></div>';
+    box.appendChild(c);
+    renderDyn(id, Object.keys(CATS)[0]);
+    updateItemBadge();
+  }
+  function renderDyn(id,cat){
+    var cfg=CATS[cat]||{}; var html='<span class="tag">'+cat+' için alanlar</span>';
+    if(cfg.dims){ html+='<div class="grid3"><div><label class="fld">En</label><input placeholder="cm"></div>'+
+      '<div><label class="fld">Boy</label><input placeholder="cm"></div><div><label class="fld">Yük.</label><input placeholder="cm"></div></div>'; }
+    if(cfg.fragile){ html+='<label class="check"><input type="checkbox" checked> Kırılabilir — dikkatli taşıma</label>'; }
+    if(cfg.cold){ html+='<label class="check"><input type="checkbox" checked> Soğuk zincir gerekli (+2°C / +8°C)</label>'; }
+    if(cat==='Evrak'){ html+='<div class="note">Evrak için boyut/ağırlık opsiyonel; sadece içerik açıklaması yeterli.</div>'; }
+    document.getElementById('dyn'+id).innerHTML=html;
+  }
+  function rmItem(id){ var el=document.getElementById('item'+id); if(el) el.remove(); updateItemBadge(); }
+  function updateItemBadge(){ var n=document.querySelectorAll('#items .item-card').length;
+    document.getElementById('itemBadge').textContent=n+' ürün'; }
+
+  // init
+  addItem();
+</script>
+</body>
+</html>

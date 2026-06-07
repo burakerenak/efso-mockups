@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<!--
+  EFSO — FİRMA TANIMLAMA (MEVCUT TASARIM KORUNARAK Sürücü/Araç/Kullanıcı eklendi)
+  Mevcut sayfa deseni birebir: üstte numaralı CompanyStepTabs (sticky) + alt alta bölüm kartları + sağda sticky durum sidebar.
+  Kart/DetailField/rozet/status-badge desenleri gerçek koddan (company-detail-view.tsx, CompanyStepTabs.tsx).
+  EKLENEN 3 bölüm (Sürücüler/Araçlar/Kullanıcılar) aynı kart+tablo deseninde; satır → kayıt/güncelleme + evrak onay (taslak→onay).
+  NOT: Tasarım örneği (mockup). Üretim kodu/gerçek API yok. Tek dosya.
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EFSO — Firma Tanımlama</title>
+<style>
+  :root{
+    --pri:#3b82f6;--pri-d:#2563eb;--pri-ring:rgba(59,130,246,.15);--efso:#0ea5b7;
+    --fg:#1f2937;--muted:#6b7280;--bg:#f9fafb;--card:#fff;--border:#e5e7eb;--border2:#eef0f2;--soft:#f9fafb;
+    --suc:#17c653;--suc-b:#e8fff3;--warn:#f6b100;--warn-b:#fff8dd;--warn-t:#b45309;
+    --dest:#f8285a;--dest-b:#ffeef0;--sec:#78829d;--sec-b:#f1f1f4;--info:#3b82f6;--info-b:#eff6ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--fg);font-size:13.5px}
+  a{color:inherit;text-decoration:none}
+
+  /* portal topbar */
+  .topbar{position:sticky;top:0;z-index:30;height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 22px}
+  .topbar .brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.4px}
+  .topbar .brand .b{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--efso),#0b7e8c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+  .topbar .crumb{color:var(--muted);font-size:12.5px;margin-left:10px}.topbar .crumb b{color:var(--fg)}
+  .topbar .me{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted)}
+  .topbar .av{width:30px;height:30px;border-radius:50%;background:var(--info-b);color:var(--pri-d);display:flex;align-items:center;justify-content:center;font-weight:700}
+  .demoflag{background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px}
+
+  .container{max-width:1200px;margin:0 auto;padding:20px 22px 60px}
+  .layout{display:flex;align-items:flex-start;gap:24px}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:20px}
+  .aside{width:280px;flex:0 0 auto;position:sticky;top:76px}
+  @media(max-width:1080px){.aside{display:none}}
+
+  /* page header */
+  .phead{display:flex;align-items:center;justify-content:space-between}
+  .phead h1{margin:0;font-size:20px;font-weight:600}
+  .phead h1 .tn{margin-left:8px;font-weight:400;color:var(--muted)}
+  .phead .st{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-top:4px}
+
+  /* step tabs (sticky) */
+  .steptabs{position:sticky;top:56px;z-index:20;background:rgba(249,250,251,.85);backdrop-filter:blur(6px);padding-top:6px}
+  .steptabs .box{border:1px solid var(--border);background:var(--card);border-radius:10px;padding:12px 14px}
+  .steprow{display:flex;align-items:center;gap:8px;overflow-x:auto}
+  .step{display:inline-flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:.15s}
+  .step:hover{background:#f3f4f6}
+  .step .n{width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:#fff;color:var(--muted);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .step .lab{font-size:12.5px;font-weight:600;color:var(--fg)}
+  .step.on .n{border-color:var(--pri);background:var(--pri);color:#fff;box-shadow:0 0 0 3px var(--pri-ring)}
+  .step.on .lab{color:var(--pri)}
+  .conn{height:1px;min-width:14px;flex:1;border-top:1px dashed var(--border);margin:0 2px}
+
+  /* cards */
+  .card{border:1px solid var(--border);background:var(--card);border-radius:10px}
+  .card .ch{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border2)}
+  .card .ch h2{margin:0;font-size:13.5px;font-weight:600}
+  .card .cc{padding:18px}
+  .sec{scroll-margin-top:130px}
+
+  /* DetailField grid */
+  .dfs{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px}
+  .df{display:flex;flex-direction:column;gap:2px}
+  .df .l{font-size:11px;color:var(--muted)}.df .v{font-size:13px;color:var(--fg)}
+
+  /* badges */
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;line-height:1.4}
+  .b-suc{background:var(--suc-b);color:#0a9c40}.b-warn{background:var(--warn-b);color:var(--warn-t)}
+  .b-dest{background:var(--dest-b);color:var(--dest)}.b-sec{background:var(--sec-b);color:var(--sec)}.b-info{background:var(--info-b);color:var(--pri-d)}
+
+  /* buttons */
+  .btn{border:1px solid var(--border);background:#fff;color:var(--fg);border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:#f9fafb}
+  .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.pri:hover{background:var(--pri-d)}
+  .btn.suc{background:var(--suc);border-color:var(--suc);color:#fff}
+  .btn.dest{background:#fff;border-color:#f6b6c4;color:var(--dest)}.btn.dest:hover{background:var(--dest-b)}
+  .btn.sm{padding:5px 9px;font-size:11.5px}
+  .btn.icon{padding:5px 8px}
+  .btn.out{background:#fff}
+
+  /* tables */
+  .tbl{width:100%;border-collapse:collapse}
+  .tbl thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:left;padding:10px 18px;background:#fafbfc;border-bottom:1px solid var(--border2)}
+  .tbl tbody td{padding:11px 18px;border-bottom:1px solid var(--border2);font-size:12.5px;vertical-align:middle}
+  .tbl tbody tr:last-child td{border-bottom:0}
+  .tbl tbody tr.clk{cursor:pointer}.tbl tbody tr.clk:hover{background:#f9fafb}
+  .c2 b{display:block;font-size:12.5px}.c2 span{font-size:10.5px;color:var(--muted)}
+  .av2{width:32px;height:32px;border-radius:50%;background:var(--info-b);color:var(--pri-d);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11.5px;flex:0 0 auto}
+  .av2.sq{border-radius:8px;background:#eef6ff}
+  .fx{display:flex;align-items:center;gap:10px}
+  .ract{display:flex;gap:6px;justify-content:flex-end}
+  .mutc{color:var(--muted)}
+  .emptyhint{padding:14px 18px;font-size:11.5px;color:var(--muted)}
+
+  /* aside */
+  .aside .card{margin-bottom:16px}
+  .aside .cc{padding:16px}
+  .prog{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+  .prog .it{display:flex;align-items:center;gap:9px;font-size:12px}
+  .prog .ck{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex:0 0 auto}
+  .ck.ok{background:var(--suc-b);color:#0a9c40}.ck.wait{background:var(--warn-b);color:var(--warn-t)}.ck.idle{background:var(--sec-b);color:var(--sec)}
+  .asideacts{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+
+  /* drawer */
+  .mask{position:fixed;inset:0;background:rgba(17,24,39,.4);display:none;z-index:40}.mask.on{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:460px;max-width:94vw;background:#fff;z-index:41;transform:translateX(100%);transition:transform .26s;display:flex;flex-direction:column;box-shadow:-18px 0 50px rgba(2,8,23,.2)}
+  .drawer.on{transform:translateX(0)}
+  .dhead{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px}
+  .dhead .x{margin-left:auto;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+  .dhead h3{margin:0;font-size:15px}.dhead .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .dbody{flex:1;overflow-y:auto;padding:16px 18px}
+  .dsec{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;margin:16px 0 8px}
+  .d2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .di{display:flex;flex-direction:column}.di.full{grid-column:1/-1}
+  .di label{font-size:11px;color:var(--muted);margin-bottom:5px}
+  .di input,.di select{padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;background:var(--soft)}
+  .docrow{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--border);border-radius:9px;margin-top:8px}
+  .docrow .ic{width:32px;height:32px;border-radius:8px;background:var(--info-b);display:flex;align-items:center;justify-content:center;font-size:14px;flex:0 0 auto}
+  .docrow .m{flex:1;min-width:0}.docrow .m b{font-size:12px;display:block}.docrow .m span{font-size:10.5px;color:var(--muted)}
+  .docrow .a{display:flex;gap:5px}
+  .upload{display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--pri);color:var(--pri-d);background:var(--info-b);border-radius:9px;padding:10px;font-weight:600;font-size:12px;cursor:pointer;margin-top:10px}
+  .approvebox{background:var(--warn-b);border:1px solid #ffe9a8;border-radius:9px;padding:10px 12px;margin-top:10px;font-size:11.5px;color:var(--warn-t)}
+  .dfoot{padding:13px 18px;border-top:1px solid var(--border);display:flex;gap:8px}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:10px 18px;border-radius:9px;font-size:12.5px;opacity:0;transition:.25s;z-index:60}.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+  <!-- Portal topbar -->
+  <div class="topbar">
+    <span class="brand"><span class="b">EF</span>EFSO</span>
+    <span class="crumb">Tanımlar · Firmalar · <b>Anadolu Lojistik A.Ş.</b></span>
+    <span class="demoflag">MOCKUP</span>
+    <span class="me">Burak Eren · SüperAdmin <span class="av">BE</span></span>
+  </div>
+
+  <div class="container">
+    <div class="layout">
+      <!-- MAIN -->
+      <div class="main">
+        <!-- page header (CompanyDetailHeader birebir) -->
+        <div class="phead">
+          <div>
+            <h1>Anadolu Lojistik A.Ş. <span class="tn">(Anadolu Nakliyat)</span></h1>
+            <div class="st"><span>Onay Bekliyor</span><span class="badge b-warn" id="firmaStatus">Onay Bekliyor</span></div>
+          </div>
+          <button class="btn out sm">✎ Düzenle</button>
+        </div>
+
+        <!-- step tabs (sticky) — 6 mevcut + 3 yeni -->
+        <div class="steptabs"><div class="box"><div class="steprow" id="steprow"></div></div></div>
+
+        <!-- 1. Temel Bilgi -->
+        <section class="sec" id="section-basicInfo">
+          <div class="card"><div class="ch"><h2>Temel Bilgi</h2></div>
+            <div class="cc"><div class="dfs">
+              <div class="df"><span class="l">Üye tipi</span><span class="v">Kurumsal · Taşıyıcı</span></div>
+              <div class="df"><span class="l">Yasal unvan</span><span class="v">Anadolu Lojistik A.Ş.</span></div>
+              <div class="df"><span class="l">Ticari unvan</span><span class="v">Anadolu Nakliyat</span></div>
+              <div class="df"><span class="l">Vergi no (VKN)</span><span class="v">1234567890</span></div>
+              <div class="df"><span class="l">Vergi dairesi</span><span class="v">Kadıköy VD</span></div>
+              <div class="df"><span class="l">Statü</span><span class="v">Onay Bekliyor</span></div>
+            </div></div>
+          </div>
+        </section>
+
+        <!-- 2. İletişim -->
+        <section class="sec" id="section-contactInfo">
+          <div class="card"><div class="ch"><h2>İletişim Bilgileri</h2></div>
+            <div class="cc"><div class="dfs">
+              <div class="df"><span class="l">Telefon</span><span class="v">+90 216 555 12 34</span></div>
+              <div class="df"><span class="l">E-posta</span><span class="v">info@anadolulojistik.com</span></div>
+              <div class="df"><span class="l">Web</span><span class="v">anadolulojistik.com</span></div>
+              <div class="df"><span class="l">İl</span><span class="v">İstanbul</span></div>
+              <div class="df"><span class="l">İlçe</span><span class="v">Kadıköy</span></div>
+              <div class="df"><span class="l">Mahalle</span><span class="v">Caferağa</span></div>
+              <div class="df"><span class="l">Posta kodu</span><span class="v">34710</span></div>
+              <div class="df"><span class="l">Açık adres</span><span class="v">Moda Cad. No:12 Kat:3</span></div>
+            </div></div>
+          </div>
+        </section>
+
+        <!-- 3. Yetkili Kişiler -->
+        <section class="sec" id="section-authorizedPerson">
+          <div class="card"><div class="ch"><h2>Yetkili Kişiler</h2><button class="btn pri sm" onclick="openDrawer('person','Yeni yetkili kişi',true)">+ Yeni</button></div>
+            <table class="tbl"><thead><tr><th>Ad Soyad</th><th>Departman</th><th>Telefon</th><th>E-posta</th><th>Durum</th><th></th></tr></thead><tbody>
+              <tr class="clk" onclick="openDrawer('person','Ali Vural')"><td><div class="fx"><span class="av2">AV</span><div class="c2"><b>Ali Vural</b><span>Genel Müdür</span></div></div></td><td>Yönetim</td><td>+90 5•• ••• 12 34</td><td>ali@anadolulojistik.com</td><td><span class="badge b-suc">Aktif</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('person','Seda Kaya')"><td><div class="fx"><span class="av2">SK</span><div class="c2"><b>Seda Kaya</b><span>Operasyon Md.</span></div></div></td><td>Operasyon</td><td>+90 5•• ••• 88 21</td><td>seda@anadolulojistik.com</td><td><span class="badge b-suc">Aktif</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+            </tbody></table>
+          </div>
+        </section>
+
+        <!-- 4. Belgeler -->
+        <section class="sec" id="section-verification">
+          <div class="card"><div class="ch"><h2>Belgeler / Doğrulama</h2><button class="btn pri sm">⬆ Belge Yükle</button></div>
+            <table class="tbl"><thead><tr><th>Belge Tipi</th><th>Dosya</th><th>Boyut</th><th>Yüklenme</th><th>Durum</th><th></th></tr></thead><tbody>
+              <tr><td>Vergi Levhası</td><td>vergi-levhasi.pdf</td><td>240 KB</td><td>02.06.2026</td><td><span class="badge b-suc">Onaylı</span></td><td><div class="ract"><button class="btn icon sm">👁</button></div></td></tr>
+              <tr><td>İmza Sirküleri</td><td>imza-sirkuleri.pdf</td><td>180 KB</td><td>03.06.2026</td><td><span class="badge b-warn">Onay Bekliyor</span></td><td><div class="ract"><button class="btn suc sm" onclick="rowDoc(this,'ok')">Onayla</button><button class="btn dest sm" onclick="rowDoc(this,'no')">Reddet</button></div></td></tr>
+              <tr><td>K1 Yetki Belgesi</td><td>k1-belgesi.pdf</td><td>320 KB</td><td>03.06.2026</td><td><span class="badge b-warn">Onay Bekliyor</span></td><td><div class="ract"><button class="btn suc sm" onclick="rowDoc(this,'ok')">Onayla</button><button class="btn dest sm" onclick="rowDoc(this,'no')">Reddet</button></div></td></tr>
+            </tbody></table>
+          </div>
+        </section>
+
+        <!-- 5. Banka -->
+        <section class="sec" id="section-bankInfo">
+          <div class="card"><div class="ch"><h2>Banka Hesapları</h2><button class="btn pri sm" onclick="openDrawer('bank','Yeni banka hesabı',true)">+ Yeni</button></div>
+            <table class="tbl"><thead><tr><th>Banka</th><th>IBAN</th><th>Para Birimi</th><th>Birincil</th><th></th></tr></thead><tbody>
+              <tr class="clk" onclick="openDrawer('bank','Ziraat Bankası')"><td>Ziraat Bankası</td><td>TR12 0001 0012 3456 7890 1234 56</td><td>TRY</td><td><span class="badge b-info">Birincil</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+            </tbody></table>
+          </div>
+        </section>
+
+        <!-- 6. Sürücüler (YENİ) -->
+        <section class="sec" id="section-drivers">
+          <div class="card"><div class="ch"><h2>Sürücüler</h2><button class="btn pri sm" onclick="openDrawer('driver','Yeni sürücü',true)">+ Yeni Sürücü</button></div>
+            <table class="tbl"><thead><tr><th>Sürücü</th><th>İletişim</th><th>Atanan Araç</th><th>Durum</th><th>Biyometrik</th><th>Onay</th><th></th></tr></thead><tbody>
+              <tr class="clk" onclick="openDrawer('driver','Ahmet Yılmaz')"><td><div class="fx"><span class="av2">AY</span><div class="c2"><b>Ahmet Yılmaz</b><span>#DRV-1042</span></div></div></td><td><div class="c2"><b>+90 5•• ••• 11 02</b><span>ahmet@…</span></div></td><td>34 ABC 123</td><td><span class="badge b-suc">Müsait</span></td><td><span class="badge b-suc">Doğrulandı</span></td><td><span class="badge b-suc">Onaylı</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('driver','Mehmet Demir')"><td><div class="fx"><span class="av2">MD</span><div class="c2"><b>Mehmet Demir</b><span>#DRV-1043</span></div></div></td><td><div class="c2"><b>+90 5•• ••• 33 18</b><span>mehmet@…</span></div></td><td>34 XY 4567</td><td><span class="badge b-info">Seferde</span></td><td><span class="badge b-warn">Bekliyor</span></td><td><span class="badge b-warn">Onay Bekliyor</span></td><td><div class="ract"><button class="btn suc sm" onclick="event.stopPropagation();rowApprove(this)">Onayla</button><button class="btn dest sm" onclick="event.stopPropagation();rowReject(this)">Reddet</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('driver','Hasan Şahin')"><td><div class="fx"><span class="av2">HŞ</span><div class="c2"><b>Hasan Şahin</b><span>#DRV-1051</span></div></div></td><td><div class="c2"><b>+90 5•• ••• 70 44</b><span>hasan@…</span></div></td><td class="mutc">— atanmamış</td><td><span class="badge b-sec">Pasif</span></td><td><span class="badge b-sec">Başlamadı</span></td><td><span class="badge b-sec">Taslak</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('driver','Kemal Ak')"><td><div class="fx"><span class="av2">KA</span><div class="c2"><b>Kemal Ak</b><span>#DRV-1052</span></div></div></td><td><div class="c2"><b>+90 5•• ••• 09 90</b><span>kemal@…</span></div></td><td>34 TR 8890</td><td><span class="badge b-suc">Müsait</span></td><td><span class="badge b-dest">Süresi Doldu</span></td><td><span class="badge b-suc">Onaylı</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+            </tbody></table>
+            <div class="emptyhint">4 sürücü · Kurumsal taşıyıcıya bağlı tüm sürücüler burada yönetilir.</div>
+          </div>
+        </section>
+
+        <!-- 7. Araçlar (YENİ) -->
+        <section class="sec" id="section-vehicles">
+          <div class="card"><div class="ch"><h2>Araçlar</h2><button class="btn pri sm" onclick="openDrawer('vehicle','Yeni araç',true)">+ Yeni Araç</button></div>
+            <table class="tbl"><thead><tr><th>Plaka / Araç</th><th>Tip</th><th>Durum</th><th>Kapasite</th><th>Atanan Sürücü</th><th>Onay</th><th></th></tr></thead><tbody>
+              <tr class="clk" onclick="openDrawer('vehicle','34 ABC 123')"><td><div class="fx"><span class="av2 sq">🚐</span><div class="c2"><b>34 ABC 123</b><span>Ford Transit · 2022</span></div></div></td><td>Transit</td><td><span class="badge b-suc">Aktif</span></td><td>1.500 kg</td><td>Ahmet Yılmaz</td><td><span class="badge b-suc">Onaylı</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('vehicle','34 XY 4567')"><td><div class="fx"><span class="av2 sq">🛻</span><div class="c2"><b>34 XY 4567</b><span>Iveco Daily · 2021</span></div></div></td><td>Kamyonet</td><td><span class="badge b-info">Seferde</span></td><td>3.500 kg</td><td>Mehmet Demir</td><td><span class="badge b-warn">Onay Bekliyor</span></td><td><div class="ract"><button class="btn suc sm" onclick="event.stopPropagation();rowApprove(this)">Onayla</button><button class="btn dest sm" onclick="event.stopPropagation();rowReject(this)">Reddet</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('vehicle','34 TR 8890')"><td><div class="fx"><span class="av2 sq">🚚</span><div class="c2"><b>34 TR 8890</b><span>Mercedes Atego · 2020</span></div></div></td><td>Kamyon</td><td><span class="badge b-suc">Aktif</span></td><td>10.000 kg</td><td>Kemal Ak</td><td><span class="badge b-suc">Onaylı</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('vehicle','34 KMN 22')"><td><div class="fx"><span class="av2 sq">🛵</span><div class="c2"><b>34 KMN 22</b><span>Honda PCX · 2023</span></div></div></td><td>Moto</td><td><span class="badge b-warn">Bakımda</span></td><td>20 kg</td><td class="mutc">— atanmamış</td><td><span class="badge b-suc">Onaylı</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('vehicle','34 YN 9001')"><td><div class="fx"><span class="av2 sq">🚛</span><div class="c2"><b>34 YN 9001</b><span>Volvo FH · 2019</span></div></div></td><td>Tır</td><td><span class="badge b-sec">Pasif</span></td><td>24.000 kg</td><td class="mutc">— atanmamış</td><td><span class="badge b-sec">Taslak</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+            </tbody></table>
+            <div class="emptyhint">5 araç · 7 araç tipi desteklenir (Moto/Küçük Van/Transit/Kamyonet/Kamyon/Tır/Yolcu).</div>
+          </div>
+        </section>
+
+        <!-- 8. Kullanıcılar (YENİ) -->
+        <section class="sec" id="section-users">
+          <div class="card"><div class="ch"><h2>Firma Kullanıcıları</h2><button class="btn pri sm" onclick="openDrawer('user','Yeni kullanıcı',true)">+ Yeni Kullanıcı</button></div>
+            <table class="tbl"><thead><tr><th>Kullanıcı</th><th>Roller</th><th>Telefon</th><th>Durum</th><th></th></tr></thead><tbody>
+              <tr class="clk" onclick="openDrawer('user','Ali Vural')"><td><div class="fx"><span class="av2">AV</span><div class="c2"><b>Ali Vural</b><span>@alivural · ali@…</span></div></div></td><td><span class="badge b-info">FleetManager</span> <span class="badge b-sec">Admin</span></td><td>+90 5•• ••• 12 34</td><td><span class="badge b-suc">Aktif</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('user','Seda Kaya')"><td><div class="fx"><span class="av2">SK</span><div class="c2"><b>Seda Kaya</b><span>@sedakaya · seda@…</span></div></div></td><td><span class="badge b-info">FleetManager</span></td><td>+90 5•• ••• 88 21</td><td><span class="badge b-suc">Aktif</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+              <tr class="clk" onclick="openDrawer('user','Burak Çelik')"><td><div class="fx"><span class="av2">BÇ</span><div class="c2"><b>Burak Çelik</b><span>@burakc · burak@…</span></div></div></td><td><span class="badge b-sec">Member</span></td><td>+90 5•• ••• 45 67</td><td><span class="badge b-sec">Pasif</span></td><td><div class="ract"><button class="btn icon sm">✎</button></div></td></tr>
+            </tbody></table>
+          </div>
+        </section>
+
+        <!-- 9. Tamamlama -->
+        <section class="sec" id="section-completion">
+          <div class="card"><div class="ch"><h2>Notlar & Statü İşlemleri</h2></div>
+            <div class="cc">
+              <div class="df" style="margin-bottom:14px"><span class="l">Notlar</span><span class="v">Kurumsal taşıyıcı; filo onayı sonrası aktif edilecek.</span></div>
+              <div class="ract" style="justify-content:flex-start">
+                <button class="btn suc" onclick="setFirma('Onaylandı','b-suc');toast('Firma onaylandı ✓')">✓ Onayla</button>
+                <button class="btn dest" onclick="setFirma('Reddedildi','b-dest');toast('Firma reddedildi')">✕ Reddet</button>
+                <button class="btn">⛔ Blokla</button>
+                <button class="btn">⏸ Pasifleştir</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ASIDE (sticky durum sidebar — CompanyDetailSidebar yerine) -->
+      <div class="aside">
+        <div class="card"><div class="cc">
+          <h2 style="margin:0 0 4px;font-size:13.5px;font-weight:600">Firma Durumu</h2>
+          <span class="badge b-warn" style="margin:6px 0 2px">Onay Bekliyor</span>
+          <div class="prog">
+            <div class="it"><span class="ck ok">✓</span> Temel bilgi</div>
+            <div class="it"><span class="ck ok">✓</span> İletişim</div>
+            <div class="it"><span class="ck ok">✓</span> Yetkili kişiler</div>
+            <div class="it"><span class="ck wait">!</span> Belgeler <span class="mutc">(2 bekliyor)</span></div>
+            <div class="it"><span class="ck ok">✓</span> Banka</div>
+            <div class="it"><span class="ck wait">!</span> Sürücüler <span class="mutc">(1 bekliyor)</span></div>
+            <div class="it"><span class="ck wait">!</span> Araçlar <span class="mutc">(1 bekliyor)</span></div>
+            <div class="it"><span class="ck ok">✓</span> Kullanıcılar</div>
+          </div>
+          <div class="asideacts">
+            <button class="btn suc" onclick="setFirma('Onaylandı','b-suc');toast('Firma onaylandı ✓')">✓ Firmayı Onayla</button>
+            <button class="btn dest" onclick="setFirma('Reddedildi','b-dest');toast('Firma reddedildi')">✕ Reddet</button>
+          </div>
+        </div></div>
+        <div class="card"><div class="cc" style="font-size:11.5px;color:var(--muted)">
+          <b style="color:var(--fg)">Taslak → Onay</b><br>Her belge ve kayıt Onay Bekliyor → Onayla/Reddet akışından geçer. Tüm zorunlu evrak onaylanınca firma onaylanabilir.
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer -->
+  <div class="mask" id="mask" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="dhead"><div><h3 id="dTitle">Detay</h3><div class="s" id="dSub"></div></div><span class="x" onclick="closeDrawer()">&times;</span></div>
+    <div class="dbody" id="dBody"></div>
+    <div class="dfoot" id="dFoot"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+  /* ---- step tabs + scroll spy ---- */
+  var STEPS=[['basicInfo','Temel Bilgi'],['contactInfo','İletişim'],['authorizedPerson','Yetkili Kişiler'],['verification','Belgeler'],['bankInfo','Banka'],['drivers','Sürücüler'],['vehicles','Araçlar'],['users','Kullanıcılar'],['completion','Tamamlama']];
+  (function(){var r=document.getElementById('steprow');STEPS.forEach(function(s,i){
+    var d=document.createElement('div');d.className='step'+(i===0?' on':'');d.dataset.k=s[0];
+    d.innerHTML='<span class="n">'+(i+1)+'</span><span class="lab">'+s[1]+'</span>';
+    d.onclick=function(){document.getElementById('section-'+s[0]).scrollIntoView({behavior:'smooth',block:'start'});};
+    r.appendChild(d);if(i<STEPS.length-1){var c=document.createElement('span');c.className='conn';r.appendChild(c);}
+  });})();
+  function onScroll(){var off=140,act=STEPS[0][0];
+    for(var i=0;i<STEPS.length;i++){var el=document.getElementById('section-'+STEPS[i][0]);if(el&&el.getBoundingClientRect().top<=off)act=STEPS[i][0];}
+    document.querySelectorAll('.step').forEach(function(s){s.classList.toggle('on',s.dataset.k===act);});}
+  window.addEventListener('scroll',onScroll,{passive:true});
+
+  function setFirma(txt,cls){var e=document.getElementById('firmaStatus');e.className='badge '+cls;e.textContent=txt;}
+  var toastT;function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on');},2200);}
+
+  function rowDoc(btn,kind){var td=btn.closest('tr').querySelector('td:nth-child(5)');
+    if(kind==='ok'){td.innerHTML='<span class="badge b-suc">Onaylı</span>';toast('Belge onaylandı ✓');}else{td.innerHTML='<span class="badge b-dest">Reddedildi</span>';toast('Belge reddedildi');}
+    btn.closest('.ract').innerHTML='<button class="btn icon sm">👁</button>';}
+  function rowApprove(btn){var tr=btn.closest('tr');tr.querySelector('td:last-child .ract').innerHTML='<button class="btn icon sm">✎</button>';
+    var ob=tr.querySelector('td:nth-last-child(2) .badge');if(ob){ob.className='badge b-suc';ob.textContent='Onaylı';}toast('Kayıt onaylandı ✓');}
+  function rowReject(btn){var tr=btn.closest('tr');tr.querySelector('td:last-child .ract').innerHTML='<button class="btn icon sm">✎</button>';
+    var ob=tr.querySelector('td:nth-last-child(2) .badge');if(ob){ob.className='badge b-dest';ob.textContent='Reddedildi';}toast('Kayıt reddedildi');}
+
+  /* ---- drawer ---- */
+  var DOCS={driver:[['Ehliyet','ehliyet.pdf','Onaylı','b-suc'],['SRC Belgesi','src.pdf','Onay Bekliyor','b-warn'],['Adli Sicil','adli-sicil.pdf','Onay Bekliyor','b-warn'],['Psikoteknik','psikoteknik.pdf','—','b-sec']],
+    vehicle:[['Ruhsat','ruhsat.pdf','Onaylı','b-suc'],['Sigorta Poliçesi','sigorta.pdf','Onay Bekliyor','b-warn'],['Muayene','muayene.pdf','Onaylı','b-suc'],['K1/K2 Belgesi','k.pdf','Onay Bekliyor','b-warn']],
+    person:[['Kimlik','kimlik.pdf','Onaylı','b-suc'],['Vekaletname','vekalet.pdf','Onay Bekliyor','b-warn']],bank:[],user:[]};
+  function fi(l,full){return '<div class="di'+(full?' full':'')+'"><label>'+l+'</label><input></div>';}
+  function se(l,opts){return '<div class="di"><label>'+l+'</label><select>'+opts.map(function(o){return '<option>'+o+'</option>';}).join('')+'</select></div>';}
+  function formFor(t){
+    if(t==='driver')return '<div class="d2">'+fi('Ad')+fi('Soyad')+fi('TC Kimlik')+se('Tip',['Sürücü','Kurye'])+fi('Telefon')+fi('E-posta')+se('Atanan araç',['— Seç —','34 ABC 123','34 XY 4567'])+se('Durum',['Müsait','Seferde','Pasif'])+fi('İşe giriş')+se('Biyometrik',['Başlamadı','Bekliyor','Doğrulandı'])+'</div>';
+    if(t==='vehicle')return '<div class="d2">'+fi('Plaka')+se('Araç tipi',['Moto','Küçük Van','Transit','Kamyonet','Kamyon','Tır','Yolcu'])+fi('Marka')+fi('Model')+fi('Yıl')+fi('Renk')+fi('Maks ağırlık (kg)')+fi('Maks hacim (m³)')+se('Durum',['Aktif','Bakımda','Pasif'])+se('Atanan sürücü',['— Seç —','Ahmet Yılmaz','Kemal Ak'])+fi('Sigorta bitiş')+fi('Muayene bitiş')+'</div>';
+    if(t==='person')return '<div class="d2">'+fi('Ad')+fi('Soyad')+se('Departman',['Yönetim','Operasyon','Finans'])+fi('TC Kimlik')+fi('Telefon')+fi('E-posta')+fi('Sabit telefon')+fi('Açıklama',true)+'</div>';
+    if(t==='bank')return '<div class="d2">'+se('Banka',['Ziraat Bankası','İş Bankası','Garanti BBVA'])+fi('IBAN',true)+se('Para birimi',['TRY','USD','EUR'])+se('Birincil',['Evet','Hayır'])+'</div>';
+    if(t==='user')return '<div class="d2">'+fi('Ad Soyad')+fi('Kullanıcı adı')+fi('E-posta')+fi('Telefon')+se('Rol',['FleetManager','Admin','Member','Customer'])+se('Durum',['Aktif','Pasif'])+'</div>';
+    return '';}
+  function docsFor(t){var set=DOCS[t]||[];if(!set.length)return '';var h='<div class="dsec">Evrak & Onay (taslak→onay)</div>';
+    set.forEach(function(d){var acts=d[2]==='Onay Bekliyor'?'<button class="btn suc sm" onclick="dDocOk(this)">Onayla</button><button class="btn dest sm" onclick="dDocNo(this)">Reddet</button>':'<button class="btn icon sm">👁</button>';
+      h+='<div class="docrow"><div class="ic">📄</div><div class="m"><b>'+d[0]+'</b><span>'+d[1]+'</span></div><span class="badge '+d[3]+'">'+d[2]+'</span><div class="a">'+acts+'</div></div>';});
+    h+='<div class="upload">⬆ Yeni belge yükle (Taslak → Onaya gönderilir)</div>';return h;}
+  var TT={driver:'Sürücü',vehicle:'Araç',person:'Yetkili Kişi',bank:'Banka Hesabı',user:'Kullanıcı'};
+  function openDrawer(t,name,isNew){
+    document.getElementById('dTitle').textContent=(isNew?'Yeni ':'')+TT[t]+(isNew?'':' · '+name);
+    document.getElementById('dSub').textContent=isNew?'Yeni kayıt — durum: Taslak':(name+' · kayıt/güncelleme + evrak onay');
+    var body='<div class="dsec">Bilgiler</div>'+formFor(t)+docsFor(t);
+    if((DOCS[t]||[]).some(function(d){return d[2]==='Onay Bekliyor';}))body+='<div class="approvebox">⏳ Onay bekleyen evrak var. Tümü onaylanınca kayıt <b>Onaylı</b> statüsüne alınabilir.</div>';
+    document.getElementById('dBody').innerHTML=body;
+    document.getElementById('dFoot').innerHTML=isNew
+      ?'<button class="btn pri" onclick="dSaveDraft()">Taslağı Kaydet</button><button class="btn" onclick="dSubmit()">Kaydet & Onaya Gönder</button>'
+      :'<button class="btn suc" onclick="dApprove()">✓ Kaydı Onayla</button><button class="btn dest" onclick="dReject()">✕ Reddet</button><button class="btn" onclick="dUpdate()">Güncelle</button>';
+    document.getElementById('mask').classList.add('on');document.getElementById('drawer').classList.add('on');}
+  function closeDrawer(){document.getElementById('mask').classList.remove('on');document.getElementById('drawer').classList.remove('on');}
+  function dDocOk(b){var r=b.closest('.docrow'),g=r.querySelector('.badge');g.className='badge b-suc';g.textContent='Onaylı';r.querySelector('.a').innerHTML='<button class="btn icon sm">👁</button>';toast('Belge onaylandı ✓');}
+  function dDocNo(b){var r=b.closest('.docrow'),g=r.querySelector('.badge');g.className='badge b-dest';g.textContent='Reddedildi';r.querySelector('.a').innerHTML='<button class="btn icon sm">👁</button>';toast('Belge reddedildi');}
+  function dSaveDraft(){toast('Taslak kaydedildi');closeDrawer();}
+  function dSubmit(){toast('Onaya gönderildi');closeDrawer();}
+  function dApprove(){toast('Kayıt onaylandı ✓');closeDrawer();}
+  function dReject(){toast('Kayıt reddedildi');closeDrawer();}
+  function dUpdate(){toast('Güncellendi');closeDrawer();}
+</script>
+</body>
+</html>
