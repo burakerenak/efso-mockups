@@ -36,7 +36,7 @@
   <div class="layout">
     <div class="card">
       <h2>Adres</h2>
-      <label class="fld">Ülke <span class="lv">Level 1</span></label>
+      <label class="fld">Ülke <span class="lv">Seviye 1</span></label>
       <select id="country" onchange="buildCountry()"></select>
       <div id="levels"></div>
       <div class="grid2">
@@ -73,44 +73,44 @@ var CFG = {
     {cap:"İlçe",opts:{"İstanbul":["Kadıköy","Üsküdar","Şişli"],"Ankara":["Çankaya","Keçiören"],"İzmir":["Konak","Bornova"]}},
     {cap:"Mahalle",opts:{"Kadıköy":["Caferağa","Moda","Fenerbahçe"],"Üsküdar":["Acıbadem","Kuzguncuk"],"Şişli":["Mecidiyeköy","Teşvikiye"]}}
   ]},
-  US:{name:"United States",flag:"🇺🇸",postal:"ZIP Code",levels:[
-    {cap:"State",opts:["California","Texas","New York"]},
-    {cap:"County",opts:{"California":["Los Angeles County","San Diego County"],"Texas":["Harris County","Dallas County"],"New York":["Kings County","Queens County"]}},
-    {cap:"City",opts:{"Los Angeles County":["Los Angeles","Long Beach"],"Harris County":["Houston","Pasadena"],"Kings County":["Brooklyn"]}}
+  US:{name:"ABD",flag:"🇺🇸",postal:"Posta Kodu",levels:[
+    {cap:"Eyalet",opts:["Kaliforniya","Teksas","New York"]},
+    {cap:"İlçe",opts:{"Kaliforniya":["Los Angeles","San Diego"],"Teksas":["Harris","Dallas"],"New York":["Brooklyn","Queens"]}},
+    {cap:"Şehir",opts:{"Los Angeles":["Los Angeles","Long Beach"],"Harris":["Houston","Pasadena"],"Brooklyn":["Brooklyn"]}}
   ]},
-  DE:{name:"Germany",flag:"🇩🇪",postal:"PLZ",levels:[
-    {cap:"Bundesland",opts:["Bayern","Berlin","Hamburg"]},
-    {cap:"Kreis",opts:{"Bayern":["München","Nürnberg"],"Berlin":["Mitte","Pankow"],"Hamburg":["Altona","Mitte"]}},
-    {cap:"Stadt",opts:G},
-    {cap:"Ortsteil",opts:G}
+  DE:{name:"Almanya",flag:"🇩🇪",postal:"Posta Kodu",levels:[
+    {cap:"Eyalet",opts:["Bavyera","Berlin","Hamburg"]},
+    {cap:"İlçe",opts:{"Bavyera":["Münih","Nürnberg"],"Berlin":["Mitte","Pankow"],"Hamburg":["Altona","Mitte"]}},
+    {cap:"Şehir",opts:G},
+    {cap:"Semt",opts:G}
   ]},
-  FR:{name:"France",flag:"🇫🇷",postal:"Code Postal",levels:[
-    {cap:"Région",opts:["Île-de-France","Provence-Alpes","Occitanie"]},
-    {cap:"Département",opts:{"Île-de-France":["Paris","Hauts-de-Seine"],"Provence-Alpes":["Bouches-du-Rhône"],"Occitanie":["Haute-Garonne"]}},
-    {cap:"Commune",opts:G},
-    {cap:"Quartier",opts:G}
+  FR:{name:"Fransa",flag:"🇫🇷",postal:"Posta Kodu",levels:[
+    {cap:"Bölge",opts:["Île-de-France","Provence","Occitanie"]},
+    {cap:"İl",opts:{"Île-de-France":["Paris","Hauts-de-Seine"],"Provence":["Marsilya"],"Occitanie":["Toulouse"]}},
+    {cap:"Belediye",opts:G},
+    {cap:"Mahalle",opts:G}
   ]},
-  JP:{name:"Japan",flag:"🇯🇵",postal:"Postal Code",levels:[
-    {cap:"Prefecture",opts:["Tokyo","Osaka","Kyoto"]},
-    {cap:"City (Shi)",opts:{"Tokyo":["Shinjuku","Shibuya"],"Osaka":["Kita","Chuo"],"Kyoto":["Nakagyo"]}},
-    {cap:"Ward (Ku)",opts:G}
+  JP:{name:"Japonya",flag:"🇯🇵",postal:"Posta Kodu",levels:[
+    {cap:"Eyalet",opts:["Tokyo","Osaka","Kyoto"]},
+    {cap:"Şehir",opts:{"Tokyo":["Shinjuku","Shibuya"],"Osaka":["Kita","Chuo"],"Kyoto":["Nakagyo"]}},
+    {cap:"İlçe",opts:G}
   ]},
-  AE:{name:"United Arab Emirates",flag:"🇦🇪",postal:null,levels:[
-    {cap:"Emirate",opts:["Dubai","Abu Dhabi","Sharjah"]},
-    {cap:"City / Area",opts:{"Dubai":["Deira","Marina","Business Bay"],"Abu Dhabi":["Khalifa City","Corniche"],"Sharjah":["Al Majaz"]}},
-    {cap:"District / Community",opts:G}
+  AE:{name:"BAE",flag:"🇦🇪",postal:null,levels:[
+    {cap:"Emirlik",opts:["Dubai","Abu Dabi","Şarca"]},
+    {cap:"Şehir / Bölge",opts:{"Dubai":["Deira","Marina","Business Bay"],"Abu Dabi":["Khalifa City","Corniche"],"Şarca":["Al Majaz"]}},
+    {cap:"Mahalle",opts:G}
   ]},
-  GB:{name:"United Kingdom",flag:"🇬🇧",postal:"Postcode",levels:[
-    {cap:"County",opts:["Greater London","Manchester","West Midlands"]},
-    {cap:"District",opts:G},{cap:"City / Town",opts:G}
+  GB:{name:"İngiltere",flag:"🇬🇧",postal:"Posta Kodu",levels:[
+    {cap:"Kontluk",opts:["Greater London","Manchester","West Midlands"]},
+    {cap:"İlçe",opts:G},{cap:"Şehir / Kasaba",opts:G}
   ]},
-  SA:{name:"Saudi Arabia",flag:"🇸🇦",postal:"Postal Code",levels:[
-    {cap:"Region (Mintaqah)",opts:["Riyadh","Makkah","Eastern"]},
-    {cap:"Governorate",opts:G},{cap:"City",opts:G},{cap:"District (Hayy)",opts:G}
+  SA:{name:"Suudi Arabistan",flag:"🇸🇦",postal:"Posta Kodu",levels:[
+    {cap:"Bölge",opts:["Riyad","Mekke","Doğu Bölgesi"]},
+    {cap:"İl",opts:G},{cap:"Şehir",opts:G},{cap:"Mahalle",opts:G}
   ]},
-  BR:{name:"Brazil",flag:"🇧🇷",postal:"CEP",levels:[
-    {cap:"Estado",opts:["São Paulo","Rio de Janeiro","Minas Gerais"]},
-    {cap:"Município / Cidade",opts:G},{cap:"Bairro",opts:G}
+  BR:{name:"Brezilya",flag:"🇧🇷",postal:"Posta Kodu",levels:[
+    {cap:"Eyalet",opts:["São Paulo","Rio de Janeiro","Minas Gerais"]},
+    {cap:"Şehir",opts:G},{cap:"Mahalle",opts:G}
   ]}
 };
 
@@ -131,7 +131,7 @@ function buildCountry(){
   var cfg=CFG[k];
   cfg.levels.forEach(function(lv,i){
     var lab=document.createElement("label");lab.className="fld";
-    lab.innerHTML=lv.cap+' <span class="lv">Level '+(i+2)+'</span>';
+    lab.innerHTML=lv.cap+' <span class="lv">Seviye '+(i+2)+'</span>';
     var sel=document.createElement("select");sel.id="lvl"+i;sel.dataset.idx=i;
     sel.onchange=function(){onLevel(i);};
     box.appendChild(lab);box.appendChild(sel);
@@ -141,11 +141,11 @@ function buildCountry(){
   // posta etiketi (yoksa gizle/uyarı)
   var pl=document.getElementById("postalLbl"),pi=document.getElementById("postal");
   if(cfg.postal){pl.textContent=cfg.postal;pi.disabled=false;pi.placeholder="";}
-  else{pl.textContent="Posta Kodu (bu ülkede yok — PO Box)";pi.disabled=true;pi.value="";pi.placeholder="—";}
+  else{pl.textContent="Posta Kutusu (bu ülkede posta kodu yok)";pi.disabled=true;pi.value="";pi.placeholder="—";}
   // caption haritası paneli
   var cm=document.getElementById("capmap");
-  cm.innerHTML='<div class="maprow"><span class="k">Level 1</span><span class="v">Ülke</span></div>'+
-    cfg.levels.map(function(lv,i){return '<div class="maprow"><span class="k">Level '+(i+2)+'</span><span class="v">'+lv.cap+'</span></div>';}).join("")+
+  cm.innerHTML='<div class="maprow"><span class="k">Seviye 1</span><span class="v">Ülke</span></div>'+
+    cfg.levels.map(function(lv,i){return '<div class="maprow"><span class="k">Seviye '+(i+2)+'</span><span class="v">'+lv.cap+'</span></div>';}).join("")+
     '<div class="maprow"><span class="k">Posta</span><span class="v">'+(cfg.postal||"— (yok)")+'</span></div>';
   document.getElementById("capnote").textContent=cfg.levels.length+" seviye gösteriliyor. Kullanılmayan seviye yok → gizlenir (ör. BAE'de İlçe/County yok).";
   render();
