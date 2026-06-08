@@ -1,0 +1,179 @@
+<!doctype html>
+<!-- EFSO — Global Adres (Location Tree + Level + dinamik Caption) çalışır mockup. Tasarım örneği, gerçek API yok. -->
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EFSO — Global Adres (dinamik caption)</title>
+<style>
+  :root{--efso:#0ea5b7;--efso-d:#0b7e8c;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f1f5f9;--soft:#f8fafc}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:30px 16px}
+  .wrap{max-width:980px;margin:0 auto}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--efso),var(--efso-d));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+  h1{margin:0;font-size:20px}.sub{color:var(--muted);font-size:13px;margin:2px 0 22px}
+  .demoflag{background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;margin-left:auto}
+  .layout{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+  @media(max-width:860px){.layout{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.05)}
+  .card h2{margin:0 0 4px;font-size:14px}
+  label.fld{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin:14px 2px 5px}
+  label.fld .lv{color:var(--efso-d);font-weight:700;font-size:10px;background:#e0f7fa;padding:1px 6px;border-radius:5px;margin-left:6px}
+  select,input,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;background:var(--soft);color:var(--ink);font-family:inherit}
+  select:focus,input:focus,textarea:focus{outline:none;border-color:var(--efso);background:#fff}
+  select:disabled{opacity:.5}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .pill{display:inline-block;font-size:11px;font-weight:600;color:var(--efso-d);background:#e0f7fa;padding:3px 9px;border-radius:999px;margin:2px 4px 0 0}
+  .side h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  .maprow{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .maprow:last-child{border:0}.maprow .k{color:var(--muted)}.maprow .v{font-weight:600}
+  pre{background:#0f172a;color:#d1fae5;border-radius:11px;padding:14px;font-size:11.5px;overflow:auto;margin:0;line-height:1.5}
+  .note{font-size:11.5px;color:var(--muted);margin-top:12px;line-height:1.5}
+  .path{font-size:12.5px;color:var(--efso-d);font-weight:600;background:#e0f7fa;border-radius:9px;padding:9px 12px;margin-top:12px}
+</style></head>
+<body><div class="wrap">
+  <div class="head"><div class="logo">EF</div><h1>Global Adres Bileşeni</h1><span class="demoflag">MOCKUP</span></div>
+  <p class="sub">Tek sabit UI · ülkeye göre değişen yalnız <b>caption</b> ve seviye sayısı · DB'de İl/İlçe kolonu yok, sadece <b>LocationId</b>.</p>
+
+  <div class="layout">
+    <div class="card">
+      <h2>Adres</h2>
+      <label class="fld">Ülke <span class="lv">Level 1</span></label>
+      <select id="country" onchange="buildCountry()"></select>
+      <div id="levels"></div>
+      <div class="grid2">
+        <div><label class="fld" id="postalLbl">Posta Kodu</label><input id="postal" placeholder="—" oninput="render()"></div>
+        <div><label class="fld">Konum (harita PIN)</label><input value="📍 Google Maps ile seç" readonly></div>
+      </div>
+      <label class="fld">Açık adres</label>
+      <textarea id="line" rows="2" placeholder="Cadde, bina, kapı no, kat" oninput="render()"></textarea>
+      <div class="path" id="path">Seçim bekleniyor…</div>
+    </div>
+
+    <div class="side">
+      <div class="card">
+        <h3>Bu ülkenin caption haritası</h3>
+        <div id="capmap"></div>
+        <div class="note" id="capnote"></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Kaydedilecek veri (LocationId mantığı)</h3>
+        <pre id="json">{ }</pre>
+        <div class="note">Dikkat: İl/İlçe metni saklanmaz; yalnız <b>locationId</b> + ülke + posta + koordinat tutulur.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Konfig: her ülke -> level captionları (+ örnek cascade verisi) + posta etiketi.
+   levels[i].opts: dizi (seviye 2) veya { parentDeğeri: [çocuklar] } (alt seviyeler). */
+var G = "Örnek 1,Örnek 2,Örnek 3".split(",");
+var CFG = {
+  TR:{name:"Türkiye",flag:"🇹🇷",postal:"Posta Kodu",levels:[
+    {cap:"İl",opts:["İstanbul","Ankara","İzmir"]},
+    {cap:"İlçe",opts:{"İstanbul":["Kadıköy","Üsküdar","Şişli"],"Ankara":["Çankaya","Keçiören"],"İzmir":["Konak","Bornova"]}},
+    {cap:"Mahalle",opts:{"Kadıköy":["Caferağa","Moda","Fenerbahçe"],"Üsküdar":["Acıbadem","Kuzguncuk"],"Şişli":["Mecidiyeköy","Teşvikiye"]}}
+  ]},
+  US:{name:"United States",flag:"🇺🇸",postal:"ZIP Code",levels:[
+    {cap:"State",opts:["California","Texas","New York"]},
+    {cap:"County",opts:{"California":["Los Angeles County","San Diego County"],"Texas":["Harris County","Dallas County"],"New York":["Kings County","Queens County"]}},
+    {cap:"City",opts:{"Los Angeles County":["Los Angeles","Long Beach"],"Harris County":["Houston","Pasadena"],"Kings County":["Brooklyn"]}}
+  ]},
+  DE:{name:"Germany",flag:"🇩🇪",postal:"PLZ",levels:[
+    {cap:"Bundesland",opts:["Bayern","Berlin","Hamburg"]},
+    {cap:"Kreis",opts:{"Bayern":["München","Nürnberg"],"Berlin":["Mitte","Pankow"],"Hamburg":["Altona","Mitte"]}},
+    {cap:"Stadt",opts:G},
+    {cap:"Ortsteil",opts:G}
+  ]},
+  FR:{name:"France",flag:"🇫🇷",postal:"Code Postal",levels:[
+    {cap:"Région",opts:["Île-de-France","Provence-Alpes","Occitanie"]},
+    {cap:"Département",opts:{"Île-de-France":["Paris","Hauts-de-Seine"],"Provence-Alpes":["Bouches-du-Rhône"],"Occitanie":["Haute-Garonne"]}},
+    {cap:"Commune",opts:G},
+    {cap:"Quartier",opts:G}
+  ]},
+  JP:{name:"Japan",flag:"🇯🇵",postal:"Postal Code",levels:[
+    {cap:"Prefecture",opts:["Tokyo","Osaka","Kyoto"]},
+    {cap:"City (Shi)",opts:{"Tokyo":["Shinjuku","Shibuya"],"Osaka":["Kita","Chuo"],"Kyoto":["Nakagyo"]}},
+    {cap:"Ward (Ku)",opts:G}
+  ]},
+  AE:{name:"United Arab Emirates",flag:"🇦🇪",postal:null,levels:[
+    {cap:"Emirate",opts:["Dubai","Abu Dhabi","Sharjah"]},
+    {cap:"City / Area",opts:{"Dubai":["Deira","Marina","Business Bay"],"Abu Dhabi":["Khalifa City","Corniche"],"Sharjah":["Al Majaz"]}},
+    {cap:"District / Community",opts:G}
+  ]},
+  GB:{name:"United Kingdom",flag:"🇬🇧",postal:"Postcode",levels:[
+    {cap:"County",opts:["Greater London","Manchester","West Midlands"]},
+    {cap:"District",opts:G},{cap:"City / Town",opts:G}
+  ]},
+  SA:{name:"Saudi Arabia",flag:"🇸🇦",postal:"Postal Code",levels:[
+    {cap:"Region (Mintaqah)",opts:["Riyadh","Makkah","Eastern"]},
+    {cap:"Governorate",opts:G},{cap:"City",opts:G},{cap:"District (Hayy)",opts:G}
+  ]},
+  BR:{name:"Brazil",flag:"🇧🇷",postal:"CEP",levels:[
+    {cap:"Estado",opts:["São Paulo","Rio de Janeiro","Minas Gerais"]},
+    {cap:"Município / Cidade",opts:G},{cap:"Bairro",opts:G}
+  ]}
+};
+
+function opt(v){var o=document.createElement("option");o.textContent=v;o.value=v;return o;}
+function fill(sel,arr,ph){sel.innerHTML="";sel.appendChild(opt(ph));arr.forEach(function(a){sel.appendChild(opt(a));});sel.value=ph;sel.dataset.ph=ph;}
+
+var country, levels;
+function initCountries(){
+  var c=document.getElementById("country");c.innerHTML="";
+  c.appendChild(opt("— Ülke seç —"));
+  Object.keys(CFG).forEach(function(k){var o=opt(CFG[k].flag+"  "+CFG[k].name);o.value=k;c.appendChild(o);});
+}
+function buildCountry(){
+  var k=document.getElementById("country").value;
+  var box=document.getElementById("levels");box.innerHTML="";
+  document.getElementById("capmap").innerHTML="";
+  if(!CFG[k]){document.getElementById("postalLbl").textContent="Posta Kodu";render();return;}
+  var cfg=CFG[k];
+  cfg.levels.forEach(function(lv,i){
+    var lab=document.createElement("label");lab.className="fld";
+    lab.innerHTML=lv.cap+' <span class="lv">Level '+(i+2)+'</span>';
+    var sel=document.createElement("select");sel.id="lvl"+i;sel.dataset.idx=i;
+    sel.onchange=function(){onLevel(i);};
+    box.appendChild(lab);box.appendChild(sel);
+    if(i===0){fill(sel,lv.opts,"— "+lv.cap+" seç —");}
+    else{sel.innerHTML="";sel.appendChild(opt("— "+lv.cap+" seç —"));sel.disabled=true;}
+  });
+  // posta etiketi (yoksa gizle/uyarı)
+  var pl=document.getElementById("postalLbl"),pi=document.getElementById("postal");
+  if(cfg.postal){pl.textContent=cfg.postal;pi.disabled=false;pi.placeholder="";}
+  else{pl.textContent="Posta Kodu (bu ülkede yok — PO Box)";pi.disabled=true;pi.value="";pi.placeholder="—";}
+  // caption haritası paneli
+  var cm=document.getElementById("capmap");
+  cm.innerHTML='<div class="maprow"><span class="k">Level 1</span><span class="v">Ülke</span></div>'+
+    cfg.levels.map(function(lv,i){return '<div class="maprow"><span class="k">Level '+(i+2)+'</span><span class="v">'+lv.cap+'</span></div>';}).join("")+
+    '<div class="maprow"><span class="k">Posta</span><span class="v">'+(cfg.postal||"— (yok)")+'</span></div>';
+  document.getElementById("capnote").textContent=cfg.levels.length+" seviye gösteriliyor. Kullanılmayan seviye yok → gizlenir (ör. BAE'de İlçe/County yok).";
+  render();
+}
+function onLevel(i){
+  var k=document.getElementById("country").value,cfg=CFG[k];
+  // sonraki seviyeleri temizle/doldur
+  var cur=document.getElementById("lvl"+i).value;
+  for(var j=i+1;j<cfg.levels.length;j++){var s=document.getElementById("lvl"+j);s.innerHTML="";s.appendChild(opt("— "+cfg.levels[j].cap+" seç —"));s.disabled=true;}
+  var next=cfg.levels[i+1];
+  if(next && cur && cur.indexOf("seç")<0){
+    var o=next.opts, arr=Array.isArray(o)?o:(o[cur]||G);
+    var s=document.getElementById("lvl"+(i+1));fill(s,arr,"— "+next.cap+" seç —");s.disabled=false;
+  }
+  render();
+}
+function selVal(id){var e=document.getElementById(id);if(!e)return null;var v=e.value;return (v&&v.indexOf("seç")<0&&v.indexOf("Ülke")<0)?v:null;}
+function render(){
+  var k=document.getElementById("country").value,cfg=CFG[k];
+  var parts=[],leaf=null;
+  if(cfg){parts.push(cfg.name);cfg.levels.forEach(function(lv,i){var v=selVal("lvl"+i);if(v){parts.push(v);leaf=v;}});}
+  document.getElementById("path").textContent= parts.length? ("📍 "+parts.join("  ›  ")) : "Seçim bekleniyor…";
+  // sahte locationId (leaf'e göre)
+  var lid=null; if(leaf){lid=4000+(leaf.length*7+leaf.charCodeAt(0))%900;}
+  var data={countryCode:k&&CFG[k]?k:null, locationId:lid, path:parts.length?parts.join(" > "):null,
+            postalCode:(document.getElementById("postal").value||null), addressLine:(document.getElementById("line").value||null)};
+  document.getElementById("json").textContent=JSON.stringify(data,null,2);
+}
+initCountries();render();
+</script>
+</body></html>
