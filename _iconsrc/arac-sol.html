@@ -4,21 +4,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
     <rect width="512" height="512" fill="#000"/>
-    <!-- pickup gövde (beyaz) — ön solda -->
-    <path fill="#fff" d="M84 314 L84 266 L172 266 L208 208 L300 208 L300 266 L456 266 L456 314 Z"/>
-    <!-- cam (boşluk) -->
-    <path fill="#000" d="M216 216 L292 216 L292 258 L226 258 Z"/>
-    <!-- kasa ile kabin ayrımı -->
-    <rect x="298" y="214" width="10" height="52" fill="#000"/>
-    <!-- tekerlek arkları (boşluk) -->
-    <circle cx="178" cy="314" r="50" fill="#000"/>
-    <circle cx="400" cy="314" r="50" fill="#000"/>
+    <!-- kamyonet gövde (beyaz): önde kabin (sol), arkada yüksek kasa -->
+    <path fill="#fff" d="M70 320 L70 246 L120 208 L170 208 L170 150 L456 150 L456 320 Z"/>
+    <!-- kabin camı (boşluk) -->
+    <path fill="#000" d="M84 248 L118 216 L152 216 L152 248 Z"/>
+    <!-- kabin/kasa ayrım çizgisi -->
+    <rect x="165" y="210" width="9" height="110" fill="#000"/>
+    <!-- kasa panel dikiş çizgisi -->
+    <rect x="312" y="172" width="9" height="120" fill="#000"/>
+    <!-- far -->
+    <rect x="74" y="290" width="22" height="26" rx="6" fill="#000"/>
+    <!-- tekerlek arkları -->
+    <circle cx="142" cy="320" r="50" fill="#000"/>
+    <circle cx="392" cy="320" r="50" fill="#000"/>
     <!-- lastikler -->
-    <circle cx="178" cy="314" r="41" fill="#fff"/>
-    <circle cx="400" cy="314" r="41" fill="#fff"/>
+    <circle cx="142" cy="320" r="41" fill="#fff"/>
+    <circle cx="392" cy="320" r="41" fill="#fff"/>
     <!-- jant -->
-    <circle cx="178" cy="314" r="15" fill="#000"/>
-    <circle cx="400" cy="314" r="15" fill="#000"/>
+    <circle cx="142" cy="320" r="15" fill="#000"/>
+    <circle cx="392" cy="320" r="15" fill="#000"/>
   </mask></defs>
   <rect width="512" height="512" fill="#29b6d8" mask="url(#m)"/>
 </svg>
