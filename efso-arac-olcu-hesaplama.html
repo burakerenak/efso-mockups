@@ -1,0 +1,129 @@
+<!doctype html>
+<!-- EFSO — Araç (Kasa) Ölçü → Hacim/Desi otomatik hesap + maskeleme DEMOSU. Davranış örneği; üretim kodu değil. -->
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EFSO — Araç Ölçü/Desi Hesap + Maskeleme</title>
+<style>
+  :root{--efso:#0ea5b7;--efso-d:#0b7e8c;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f1f5f9;--soft:#f8fafc;--ok:#16a34a}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);padding:30px 16px}
+  .wrap{max-width:760px;margin:0 auto}
+  .head{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+  .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--efso),var(--efso-d));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+  h1{margin:0;font-size:20px}.sub{color:var(--muted);font-size:13px;margin:2px 0 22px}
+  .flag{margin-left:auto;background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.05);margin-bottom:18px}
+  .card h2{margin:0 0 14px;font-size:14px}
+  label.fld{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin:0 2px 5px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .ig{position:relative}
+  .ig input,.ig select{width:100%;padding:11px 44px 11px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--soft);color:var(--ink);font-family:inherit;text-align:right}
+  .ig input:focus{outline:none;border-color:var(--efso);background:#fff}
+  .ig .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);font-weight:600;pointer-events:none}
+  .ig.calc input{background:#ecfdf5;border-color:#bbf7d0;color:#065f46;font-weight:700;cursor:default}
+  .ig.calc .unit{color:#059669}
+  .hint{font-size:11px;color:var(--muted);margin-top:6px}
+  .row{display:flex;align-items:center;gap:8px;margin:14px 0 0}
+  .row select{width:auto;padding:8px 30px 8px 10px;text-align:left}
+  pre{background:#0f172a;color:#d1fae5;border-radius:11px;padding:14px;font-size:12px;overflow:auto;margin:0;line-height:1.5}
+  .rules{font-size:12px;color:#334155;line-height:1.7}
+  .rules b{color:var(--ink)}
+  .k{display:inline-block;background:#e0f7fa;color:var(--efso-d);font-weight:700;border-radius:6px;padding:1px 7px;font-size:11px}
+</style></head>
+<body><div class="wrap">
+  <div class="head"><div class="logo">EF</div><h1>Araç (Kasa) Ölçü → Hacim/Desi</h1><span class="flag">DEMO</span></div>
+  <p class="sub">En/Boy/Yükseklik yaz → Hacim &amp; Desi <b>otomatik</b> hesaplanır. Alanlar tr-TR <b>maskeli</b> (binlik “.”, ondalık “,”, birim soneki). Altta DB'ye yazılacak <b>ham sayı</b>.</p>
+
+  <div class="card">
+    <h2>Kasa Ölçüleri</h2>
+    <div class="grid3">
+      <div><label class="fld">En</label><div class="ig"><input id="en" inputmode="decimal" placeholder="0"><span class="unit">cm</span></div></div>
+      <div><label class="fld">Boy</label><div class="ig"><input id="boy" inputmode="decimal" placeholder="0"><span class="unit">cm</span></div></div>
+      <div><label class="fld">Yükseklik</label><div class="ig"><input id="yuk" inputmode="decimal" placeholder="0"><span class="unit">cm</span></div></div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div><label class="fld">Gerçek ağırlık</label><div class="ig"><input id="kg" inputmode="decimal" placeholder="0"><span class="unit">kg</span></div></div>
+      <div><label class="fld">Desi böleni</label><div class="ig"><select id="bolen"><option value="3000">3000 (kara/kargo)</option><option value="5000">5000 (hava)</option></select></div></div>
+    </div>
+
+    <div class="grid3" style="margin-top:16px">
+      <div><label class="fld">Hacim (otomatik)</label><div class="ig calc"><input id="hacim" readonly tabindex="-1"><span class="unit">m³</span></div></div>
+      <div><label class="fld">Desi (otomatik)</label><div class="ig calc"><input id="desi" readonly tabindex="-1"><span class="unit">desi</span></div></div>
+      <div><label class="fld">Ücrete esas (otomatik)</label><div class="ig calc"><input id="esas" readonly tabindex="-1"><span class="unit">≈kg</span></div></div>
+    </div>
+    <div class="hint">Hacim = (En×Boy×Yük)/1.000.000 · Desi = (En×Boy×Yük)/<span id="bh">3000</span> · Ücrete esas = max(ağırlık, desi)</div>
+  </div>
+
+  <div class="card">
+    <h2>DB'ye kaydedilecek ham veri</h2>
+    <pre id="json">{ }</pre>
+    <div class="hint">Maske yalnız görüntüdür; forma/DB'ye <b>ham sayı</b> yazılır (örn. 120 — “120 cm” veya “1.250” değil).</div>
+  </div>
+
+  <div class="card">
+    <h2>3 altın kural</h2>
+    <div class="rules">
+      1) <b>Maske = sadece görüntü.</b> DB'ye ham sayı (<span class="k">floatValue</span>) yaz.<br>
+      2) <b>Hesaplanan alanlar read-only</b> — her ölçü değişiminde yeniden hesaplanır.<br>
+      3) <b>Locale tr-TR</b> (binlik “.”, ondalık “,”). Doğrulama (Zod) ham sayı üstünde.
+    </div>
+    <div class="hint">React stack'te: giriş alanları <b>react-number-format (NumericFormat)</b> + <b>Controller</b>; hesaplananlar <b>Intl.NumberFormat('tr-TR')</b>.</div>
+  </div>
+</div>
+
+<script>
+  // model: ham sayılar (DB'ye gidecek olan)
+  var model = { en:null, boy:null, yuk:null, kg:null };
+  var ids = { en:"en", boy:"boy", yuk:"yuk", kg:"kg" };
+
+  function toNum(s){
+    if(s==null) return null;
+    s = (""+s).replace(/[^\d.,-]/g,"").trim();
+    if(!s) return null;
+    if(s.indexOf(",")>-1){ s = s.replace(/\./g,"").replace(",", "."); }   // tr: nokta=binlik, virgül=ondalık
+    var n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  }
+  function fmt(n, frac){
+    if(n==null || isNaN(n)) return "";
+    return new Intl.NumberFormat("tr-TR",{minimumFractionDigits:frac, maximumFractionDigits:frac}).format(n);
+  }
+
+  function recalc(){
+    var en=model.en||0, boy=model.boy||0, yuk=model.yuk||0, kg=model.kg||0;
+    var bolen = +document.getElementById("bolen").value;
+    document.getElementById("bh").textContent = bolen;
+    var cm3 = en*boy*yuk;
+    var hacim = cm3/1000000;
+    var desi  = cm3/bolen;
+    var esas  = Math.max(kg, desi);
+    document.getElementById("hacim").value = cm3? fmt(hacim,3) : "";
+    document.getElementById("desi").value  = cm3? fmt(desi,2)  : "";
+    document.getElementById("esas").value  = (cm3||kg)? fmt(esas,2) : "";
+    document.getElementById("json").textContent = JSON.stringify({
+      enCm: model.en, boyCm: model.boy, yukseklikCm: model.yuk, agirlikKg: model.kg,
+      desiBolen: bolen,
+      hacimM3: cm3? +hacim.toFixed(3) : null,
+      desi:    cm3? +desi.toFixed(2)  : null,
+      ucreteEsasKg: (cm3||kg)? +esas.toFixed(2) : null
+    }, null, 2);
+  }
+
+  Object.keys(ids).forEach(function(key){
+    var el = document.getElementById(ids[key]);
+    el.addEventListener("input", function(){ model[key] = toNum(el.value); recalc(); });
+    el.addEventListener("focus", function(){           // düzenlerken ham göster
+      if(model[key]!=null) el.value = (""+model[key]).replace(".",",");
+    });
+    el.addEventListener("blur", function(){            // çıkınca maskele (tr-TR grupla)
+      el.value = model[key]!=null ? fmt(model[key], key==="kg"?2:0) : "";
+    });
+  });
+  document.getElementById("bolen").addEventListener("change", recalc);
+
+  // örnek başlangıç
+  model = { en:240, boy:200, yuk:220, kg:1500 };
+  ["en","boy","yuk","kg"].forEach(function(k){ document.getElementById(k).value = fmt(model[k], k==="kg"?2:0); });
+  recalc();
+</script>
+</body></html>
