@@ -226,6 +226,93 @@
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
   .infobar{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.5;margin-bottom:18px;display:flex;gap:9px}
+  /* ===== SİPARİŞ LİSTESİ ===== */
+  .list-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:12.5px;font-weight:600;color:#475569;cursor:pointer;display:flex;align-items:center;gap:7px}
+  .chip:hover{border-color:var(--efso)}
+  .chip.on{background:var(--efso);color:#fff;border-color:var(--efso)}
+  .chip .ct{background:rgba(0,0,0,.08);border-radius:999px;padding:0 7px;font-size:11px}
+  .chip.on .ct{background:rgba(255,255,255,.25)}
+  .otable{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  .orow{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:.12s}
+  .orow:last-child{border-bottom:0}
+  .orow:hover{background:var(--soft)}
+  .orow .oemoji{font-size:26px;flex:0 0 auto;width:30px;text-align:center}
+  .orow .omain{flex:1;min-width:0}
+  .orow .ol1{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .orow .ono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-size:12px}
+  .orow .ovh{font-weight:700;font-size:13.5px}
+  .orow .odim{color:var(--muted);font-size:11.5px}
+  .orow .oroute{color:var(--muted);font-size:12px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .orow .oend{display:flex;align-items:center;gap:16px;flex:0 0 auto}
+  .orow .oamt{font-weight:800;font-size:15px;text-align:right;min-width:60px}
+  .orow .ogo{color:var(--efso);font-weight:700;font-size:12.5px;white-space:nowrap}
+  @media(max-width:640px){.orow{flex-wrap:wrap}.orow .oend{width:100%;justify-content:flex-end;border-top:1px dashed var(--line);padding-top:10px;margin-top:4px}}
+  .empty{background:#fff;border:1px dashed var(--line);border-radius:16px;padding:46px 20px;text-align:center;color:var(--muted)}
+  .empty .e{font-size:40px}.empty h3{margin:12px 0 4px;color:var(--ink)}
+
+  /* durum rozetleri */
+  .sbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap}
+  .st-wait{background:#fef9c3;color:#854d0e}      /* Beklemede */
+  .st-seek{background:#ffedd5;color:#9a3412}      /* KuryeAraniyor */
+  .st-assigned{background:#e0e7ff;color:#3730a3}  /* KuryeAtandi */
+  .st-progress{background:#dbeafe;color:#1d4ed8}  /* Alım/Yükleniyor/Yolda... */
+  .st-done{background:#dcfce7;color:#15803d}      /* Tamamlandi */
+  .st-cancel{background:#fee2e2;color:#b91c1c}    /* IptalEdildi */
+  .pulse{position:relative}
+  .pulse::before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;border-radius:50%;background:currentColor;transform:translateY(-50%);animation:pls 1.1s infinite}
+  .pulse{padding-left:24px}
+  @keyframes pls{0%{box-shadow:0 0 0 0 rgba(154,52,18,.5)}70%{box-shadow:0 0 0 7px rgba(154,52,18,0)}100%{box-shadow:0 0 0 0 rgba(154,52,18,0)}}
+
+  /* ===== TAKİP EKRANI ===== */
+  .track-back{color:var(--efso);font-weight:600;font-size:13px;cursor:pointer;margin-bottom:14px;display:inline-block}
+  .track-back:hover{text-decoration:underline}
+  .trackwrap{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:start}
+  @media(max-width:980px){.trackwrap{grid-template-columns:1fr}}
+  .thead{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .thead .ono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:800;font-size:18px}
+  .thead .meta{color:var(--muted);font-size:12.5px}
+  .thead .sp{flex:1}
+
+  /* kurye aranıyor / kurye kartı */
+  .seekbox{background:linear-gradient(135deg,#fff7ed,#fff);border:1px solid #fed7aa;border-radius:16px;padding:20px;display:flex;align-items:center;gap:16px;margin-bottom:16px}
+  .spinner{width:42px;height:42px;border-radius:50%;border:4px solid #fed7aa;border-top-color:#ea580c;animation:spin 1s linear infinite;flex:0 0 auto}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .seekbox b{font-size:15px}.seekbox span{font-size:12.5px;color:var(--muted)}
+  .courier{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+  .courier .row1{display:flex;align-items:center;gap:13px}
+  .courier .av{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--efso),var(--efso-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex:0 0 auto}
+  .courier .nm{font-weight:700;font-size:15px}.courier .vh{font-size:12px;color:var(--muted)}
+  .courier .rate{margin-left:auto;text-align:right;font-size:12px;color:var(--amber);font-weight:700}
+  .courier .acts{display:flex;gap:9px;margin-top:13px}
+  .courier .acts button{flex:1;border:1px solid var(--line);background:var(--soft);border-radius:11px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer;color:var(--ink)}
+  .courier .acts button.call{background:var(--efso);color:#fff;border-color:var(--efso)}
+  .courier .mask{font-size:11px;color:var(--muted);margin-top:9px;background:var(--soft);border-radius:9px;padding:8px 10px}
+
+  /* harita + ETA */
+  .tmap{height:170px;border-radius:14px;border:1px solid var(--line);margin-bottom:16px;position:relative;overflow:hidden;
+        background:linear-gradient(45deg,#e7eef6 25%,transparent 25%) -12px 0/24px 24px,linear-gradient(-45deg,#e7eef6 25%,transparent 25%) -12px 0/24px 24px,#eef3f9}
+  .tmap .route{position:absolute;left:14%;top:60%;right:16%;height:3px;background:repeating-linear-gradient(90deg,var(--efso) 0 9px,transparent 9px 16px)}
+  .tmap .pa,.tmap .pb,.tmap .pc{position:absolute;font-size:26px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.25))}
+  .tmap .pa{left:10%;top:42%}.tmap .pb{right:11%;top:42%}.tmap .pc{left:46%;top:30%;font-size:22px}
+  .tmap .eta{position:absolute;top:10px;left:12px;background:#fff;border-radius:10px;padding:6px 11px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+  .tmap .lbl{position:absolute;bottom:8px;right:10px;font-size:10px;color:#4285F4;font-weight:700;background:#fff;padding:2px 7px;border-radius:6px}
+
+  /* durum zaman çizelgesi */
+  .timeline{position:relative;padding-left:6px}
+  .tl{display:flex;gap:13px;position:relative;padding-bottom:16px}
+  .tl:last-child{padding-bottom:0}
+  .tl .dotc{width:30px;flex:0 0 auto;display:flex;flex-direction:column;align-items:center}
+  .tl .d{width:30px;height:30px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:14px;z-index:1}
+  .tl .ln{width:2px;flex:1;background:#e2e8f0;margin:2px 0}
+  .tl:last-child .ln{display:none}
+  .tl.done .d{background:var(--green);color:#fff}.tl.done .ln{background:var(--green)}
+  .tl.cur .d{background:var(--efso);color:#fff;box-shadow:0 0 0 4px #cffafe}
+  .tl .tx{padding-top:4px}
+  .tl .tx b{font-size:13.5px;display:block}.tl .tx span{font-size:11.5px;color:var(--muted)}
+  .tl.future .tx b{color:#94a3b8;font-weight:600}
+
   .hide{display:none!important}
 </style>
 </head>
@@ -251,7 +338,7 @@
           <div class="nitem" data-cat="evofis" onclick="selectCat('evofis')"><span class="ic">🏠</span> Ev &amp; Ofis Taşımacılığı <span class="nbadge">1</span></div>
         </div>
       </div>
-      <div class="nitem"><span class="ic">🗂️</span> Sipariş Listesi</div>
+      <div class="nitem" id="navList" onclick="showView('list')"><span class="ic">🗂️</span> Sipariş Listesi <span class="nbadge" id="navListBadge">0</span></div>
       <div class="nitem"><span class="ic">🚚</span> Kuryeler / Filo</div>
 
       <div class="navsec">Yönetim</div>
@@ -276,6 +363,9 @@
     </div>
 
     <div class="content">
+
+     <!-- ============ VIEW: YENİ SİPARİŞ (wizard) ============ -->
+     <div id="viewNew">
 
       <!-- Wizard step indicator -->
       <div class="steps" id="stepbar">
@@ -335,6 +425,27 @@
           <button class="btn primary" onclick="placeOrder()">✓ Siparişi Oluştur</button>
         </div>
       </section>
+
+     </div><!-- /viewNew -->
+
+     <!-- ============ VIEW: SİPARİŞ LİSTESİ ============ -->
+     <div id="viewList" class="hide">
+       <div class="list-head">
+         <div>
+           <h2 class="page-h">Siparişlerim</h2>
+           <p class="page-sub" style="margin:0">Tüm siparişler ve canlı durumları. Takip için satırdaki <b>Takip →</b>'e tıklayın.</p>
+         </div>
+         <button class="btn primary" onclick="selectCat(S.cat||'yuk')">+ Yeni Sipariş</button>
+       </div>
+       <div class="chips" id="statusChips"></div>
+       <div id="listHost"></div>
+     </div>
+
+     <!-- ============ VIEW: SİPARİŞ TAKİP ============ -->
+     <div id="viewTrack" class="hide">
+       <div class="track-back" onclick="showView('list')">← Sipariş listesine dön</div>
+       <div id="trackHost"></div>
+     </div>
 
     </div>
   </div>
@@ -455,8 +566,26 @@ function selectCat(cat){
   S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{} };
   document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.toggle('active', n.dataset.cat===cat));
   document.getElementById('cbCat').textContent = CATS[cat].label;
+  showView('new');
   renderStep1();
   goStep(1);
+}
+
+/* ============================================================
+   GÖRÜNÜM YÖNETİMİ (Yeni sipariş · Liste · Takip)
+   ============================================================ */
+function showView(v){
+  document.getElementById('viewNew').classList.toggle('hide', v!=='new');
+  document.getElementById('viewList').classList.toggle('hide', v!=='list');
+  document.getElementById('viewTrack').classList.toggle('hide', v!=='track');
+  const nav=document.getElementById('navList');
+  nav.style.background = v==='list' ? '#162033' : '';
+  nav.style.color      = v==='list' ? '#fff' : '';
+  const cbStep=document.getElementById('cbStep');
+  if(v==='list'){ document.getElementById('cbCat').textContent='Sipariş Listesi'; cbStep.textContent='Liste';
+    document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.remove('active')); renderList(); }
+  if(v==='track'){ cbStep.textContent='Takip'; }
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function goStep(n){
@@ -1056,9 +1185,212 @@ function renderStep4(){
 }
 
 function placeOrder(){
-  toast('✅ Sipariş oluşturuldu — Kurye aranıyor… (#EFSO-' + Math.floor(performance.now()).toString().slice(-6) + ')');
-  S.route=[]; S.items=[]; S.addrMap={}; S.slot=null; S.stops=0;   // yeni sipariş için temizle
-  setTimeout(()=>{ goStep(1); document.querySelector('.steps').scrollIntoView(); }, 1600);
+  const o=buildOrder();              // mevcut sihirbaz durumundan sipariş üret
+  ORDERS.unshift(o);
+  updateNavListBadge();
+  toast('✅ Sipariş oluşturuldu — '+o.no+' · Takip ekranı açılıyor…');
+  S.route=[]; S.items=[]; S.addrMap={}; S.slot=null; S.stops=0; S.mode=null; S.veh=null;  // yeni sipariş için temizle
+  showTrack(o.no);
+  // DEMO: kurye ~3.5 sn sonra otomatik atanır (gerçekte dispatch motoru)
+  setTimeout(()=>{ const cur=ORDERS.find(x=>x.no===o.no); if(cur && cur.status==='KuryeAraniyor') setStatus(o.no,'KuryeAtandi'); }, 3500);
+}
+
+/* ============================================================
+   SİPARİŞ LİSTESİ + TAKİP MOTORU
+   ============================================================ */
+const STATUSES=[
+  {key:'Beklemede',         label:'Beklemede',          ic:'🕒', sub:'Sipariş alındı, işleniyor'},
+  {key:'KuryeAraniyor',     label:'Kurye Aranıyor',     ic:'🔎', sub:'En uygun kurye atanıyor'},
+  {key:'KuryeAtandi',       label:'Kurye Atandı',       ic:'🧑‍✈️', sub:'Kurye alıma yöneliyor'},
+  {key:'AlimAdresinde',     label:'Alım Adresinde',     ic:'📍', sub:'Kurye alım noktasında'},
+  {key:'Yukleniyor',        label:'Yükleniyor',         ic:'📦', sub:'Yük araca alınıyor'},
+  {key:'Yolda',             label:'Yolda',              ic:'🚚', sub:'Teslimata gidiliyor'},
+  {key:'TeslimatAdresinde', label:'Teslimat Adresinde', ic:'🏁', sub:'Teslim noktasında'},
+  {key:'Bosaltiliyor',      label:'Boşaltılıyor',       ic:'📥', sub:'Yük indiriliyor'},
+  {key:'Tamamlandi',        label:'Tamamlandı',         ic:'🎉', sub:'Teslim edildi'},
+];
+const COURIERS=[
+  {name:'Mehmet Yıldız', veh:'Ford Transit · 34 EFS 042', rate:'4.9 ★'},
+  {name:'Ayşe Korkmaz',  veh:'Mercedes Vito · 34 KRY 188', rate:'4.8 ★'},
+  {name:'Hasan Demir',   veh:'Moto Kurye · 34 MTO 771',    rate:'5.0 ★'},
+];
+let orderSeq=482, CUR_TRACK=null, LIST_FILTER='all';
+
+const ORDERS=[
+  {no:'EFSO-2026-000481', cat:'yuk', catLabel:'Yük Taşımacılığı', vehName:'Van Ford Transit', vehEmoji:'🚐',
+   modeLabel:'Express', rtText:'A1: Levent, Beşiktaş · T1: Ataşehir', km:18, stops:0, itemsN:2, price:469,
+   status:'Yolda', createdAt:'09.06.2026 11:20',
+   courier:{name:'Mehmet Yıldız', veh:'Ford Transit · 34 EFS 042', rate:'4.9 ★', eta:'7 dk', phone:'+90 5•• ••• 42 18'},
+   routeSnap:[{type:'pick',addr:'Levent, Beşiktaş, İstanbul'},{type:'drop',addr:'Ataşehir, İstanbul'}], fromTo:null},
+  {no:'EFSO-2026-000479', cat:'yolcu', catLabel:'Yolcu Taşımacılığı', vehName:'Mercedes Vito', vehEmoji:'🚐',
+   modeLabel:'Şimdi', rtText:'Taksim → Sabiha Gökçen Havalimanı', km:42, stops:0, itemsN:0, price:1280,
+   status:'Tamamlandi', createdAt:'08.06.2026 19:05',
+   courier:{name:'Ayşe Korkmaz', veh:'Mercedes Vito · 34 KRY 188', rate:'4.8 ★', eta:'—', phone:'+90 5•• ••• 11 90'},
+   routeSnap:[], fromTo:{from:'Taksim, Beyoğlu', to:'Sabiha Gökçen Havalimanı'}},
+  {no:'EFSO-2026-000476', cat:'yuk', catLabel:'Yük Taşımacılığı', vehName:'Moto Kurye', vehEmoji:'🛵',
+   modeLabel:'Express', rtText:'A1: Kadıköy Rıhtım · T1: Üsküdar Meydanı', km:6, stops:0, itemsN:1, price:140,
+   status:'KuryeAraniyor', createdAt:'09.06.2026 14:10', courier:null,
+   routeSnap:[{type:'pick',addr:'Kadıköy Rıhtım, Kadıköy'},{type:'drop',addr:'Üsküdar Meydanı'}], fromTo:null},
+];
+
+function nowStr(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
+  return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+function buildOrder(){
+  const v=curVeh(), M=S.mode?MODES[S.mode]:null, p=priceModel();
+  orderSeq++;
+  return {
+    no:'EFSO-2026-'+String(orderSeq).padStart(6,'0'),
+    cat:S.cat, catLabel:CATS[S.cat].label, vehName:v.name, vehEmoji:v.ph||'🚚',
+    modeLabel:M?M.name.split('—')[0].trim():'Randevu', rtText:routeText(),
+    km:p.km, stops:p.stops, itemsN:(S.cat==='yuk'&&!v.selectOnly)?S.items.length:0,
+    price:p.sale, meter:p.meter, survey:p.survey,
+    status:'KuryeAraniyor', createdAt:nowStr(), courier:null,
+    routeSnap: S.route.map(s=>({type:s.type, addr:S.addrMap['st_'+s.id]||''})),
+    fromTo: S.cat!=='yuk' ? {from:S.addrMap.from||'', to:S.addrMap.to||''} : null,
+  };
+}
+function assignCourier(o){
+  const c=COURIERS[orderSeq%COURIERS.length];
+  return {...c, eta:(4+(o.km%12))+' dk', phone:'+90 5•• ••• '+String(10+(orderSeq%89)).padStart(2,'0')+' '+String(o.km%90).padStart(2,'0')};
+}
+function statusBadge(o){
+  if(o.status==='IptalEdildi') return {cls:'st-cancel', ic:'✕', label:'İptal Edildi'};
+  const k=o.status;
+  if(k==='Beklemede')     return {cls:'st-wait', ic:'🕒', label:'Beklemede'};
+  if(k==='KuryeAraniyor') return {cls:'st-seek pulse', ic:'', label:'Kurye Aranıyor'};
+  if(k==='KuryeAtandi')   return {cls:'st-assigned', ic:'🧑‍✈️', label:'Kurye Atandı'};
+  if(k==='Tamamlandi')    return {cls:'st-done', ic:'🎉', label:'Tamamlandı'};
+  const m=STATUSES.find(s=>s.key===k)||{}; return {cls:'st-progress', ic:m.ic||'🚚', label:m.label||k};
+}
+function setStatus(no,key){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  o.status=key;
+  if(key==='KuryeAtandi' && !o.courier) o.courier=assignCourier(o);
+  renderList();
+  if(!document.getElementById('viewTrack').classList.contains('hide') && CUR_TRACK===no) renderTrack();
+  updateNavListBadge();
+}
+function advanceStatus(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o||o.status==='IptalEdildi'||o.status==='Tamamlandi') return;
+  const idx=STATUSES.findIndex(s=>s.key===o.status);
+  if(idx>-1 && idx<STATUSES.length-1) setStatus(no, STATUSES[idx+1].key);
+}
+function cancelOrder(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  if(o.status==='Tamamlandi'){ toast('Tamamlanan sipariş iptal edilemez.'); return; }
+  setStatus(no,'IptalEdildi'); toast('Sipariş iptal edildi.');
+}
+function updateNavListBadge(){ const b=document.getElementById('navListBadge'); if(b) b.textContent=ORDERS.length; }
+function setListFilter(f){ LIST_FILTER=f; renderList(); }
+
+function renderList(){
+  const host=document.getElementById('listHost'), chipsEl=document.getElementById('statusChips'); if(!host) return;
+  const groups=[['all','Tümü'],['KuryeAraniyor','Kurye Aranıyor'],['KuryeAtandi','Atandı'],['Yolda','Yolda'],['Tamamlandi','Tamamlandı'],['IptalEdildi','İptal']];
+  chipsEl.innerHTML=groups.map(g=>{
+    const cnt = g[0]==='all'?ORDERS.length:ORDERS.filter(o=>o.status===g[0]).length;
+    return `<div class="chip ${LIST_FILTER===g[0]?'on':''}" onclick="setListFilter('${g[0]}')">${g[1]} <span class="ct">${cnt}</span></div>`;
+  }).join('');
+  const rows=ORDERS.filter(o=>LIST_FILTER==='all'||o.status===LIST_FILTER);
+  if(!rows.length){ host.innerHTML=`<div class="empty"><div class="e">📭</div><h3>Sipariş yok</h3><p>Bu filtrede sipariş bulunmuyor.</p></div>`; return; }
+  host.innerHTML=`<div class="otable">
+    ${rows.map(o=>{ const b=statusBadge(o); return `<div class="orow" onclick="showTrack('${o.no}')">
+      <div class="oemoji">${o.vehEmoji}</div>
+      <div class="omain">
+        <div class="ol1"><span class="ono">${o.no}</span><span class="ovh">${o.vehName}</span><span class="odim">${o.catLabel} · ${o.modeLabel} · ${o.createdAt}</span></div>
+        <div class="oroute">${o.rtText||'—'}</div>
+      </div>
+      <div class="oend">
+        <span class="sbadge ${b.cls}">${b.ic} ${b.label}</span>
+        <span class="oamt">${(o.meter||o.survey)?'~':''}${money(o.price)}</span>
+        <span class="ogo">Takip →</span>
+      </div></div>`; }).join('')}
+  </div>`;
+}
+
+function showTrack(no){ CUR_TRACK=no; renderTrack(); showView('track'); }
+
+function renderTrack(){
+  const o=ORDERS.find(x=>x.no===CUR_TRACK), host=document.getElementById('trackHost'); if(!o||!host) return;
+  const b=statusBadge(o);
+  const cancelled=o.status==='IptalEdildi';
+  const idx=cancelled?-1:STATUSES.findIndex(s=>s.key===o.status);
+
+  // sol üst: kurye aranıyor / kurye kartı / tamamlandı
+  let topBox='';
+  if(o.status==='KuryeAraniyor'){
+    topBox=`<div class="seekbox"><div class="spinner"></div>
+      <div><b>Kurye aranıyor…</b><span>Konumuna en yakın ve uygun kurye atanıyor. Atanınca burada kurye bilgisi ve canlı konum görünecek.</span></div></div>`;
+  } else if(cancelled){
+    topBox=`<div class="seekbox" style="background:#fef2f2;border-color:#fecaca"><div style="font-size:34px">✕</div>
+      <div><b>Sipariş iptal edildi</b><span>Bu sipariş artık takip edilmiyor.</span></div></div>`;
+  } else if(o.courier){
+    const c=o.courier;
+    const done=o.status==='Tamamlandi';
+    topBox=`<div class="courier">
+      <div class="row1"><div class="av">${c.name.split(' ').map(x=>x[0]).join('').slice(0,2)}</div>
+        <div><div class="nm">${c.name}</div><div class="vh">${c.veh}</div></div>
+        <div class="rate">${c.rate}<br><span style="color:var(--muted);font-weight:400">${done?'teslim etti':'ETA '+(c.eta||'—')}</span></div></div>
+      <div class="acts"><button class="call" onclick="toast('📞 Maskeli hat üzerinden aranıyor…')">📞 Ara</button>
+        <button onclick="toast('💬 Mesaj penceresi (mockup)')">💬 Mesaj</button>
+        <button onclick="toast('📍 Canlı konum (mockup)')">📍 Konum</button></div>
+      <div class="mask">📞 ${c.phone} — telefon maskelenir; gerçek numara taraflara gösterilmez (disintermediation savunması).</div>
+    </div>`;
+  }
+
+  // harita (kurye atandıysa)
+  const showMap = !cancelled && idx>=2;
+  const mapBox = showMap ? `<div class="tmap">
+      <div class="eta">⏱️ ${o.courier?('ETA '+(o.status==='Tamamlandi'?'—':o.courier.eta)):'—'} · ${o.km} km</div>
+      <span class="pa">📍</span><span class="pc">🚚</span><span class="pb">🏁</span><div class="route"></div>
+      <span class="lbl">Google Maps · canlı</span></div>` : '';
+
+  // zaman çizelgesi
+  const tl=STATUSES.map((s,i)=>{
+    const cls = cancelled ? 'future' : (i<idx?'done':(i===idx?'cur':'future'));
+    const ic  = (!cancelled && i<idx) ? '✓' : s.ic;
+    return `<div class="tl ${cls}"><div class="dotc"><div class="d">${ic}</div><div class="ln"></div></div>
+      <div class="tx"><b>${s.label}</b><span>${s.sub}</span></div></div>`;
+  }).join('');
+
+  // sağ: özet + aksiyonlar
+  const route = o.routeSnap && o.routeSnap.length
+    ? o.routeSnap.map((s,i)=>`<div style="display:flex;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:12.5px">
+        <span>${s.type==='pick'?'📍':'🏁'}</span><span>${s.type==='pick'?'Alım':'Teslim'}: <b>${s.addr||'—'}</b></span></div>`).join('')
+    : (o.fromTo ? `<div style="font-size:12.5px;padding:6px 0">📍 ${o.fromTo.from||'—'} → 🏁 ${o.fromTo.to||'—'}</div>` : '');
+
+  host.innerHTML=`
+    <div class="thead">
+      <div><div class="ono">${o.no}</div><div class="meta">${o.catLabel} · ${o.vehEmoji} ${o.vehName} · ${o.modeLabel} · ${o.createdAt}</div></div>
+      <div class="sp"></div>
+      <span class="sbadge ${b.cls}" style="font-size:13px;padding:7px 14px">${b.ic} ${b.label}</span>
+    </div>
+    <div class="trackwrap">
+      <div>
+        ${topBox}
+        ${mapBox}
+        <div class="panel"><div class="panel-h"><div class="n">🛰️</div><b>Durum Geçmişi</b>
+          <span class="badge">${cancelled?'İptal':(idx+1)+' / '+STATUSES.length}</span></div>
+          <div class="panel-b"><div class="timeline">${tl}</div></div></div>
+      </div>
+      <div class="sticky">
+        <div class="sum">
+          <div class="sh">📦 Sipariş Özeti</div>
+          <div class="row"><span>Sipariş No</span><b>${o.no}</b></div>
+          <div class="row"><span>Araç</span><b>${o.vehName}</b></div>
+          <div class="row"><span>Mesafe / Durak</span><b>${o.km} km · ${o.stops} ek durak</b></div>
+          ${o.itemsN?`<div class="row"><span>Ürün</span><b>${o.itemsN} kalem</b></div>`:''}
+          <div style="padding:12px 16px;border-bottom:1px dashed var(--line)">
+            <div style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Güzergah</div>${route}</div>
+          <div class="price"><div class="big">${(o.meter||o.survey)?'~':''}${money(o.price)}</div><small>${o.survey?'keşif sonrası netleşir':'KDV dahil'}</small></div>
+        </div>
+        <div class="actions" style="margin-top:14px;flex-direction:column">
+          ${(!cancelled&&o.status!=='Tamamlandi')?`<button class="btn primary" style="width:100%" onclick="advanceStatus('${o.no}')">▶ Demo: Durumu İlerlet</button>`:''}
+          <button class="btn ghost" style="width:100%" onclick="toast('🛟 Destek talebi oluşturuldu (mockup)')">🛟 Destek / Sorun Bildir</button>
+          ${(!cancelled&&o.status!=='Tamamlandi')?`<button class="btn ghost" style="width:100%;color:var(--red);border-color:#fecaca" onclick="cancelOrder('${o.no}')">✕ Siparişi İptal Et</button>`:''}
+        </div>
+      </div>
+    </div>`;
 }
 
 /* ============================================================
@@ -1072,6 +1404,7 @@ function toast(msg){
 
 /* ---- başlangıç ---- */
 renderStep1();
+updateNavListBadge();
 </script>
 </body>
 </html>
