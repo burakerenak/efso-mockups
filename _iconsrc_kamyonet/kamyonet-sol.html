@@ -2,22 +2,34 @@
 <style>html,body{margin:0;padding:0;background:transparent}svg{display:block;width:512px;height:512px}</style></head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <g id="wheel" fill="none" stroke="#6cb7e2" stroke-linecap="round">
+      <circle r="46" stroke-width="13"/>   <!-- dış lastik -->
+      <circle r="29" stroke-width="9"/>    <!-- jant -->
+      <circle r="7"  stroke-width="9"/>    <!-- göbek -->
+      <g stroke-width="7">                  <!-- 5 kollu jant -->
+        <line y1="-11" y2="-26"/>
+        <line y1="-11" y2="-26" transform="rotate(72)"/>
+        <line y1="-11" y2="-26" transform="rotate(144)"/>
+        <line y1="-11" y2="-26" transform="rotate(216)"/>
+        <line y1="-11" y2="-26" transform="rotate(288)"/>
+      </g>
+    </g>
+  </defs>
   <g fill="none" stroke="#6cb7e2" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
-    <!-- kamyonet yan dış hat (ön solda): kabin + yüksek kasa -->
-    <path d="M70 314 L70 246 L120 208 L170 208 L170 150 L456 150 L456 314 Z"/>
+    <!-- gövde: kabin + yüksek kasa, altta çamurluk arkları -->
+    <path d="M70 314 L70 250 L118 210 L168 210 L168 150 L456 150 L456 314 L444 314
+             A52 52 0 0 1 340 314 L198 314 A52 52 0 0 1 94 314 L70 314 Z"/>
     <!-- kabin camı -->
     <path d="M86 248 L116 216 L150 216 L150 248 Z"/>
     <!-- kabin / kasa ayrımı -->
-    <path d="M170 210 V314"/>
+    <path d="M168 212 V300"/>
     <!-- kasa panel dikişi -->
     <path d="M314 172 V292"/>
     <!-- far -->
-    <rect x="74" y="288" width="22" height="24" rx="6"/>
-    <!-- tekerlekler -->
-    <circle cx="142" cy="314" r="42"/>
-    <circle cx="392" cy="314" r="42"/>
-    <circle cx="142" cy="314" r="14"/>
-    <circle cx="392" cy="314" r="14"/>
+    <rect x="74" y="284" width="22" height="24" rx="6"/>
   </g>
+  <use href="#wheel" transform="translate(146,314)"/>
+  <use href="#wheel" transform="translate(392,314)"/>
 </svg>
 </body></html>
