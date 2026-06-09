@@ -115,7 +115,7 @@
   .hintbox{font-size:11.5px;color:var(--muted);line-height:1.5;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:6px}
 
   /* address stops */
-  .stop{border:1px solid var(--line);border-radius:13px;margin-top:12px;background:var(--soft);overflow:hidden}
+  .stop{border:1px solid var(--line);border-radius:13px;margin-top:12px;background:var(--soft)}
   .stop .top{display:flex;align-items:center;gap:11px;padding:12px}
   .stop .pin{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
   .pin.pick0{background:#dbeafe}.pin.drop0{background:#dcfce7}.pin.mid{background:#fef9c3}
@@ -148,7 +148,16 @@
   .seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .seg button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;font-size:12px;cursor:pointer;font-weight:600;color:#475569}
   .seg button.on{border-color:var(--efso);background:#e0f7fa;color:var(--efso-dark)}
-  .desi{font-size:11.5px;color:var(--efso-dark);background:#e0f7fa;border-radius:9px;padding:7px 11px;margin-top:10px;font-weight:600;display:flex;justify-content:space-between}
+  .desi{font-size:11.5px;color:var(--efso-dark);background:#e0f7fa;border-radius:9px;padding:7px 11px;margin-top:10px;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+  /* durak kartı — Detay açılır + sil (detaylı ekran mantığı) */
+  .stop .act{display:flex;gap:10px;align-items:center;flex:0 0 auto}
+  .stop .edit{color:var(--efso);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .stop .det{display:none;padding:8px 12px 12px;border-top:1px dashed var(--line);background:#fff;border-radius:0 0 12px 12px}
+  .stop.exp .det{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+  /* ürün dinamik alanlar */
+  .dyn{border-top:1px dashed var(--line);margin-top:11px;padding-top:9px}
+  .dyn .tag{display:inline-block;font-size:10px;color:var(--amber);background:#fff7ed;border:1px solid #fed7aa;padding:1px 8px;border-radius:6px;margin-bottom:6px}
 
   /* slot selector */
   .slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
@@ -334,10 +343,10 @@
 <!-- KAPASİTE UYARI MODALI -->
 <div class="ovl" id="capModal">
   <div class="modal">
-    <div class="mh"><div class="ic">⚠️</div><b>Kap bilgileri araca uymuyor</b></div>
+    <div class="mh"><div class="ic">⚠️</div><b>Yük araca uymuyor</b></div>
     <div class="mb" id="capText"></div>
     <div class="mf">
-      <button class="btn ghost" onclick="closeCap()">Kap Bilgisini Düzenle</button>
+      <button class="btn ghost" onclick="closeCap()">Ürün Bilgisini Düzenle</button>
       <button class="btn primary" id="capRedirect">Uygun Araca Yönlendir →</button>
     </div>
   </div>
@@ -434,7 +443,8 @@ const MODE_ADJ = { express:1, gunici:0.82, ileri:0.78, simdi:1, randevu:1 };
 /* ============================================================
    DURUM
    ============================================================ */
-let S = { cat:'yolcu', mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount:2, km:12, stops:0, addr:{from:'',to:''} };
+let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
+          route:[], items:[], addrMap:{} };
 
 /* ============================================================
    NAVIGASYON
@@ -442,7 +452,7 @@ let S = { cat:'yolcu', mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount
 function toggleGroup(id){ document.getElementById(id).classList.toggle('open'); }
 
 function selectCat(cat){
-  S = { cat, mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount:2, km:12, stops:0, addr:{from:'',to:''} };
+  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{} };
   document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.toggle('active', n.dataset.cat===cat));
   document.getElementById('cbCat').textContent = CATS[cat].label;
   renderStep1();
@@ -512,8 +522,9 @@ function renderStep2(){
   document.getElementById('s2title').textContent = S.cat==='yolcu'?'Araç Tipini Seçin':'Araç Tipini Seçin';
 }
 function pickVeh(id){
-  S.veh=id; S.kaps=[]; S.slot=null; S.stops=0;
+  S.veh=id; S.slot=null;
   S.km = id.startsWith('tir') ? 250 : (id.startsWith('kamyon') ? 60 : 12); // tahmini varsayılan mesafe
+  recalcStops();   // ek durak sayısı route'tan türetilir
   renderStep2(); setTimeout(()=>goStep(3),160);
 }
 function curVeh(){ return CATS[S.cat].vehicles.find(v=>v.id===S.veh); }
@@ -533,8 +544,8 @@ function renderStep3(){
   else                     html=formYuk(v,M);
 
   document.getElementById('formHost').innerHTML = html;
-  // varsayılan bir kap ekle (kap formu varsa)
-  if(S.cat==='yuk' && !v.selectOnly && S.kaps.length===0) addKap();
+  // yük: kategori-bazlı ürün kartlarını çiz (araç-seçimi-yeterli tiplerde ürün yok)
+  if(S.cat==='yuk' && !v.selectOnly){ ensureItems(); renderItems(); }
   renderLiveSum();
 }
 
@@ -563,7 +574,7 @@ const AC_LOCAL = [
 let acTimer=null, acReqId=0;
 
 function acInput(which,q){
-  S.addr[which]=q;
+  S.addrMap[which]=q;
   const list=document.getElementById('aclist_'+which); if(!list) return;
   if(!q || q.trim().length<2){ list.classList.remove('show'); list.innerHTML=''; return; }
   renderAc(which, acLocal(q));                 // anında yerel öneri
@@ -598,16 +609,16 @@ function renderAc(which,items){
   list.classList.add('show');
 }
 function acPick(which,el){
-  const v=el.getAttribute('data-v'); S.addr[which]=v;
+  const v=el.getAttribute('data-v'); S.addrMap[which]=v;
   const inp=document.getElementById('ac_'+which); if(inp) inp.value=v;
   const list=document.getElementById('aclist_'+which); if(list){list.classList.remove('show');list.innerHTML='';}
-  toast('📍 '+(which==='from'?'Alım/Çıkış':'Teslim/Varış')+' adresi seçildi');
+  toast('📍 Adres seçildi: '+v);
 }
 function acBlur(which){ setTimeout(()=>{const l=document.getElementById('aclist_'+which); if(l) l.classList.remove('show');},160); }
 
 /* Adres giriş satırı (pin + label + autocomplete input) */
 function addrInput(which,label,placeholder,pinClass,icon){
-  const val=(S.addr[which]||'').replace(/"/g,'&quot;');
+  const val=(S.addrMap[which]||'').replace(/"/g,'&quot;');
   return `<div class="stop"><div class="top">
     <div class="pin ${pinClass}">${icon}</div>
     <div class="meta" style="flex:1">
@@ -621,28 +632,80 @@ function addrInput(which,label,placeholder,pinClass,icon){
   </div></div>`;
 }
 
-/* ---- ADRES bloğu ---- */
-function addrBlock(M){
-  const multi = M && M.multi;
-  let stops =
-    addrInput('from','Alım Adresi (A)','Adres yazın — öneriler gelir…','pick0','📍') +
-    addrInput('to','Teslim Adresi (B)','Adres yazın — öneriler gelir…','drop0','🏁');
-  const addBtns = multi ? `
-    <div class="addrow">
-      <button class="btn-ghost" onclick="addStop('Ara durak (B→C)')">+ Ara Durak (A-B + B-C)</button>
-      <button class="btn-ghost" onclick="addStop('Çoklu teslim (A-N)')">+ Çoklu Teslim (A-N / N-N)</button>
+/* ============================================================
+   GÜZERGAH — çok duraklı (ara durak + çoklu alım/teslim) · detaylı ekran mantığı
+   ============================================================ */
+let stopSeq=0;
+function newStop(type){ return {id:'s'+(++stopSeq), type, name:'' }; }
+function ensureRoute(){ if(!S.route || S.route.length===0){ stopSeq=0; S.route=[newStop('pick'), newStop('drop')]; recalcStops(); } }
+function picks(){ return S.route.filter(s=>s.type==='pick'); }
+function drops(){ return S.route.filter(s=>s.type==='drop'); }
+function recalcStops(){ S.stops = Math.max(0,(picks().length-1)+(drops().length-1)); } // fiyata esas ek durak
+function addRouteStop(type){
+  S.route.push(newStop(type)); recalcStops();
+  toast('+ '+(type==='pick'?'Alım':'Teslim')+' noktası eklendi'); renderStep3();
+}
+function delRouteStop(id){
+  const s=S.route.find(x=>x.id===id); if(!s) return;
+  if(s.type==='pick' && picks().length<=1) return;   // en az 1 alım
+  if(s.type==='drop' && drops().length<=1) return;   // en az 1 teslim
+  S.route=S.route.filter(x=>x.id!==id); delete S.addrMap['st_'+id];
+  // ürünlerin bağlı durak indekslerini sınırla
+  const np=picks().length, nd=drops().length;
+  S.items.forEach(it=>{ it.from=Math.min(it.from||1,np); it.to=Math.min(it.to||1,nd); });
+  recalcStops(); renderStep3();
+}
+function toggleStopDet(id){ const c=document.getElementById('det_'+id); if(c) c.closest('.stop').classList.toggle('exp'); }
+function setStopName(id,v){ const s=S.route.find(x=>x.id===id); if(s) s.name=v; }
+
+function stopCard(s){
+  const isPick=s.type==='pick';
+  const n=(isPick?picks():drops()).indexOf(s)+1;
+  const pin=isPick?'📍':'🏁', cls=isPick?'pick0':'drop0', who=isPick?'Gönderici':'Alıcı';
+  const lbl=(isPick?'Alım ':'Teslim ')+n;
+  const canDel = isPick ? picks().length>1 : drops().length>1;
+  const key='st_'+s.id;
+  const val=(S.addrMap[key]||'').replace(/"/g,'&quot;');
+  return `<div class="stop"><div class="top">
+      <div class="pin ${cls}">${pin}</div>
+      <div class="meta" style="flex:1">
+        <b>${lbl}</b>
+        <div class="acwrap">
+          <input class="ac-in" id="ac_${key}" autocomplete="off" placeholder="Adres yazın — öneriler gelir…" value="${val}"
+            oninput="acInput('${key}',this.value)" onfocus="acInput('${key}',this.value)" onblur="acBlur('${key}')">
+          <div class="ac-list" id="aclist_${key}"></div>
+        </div>
+      </div>
+      <div class="act"><span class="edit" onclick="toggleStopDet('${s.id}')">Detay</span>
+        ${canDel?`<span class="del" onclick="delRouteStop('${s.id}')">🗑️</span>`:''}</div>
     </div>
-    ${S.stops>0?`<div class="hintbox" style="margin-top:9px;display:flex;justify-content:space-between;align-items:center">
-      <span>🚏 ${S.stops} ek durak eklendi — fiyata yansıdı.</span>
-      <span style="color:var(--red);cursor:pointer;font-weight:600" onclick="setStops(0)">Sıfırla ✕</span></div>`:''}` : '';
-  return `<div class="panel addr"><div class="panel-h"><div class="n">1</div><b>Adres Bilgileri</b>
-      <span class="badge">${multi?'A-B · A-B+B-C · A-N · N-N':'A → B Direkt'}</span></div>
-    <div class="panel-b">${stops}${addBtns}</div></div>`;
+    <div class="det" id="det_${s.id}">
+      <div class="grid2"><div><label class="fld">Tarih</label><input type="date"></div>
+        <div><label class="fld">Saat aralığı</label><input type="time" value="10:00"></div></div>
+      <label class="fld">${who} adı</label><input placeholder="Ad Soyad / Firma" value="${(s.name||'').replace(/"/g,'&quot;')}" onchange="setStopName('${s.id}',this.value)">
+      <label class="fld">Telefon (maskeli)</label><input value="+90 5•• ••• 42 18" readonly>
+      <div class="note">📞 Telefon maskeleme aktif — gerçek numara taraflara gösterilmez.</div>
+    </div></div>`;
+}
+
+function routeBlock(){
+  ensureRoute();
+  const badge=`${picks().length} alım · ${drops().length} teslim`;
+  return `<div class="panel addr"><div class="panel-h"><div class="n">1</div><b>Güzergah (Duraklar)</b>
+      <span class="badge ok">${badge}</span></div>
+    <div class="panel-b">
+      ${S.route.map(stopCard).join('')}
+      <div class="addrow">
+        <button class="btn-ghost" onclick="addRouteStop('pick')">+ Alım Noktası</button>
+        <button class="btn-ghost" onclick="addRouteStop('drop')">+ Teslim Noktası</button>
+      </div>
+      <div class="note" style="margin-top:9px">Çoklu alım/teslim → otomatik <b>1→N / N→N</b> rotalama. Adresler harita önerili (anahtarsız), her durakta <b>Detay</b> ile tarih/kişi/maskeli telefon. Ek duraklar fiyata yansır.</div>
+    </div></div>`;
 }
 
 /* ---- YÜK formu ---- */
 function formYuk(v,M){
-  let h = addrBlock(M);
+  let h = routeBlock();
 
   // Slot (gün içi / ileri tarihli)
   if(M && M.slot){
@@ -686,8 +749,9 @@ function formYuk(v,M){
         </div></div>`;
     }
   } else {
-    h += `<div class="panel"><div class="panel-h"><div class="n">${nKap}</div><b>Kap Bilgileri</b>
-        <span class="badge">${v.kap.join(' · ')}</span></div><div class="panel-b" id="kapHost"></div></div>`;
+    h += `<div class="panel"><div class="panel-h"><div class="n">${nKap}</div><b>Yük / Ürünler</b>
+        <span class="badge" id="itemBadge">${(S.items&&S.items.length)||0} ürün</span></div>
+      <div class="panel-b" id="itemHost"></div></div>`;
   }
 
   // Gün içi/ileri ek alanları (yükleyen/boşaltan + süre)
@@ -708,48 +772,79 @@ function formYuk(v,M){
   return h;
 }
 
-/* ---- KAP ekleme (dinamik) ---- */
-function addKap(){
-  const v=curVeh();
-  const id='k'+(S.kaps.length+1)+'_'+Math.floor(performance.now());
-  S.kaps.push({id, type:v.kap[0], qty:1, kg:1});
-  renderKaps();
+/* ============================================================
+   YÜK / ÜRÜNLER — kategori-bazlı ürün kartları · detaylı ekran mantığı
+   kategori → dinamik alanlar (ölçü/kırılabilir/soğuk) · desi otomatik · hangi alım→teslim
+   ============================================================ */
+const ITEM_CATS = {
+  'Koli / Paket':{dims:true},
+  'Palet':{dims:true},
+  'Beyaz eşya':{dims:true,fragile:true},
+  'Mobilya':{dims:true,fragile:true},
+  'Gıda (soğuk)':{cold:true},
+  'Evrak / Zarf':{},
+  'Diğer':{dims:true},
+};
+let itemSeq=0;
+function ensureItems(){ if(!S.items) S.items=[]; if(S.items.length===0) addItem(true); }
+function addItem(silent){
+  S.items.push({id:'i'+(++itemSeq), cat:Object.keys(ITEM_CATS)[0], qty:1, kg:10, val:0, w:40, l:50, hh:60, from:1, to:1});
+  if(!silent) renderItems(true);
 }
-function rmKap(id){ S.kaps=S.kaps.filter(k=>k.id!==id); renderKaps(); }
-function setKapType(id,t){ const k=S.kaps.find(x=>x.id===id); k.type=t; renderKaps(); }
-function setKapVal(id,f,val){ const k=S.kaps.find(x=>x.id===id); k[f]=+val||0; updateDesi(); checkCapacity(); renderLiveSum(); }
-
-function renderKaps(){
-  const host=document.getElementById('kapHost'); if(!host) return;
-  const v=curVeh();
-  host.innerHTML = S.kaps.map((k,i)=>{
-    const isDosya = /dosya|zarf/i.test(k.type);
-    const skip = v.dosyaSkip && isDosya;  // Dosya ise adet/ağırlık sorma
-    return `<div class="kap">
-      <div class="h"><b>Kap ${i+1}</b>${S.kaps.length>1?`<span class="rm" onclick="rmKap('${k.id}')">Kaldır ✕</span>`:''}</div>
-      <div class="seg">${v.kap.map(t=>`<button class="${k.type===t?'on':''}" onclick="setKapType('${k.id}','${t}')">${t}</button>`).join('')}</div>
-      ${skip
-        ? `<div class="hintbox" style="margin-top:10px">📄 Dosya/zarf seçildi — adet ve ağırlık sorulmadan siparişe devam edilir.</div>`
-        : `<div class="grid3" style="margin-top:11px">
-            <div><label class="fld">Adet</label><input type="number" min="1" value="${k.qty}" onchange="setKapVal('${k.id}','qty',this.value)"></div>
-            <div><label class="fld">Ağırlık (kg)</label><input type="number" min="0" value="${k.kg}" onchange="setKapVal('${k.id}','kg',this.value)"></div>
-            <div><label class="fld">Desi (en×boy×yük/3000)</label><input type="number" min="0" placeholder="opsiyonel" onchange="setKapVal('${k.id}','desi',this.value)"></div>
-           </div>`}
-    </div>`;
-  }).join('') + `<div class="addrow"><button class="btn-ghost" onclick="addKap()">+ Kap Ekle</button></div>
-    <div class="desi" id="desiTot"><span>Toplam</span><span id="desiVal">—</span></div>`;
-  updateDesi(); checkCapacity();
+function rmItem(id){ S.items=S.items.filter(x=>x.id!==id); renderItems(true); }
+function setItem(id,f,v){
+  const it=S.items.find(x=>x.id===id); if(!it) return;
+  it[f] = (f==='cat') ? v : (+v||0);
+  renderItems(true);
+}
+function itemDesi(it){
+  const q=+it.qty||0, w=+it.w||0, l=+it.l||0, hh=+it.hh||0;
+  const d=(w&&l&&hh)?Math.round(w*l*hh/3000*q):0;     // hacimsel desi
+  const ekg=Math.max(d,(+it.kg||0)*q);                 // ücrete esas = max(desi, kg)
+  return {d,ekg};
 }
 function totals(){
   let kg=0,desi=0,qty=0;
-  S.kaps.forEach(k=>{ const isDosya=/dosya|zarf/i.test(k.type); if(isDosya)return;
-    kg+=(k.kg||0)*(k.qty||1); qty+=(k.qty||0); desi+=(k.desi||0); });
+  (S.items||[]).forEach(it=>{ const {d}=itemDesi(it); qty+=(+it.qty||0); desi+=d; kg+=(+it.kg||0)*(+it.qty||0); });
   return {kg,desi,qty};
 }
-function updateDesi(){
-  const el=document.getElementById('desiVal'); if(!el)return;
-  const t=totals();
-  el.textContent = `${t.qty} adet · ${t.kg} kg${t.desi?` · ${t.desi} desi`:''}`;
+function renderItems(check){
+  const host=document.getElementById('itemHost'); if(!host) return;
+  host.innerHTML = S.items.map((it,idx)=>{
+    const cfg=ITEM_CATS[it.cat]||{};
+    const opts=Object.keys(ITEM_CATS).map(k=>`<option ${k===it.cat?'selected':''}>${k}</option>`).join('');
+    const {d,ekg}=itemDesi(it);
+    let dyn=`<span class="tag">${it.cat} için alanlar</span>`;
+    if(cfg.dims) dyn+=`<div class="grid3">
+        <div><label class="fld">En cm</label><input type="number" min="0" value="${it.w}" onchange="setItem('${it.id}','w',this.value)"></div>
+        <div><label class="fld">Boy cm</label><input type="number" min="0" value="${it.l}" onchange="setItem('${it.id}','l',this.value)"></div>
+        <div><label class="fld">Yük. cm</label><input type="number" min="0" value="${it.hh}" onchange="setItem('${it.id}','hh',this.value)"></div></div>`;
+    if(cfg.fragile) dyn+=`<label class="check"><input type="checkbox" checked> <span>Kırılabilir — dikkatli taşıma</span></label>`;
+    if(cfg.cold)    dyn+=`<label class="check"><input type="checkbox" checked> <span>Soğuk zincir (+2°C / +8°C)</span></label>`;
+    if(it.cat==='Evrak / Zarf') dyn+=`<div class="note">Evrak/zarf için boyut ve ağırlık opsiyoneldir.</div>`;
+    const pOpts=picks().map((s,i)=>`<option value="${i+1}" ${it.from===i+1?'selected':''}>Alım ${i+1}</option>`).join('');
+    const dOpts=drops().map((s,i)=>`<option value="${i+1}" ${it.to===i+1?'selected':''}>Teslim ${i+1}</option>`).join('');
+    return `<div class="kap">
+      <div class="h"><b>Ürün ${idx+1}</b>${S.items.length>1?`<span class="rm" onclick="rmItem('${it.id}')">Kaldır ✕</span>`:''}</div>
+      <label class="fld">Kategori <span class="req">*</span></label>
+      <select onchange="setItem('${it.id}','cat',this.value)">${opts}</select>
+      <div class="grid3" style="margin-top:6px">
+        <div><label class="fld">Adet</label><input type="number" min="1" value="${it.qty}" onchange="setItem('${it.id}','qty',this.value)"></div>
+        <div><label class="fld">Ağırlık kg</label><input type="number" min="0" value="${it.kg}" onchange="setItem('${it.id}','kg',this.value)"></div>
+        <div><label class="fld">Değer ₺</label><input type="number" min="0" value="${it.val}" onchange="setItem('${it.id}','val',this.value)"></div>
+      </div>
+      <div class="dyn">${dyn}</div>
+      ${d?`<div class="desi"><span>Hesaplanan desi: ${d}</span><span>ücrete esas: ${ekg} (desi/kg max)</span></div>`:''}
+      <div class="grid2" style="margin-top:10px">
+        <div><label class="fld">Hangi alımdan?</label><select onchange="setItem('${it.id}','from',this.value)">${pOpts}</select></div>
+        <div><label class="fld">Hangi teslime?</label><select onchange="setItem('${it.id}','to',this.value)">${dOpts}</select></div>
+      </div>
+    </div>`;
+  }).join('') + `<div class="addrow"><button class="btn-ghost" onclick="addItem()">+ Ürün Ekle</button></div>
+    <div class="desi"><span>Toplam</span><span>${(()=>{const t=totals();return `${t.qty} adet · ${t.kg} kg${t.desi?` · ${t.desi} desi`:''}`;})()}</span></div>`;
+  const ib=document.getElementById('itemBadge'); if(ib) ib.textContent=S.items.length+' ürün';
+  if(check) checkCapacity();   // modal yalnız kullanıcı değişikliğinde
+  renderLiveSum();
 }
 
 /* ---- KAPASİTE KONTROL → uyarı modalı ---- */
@@ -764,8 +859,8 @@ function checkCapacity(){
 }
 function showCap(v,t){
   document.getElementById('capText').innerHTML =
-    `Kap bilgileriniz <b>${v.name}</b> kapasitesini aşıyor (limit: ${v.maxKg} kg${v.maxDesi?` / ${v.maxDesi} desi`:''}; girilen: <b>${t.kg} kg${t.desi?` / ${t.desi} desi`:''}</b>).<br><br>
-     Kap bilgilerinizi mi düzenlemek istersiniz, yoksa yükünüze uygun araç tipine mi yönlendirelim?`;
+    `Ürün bilgileriniz <b>${v.name}</b> kapasitesini aşıyor (limit: ${v.maxKg} kg${v.maxDesi?` / ${v.maxDesi} desi`:''}; girilen: <b>${t.kg} kg${t.desi?` / ${t.desi} desi`:''}</b>).<br><br>
+     Ürün bilgilerinizi mi düzenlemek istersiniz, yoksa yükünüze uygun araç tipine mi yönlendirelim?`;
   // uygun aracı bul
   const fit = CATS[S.cat].vehicles.find(x=>x.maxKg && x.maxKg>=t.kg && (!x.maxDesi || x.maxDesi>=t.desi));
   const btn=document.getElementById('capRedirect');
@@ -825,8 +920,6 @@ function formEvOfis(){
    ============================================================ */
 function money(n){ return '₺'+Math.round(n).toLocaleString('tr-TR'); }
 function setKm(v){ S.km=Math.max(1,Math.round(+v||1)); renderLiveSum(); }
-function setStops(n){ S.stops=Math.max(0,n|0); renderStep3(); }
-function addStop(label){ S.stops++; toast('+ '+label+' eklendi (toplam ek durak: '+S.stops+')'); renderStep3(); }
 
 /* ---- FİYAT MOTORU: açılış + km×satış + durak ; mod çarpanı ; maliyet & kâr ---- */
 function priceModel(){
@@ -858,9 +951,9 @@ function rotaControl(p){
       <input type="number" min="1" value="${p.km}" onchange="setKm(this.value)" style="width:74px">
       <span>km</span>
       <label style="margin-left:auto">Ek Durak</label>
-      <button class="step" onclick="setStops(${p.stops-1})">−</button><b>${p.stops}</b><button class="step" onclick="setStops(${p.stops+1})">+</button>
+      <b title="Güzergah bölümündeki alım/teslim duraklarından türetilir">${p.stops} 🚏</b>
     </div>
-    <div class="rota-note">Gerçekte Google Maps Directions ile A→B (+duraklar) otomatik hesaplanır; mockup'ta elle ayarlanır.</div>
+    <div class="rota-note">Mesafe gerçekte Google Maps Directions ile otomatik gelir; mockup'ta elle ayarlanır. Ek durak <b>Güzergah</b> bölümünden gelir.</div>
   </div>`;
 }
 
@@ -913,6 +1006,15 @@ function renderLiveSum(){
 /* ============================================================
    STEP 4 — ONAY
    ============================================================ */
+function routeText(){
+  if(S.cat==='yuk'){
+    const seg=[];
+    picks().forEach((s,i)=>seg.push(`A${i+1}: ${S.addrMap['st_'+s.id]||'—'}`));
+    drops().forEach((s,i)=>seg.push(`T${i+1}: ${S.addrMap['st_'+s.id]||'—'}`));
+    return seg.join('  ·  ');
+  }
+  return `${S.addrMap.from||'—'}  →  ${S.addrMap.to||'—'}`;
+}
 function renderStep4(){
   const v=curVeh(), M=S.mode?MODES[S.mode]:null, p=priceModel();
   const t=(S.cat==='yuk'&&!v.selectOnly)?totals():null;
@@ -920,17 +1022,19 @@ function renderStep4(){
     ['Kategori', CATS[S.cat].label],
     M?['Zamanlama', M.name]:null,
     ['Araç Tipi', `${v.name} — ${v.sub}`],
-    (S.addr.from||S.addr.to)?['Güzergah', `${S.addr.from||'—'} → ${S.addr.to||'—'}`]:null,
-    ['Mesafe / Durak', `${p.km} km · ${p.stops} ek durak`],
+    ['Güzergah', routeText()],
+    S.cat==='yuk'?['Durak Yapısı', `${picks().length} alım · ${drops().length} teslim`]:null,
+    ['Mesafe / Ek Durak', `${p.km} km · ${p.stops} ek durak`],
     S.slot?['Teslimat Slotu', (()=>{const s=SLOTS.find(x=>x.id===S.slot);return `${s.name} · ${s.win} · ${s.taahhut}`;})()]:null,
     S.cat==='yolcu'?['Yolcu', S.pax+' kişi']:null,
+    (S.cat==='yuk'&&!v.selectOnly)?['Ürünler', `${S.items.length} kalem`]:null,
     t?['Toplam Yük', `${t.qty} adet · ${t.kg} kg${t.desi?` · ${t.desi} desi`:''}`]:null,
-    v.selectOnly?['Kap Bilgisi', 'Araç seçimi yeterli (adet/ağırlık girilmedi)']:null,
+    v.selectOnly?['Yük Bilgisi', 'Araç seçimi yeterli (adet/ağırlık girilmedi)']:null,
   ].filter(Boolean);
 
   document.getElementById('confHost').innerHTML = `
     <div class="panel"><div class="panel-h"><div class="n">✓</div><b>Sipariş Bilgileri</b></div><div class="panel-b">
-      ${items.map(i=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px"><span style="color:var(--muted)">${i[0]}</span><b>${i[1]}</b></div>`).join('')}
+      ${items.map(i=>`<div style="display:flex;justify-content:space-between;gap:18px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:13px"><span style="color:var(--muted);flex:0 0 auto">${i[0]}</span><b style="text-align:right;min-width:0">${i[1]}</b></div>`).join('')}
     </div></div>
     <div class="panel"><div class="panel-h"><div class="n">💳</div><b>Ödeme</b></div><div class="panel-b">
       <label class="fld">Kayıtlı Kart</label>
@@ -953,6 +1057,7 @@ function renderStep4(){
 
 function placeOrder(){
   toast('✅ Sipariş oluşturuldu — Kurye aranıyor… (#EFSO-' + Math.floor(performance.now()).toString().slice(-6) + ')');
+  S.route=[]; S.items=[]; S.addrMap={}; S.slot=null; S.stops=0;   // yeni sipariş için temizle
   setTimeout(()=>{ goStep(1); document.querySelector('.steps').scrollIntoView(); }, 1600);
 }
 
