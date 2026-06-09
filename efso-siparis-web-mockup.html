@@ -126,7 +126,7 @@
   .btn-ghost:hover{background:#e0f7fa}
 
   /* adres otomatik tamamlama (keyless · Photon/OSM + yerel fallback) */
-  .panel.addr{overflow:visible}
+  .panel.addr{overflow:visible;position:relative;z-index:20}  /* öneri listesi sonraki panelin ALTINDA kalmasın */
   .acwrap{position:relative;margin-top:4px}
   .ac-in{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:#fff}
   .ac-in:focus{outline:none;border-color:var(--efso)}
