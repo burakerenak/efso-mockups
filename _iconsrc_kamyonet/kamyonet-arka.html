@@ -2,35 +2,36 @@
 <style>html,body{margin:0;padding:0;background:transparent}svg{display:block;width:512px;height:512px}</style></head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <g id="wheel" fill="none" stroke="#6cb7e2" stroke-linecap="round">
-      <circle r="46" stroke-width="13"/>
-      <circle r="29" stroke-width="9"/>
-      <circle r="7"  stroke-width="9"/>
-      <g stroke-width="7">
-        <line y1="-11" y2="-26"/>
-        <line y1="-11" y2="-26" transform="rotate(72)"/>
-        <line y1="-11" y2="-26" transform="rotate(144)"/>
-        <line y1="-11" y2="-26" transform="rotate(216)"/>
-        <line y1="-11" y2="-26" transform="rotate(288)"/>
-      </g>
-    </g>
-  </defs>
-  <use href="#wheel" transform="translate(176,418) scale(0.92)"/>
-  <use href="#wheel" transform="translate(336,418) scale(0.92)"/>
-  <g fill="none" stroke="#6cb7e2" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+  <defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+    <rect width="512" height="512" fill="#000"/>
+    <!-- lastikler (altta) -->
+    <circle cx="178" cy="416" r="40" fill="#fff"/>
+    <circle cx="334" cy="416" r="40" fill="#fff"/>
     <!-- arka gövde -->
-    <rect x="118" y="92" width="276" height="314" rx="30"/>
-    <!-- çatı çizgisi -->
-    <path d="M118 152 H394"/>
-    <!-- iki kapı ortası -->
-    <path d="M256 152 V406"/>
+    <rect x="118" y="96" width="276" height="312" rx="28" fill="#fff"/>
+    <!-- çatı çizgisi (boşluk) -->
+    <rect x="150" y="126" width="212" height="10" rx="5" fill="#000"/>
+    <!-- kasa dikey çubukları -->
+    <rect x="150" y="150" width="7" height="180" fill="#000"/>
+    <rect x="178" y="150" width="7" height="180" fill="#000"/>
+    <rect x="206" y="150" width="7" height="180" fill="#000"/>
+    <rect x="306" y="150" width="7" height="180" fill="#000"/>
+    <rect x="334" y="150" width="7" height="180" fill="#000"/>
+    <rect x="362" y="150" width="7" height="180" fill="#000"/>
+    <!-- orta kapı ayrımı (kalın) -->
+    <rect x="250" y="140" width="12" height="230" rx="6" fill="#000"/>
     <!-- kapı kolları -->
-    <path d="M230 264 V308"/>
-    <path d="M282 264 V308"/>
+    <rect x="226" y="252" width="10" height="44" rx="5" fill="#000"/>
+    <rect x="276" y="252" width="10" height="44" rx="5" fill="#000"/>
     <!-- stop lambaları -->
-    <rect x="150" y="350" width="42" height="34" rx="8"/>
-    <rect x="320" y="350" width="42" height="34" rx="8"/>
-  </g>
+    <rect x="150" y="350" width="44" height="32" rx="8" fill="#000"/>
+    <rect x="318" y="350" width="44" height="32" rx="8" fill="#000"/>
+    <!-- jant boşlukları -->
+    <circle cx="178" cy="416" r="19" fill="#000"/>
+    <circle cx="334" cy="416" r="19" fill="#000"/>
+    <circle cx="178" cy="416" r="6" fill="#fff"/>
+    <circle cx="334" cy="416" r="6" fill="#fff"/>
+  </mask></defs>
+  <rect width="512" height="512" fill="#6cb7e2" mask="url(#m)"/>
 </svg>
 </body></html>

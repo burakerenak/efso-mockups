@@ -2,21 +2,24 @@
 <style>html,body{margin:0;padding:0;background:transparent}svg{display:block;width:512px;height:512px}</style></head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <g fill="none" stroke="#6cb7e2" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+  <defs><mask id="m" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512">
+    <rect width="512" height="512" fill="#000"/>
     <!-- sol açık kapı -->
-    <path d="M150 152 L66 118 L66 424 L150 408 Z"/>
+    <path d="M150 152 L66 116 L66 424 L150 408 Z" fill="#fff"/>
     <!-- sağ açık kapı -->
-    <path d="M362 152 L446 118 L446 424 L362 408 Z"/>
+    <path d="M362 152 L446 116 L446 424 L362 408 Z" fill="#fff"/>
+    <!-- kapı kolları (boşluk) -->
+    <rect x="120" y="270" width="12" height="44" rx="6" fill="#000"/>
+    <rect x="380" y="270" width="12" height="44" rx="6" fill="#000"/>
     <!-- arka açıklık çerçevesi -->
-    <rect x="150" y="150" width="212" height="260" rx="8"/>
-    <!-- iç derinlik (perspektif) -->
-    <rect x="196" y="196" width="120" height="168" rx="6"/>
-    <path d="M150 150 L196 196"/>
-    <path d="M362 150 L316 196"/>
-    <path d="M150 410 L196 364"/>
-    <path d="M362 410 L316 364"/>
-    <!-- iç zemin çizgisi -->
-    <path d="M196 364 H316"/>
-  </g>
+    <rect x="150" y="150" width="212" height="262" rx="10" fill="#fff"/>
+    <!-- iç boşluk (karanlık iç) -->
+    <rect x="178" y="178" width="156" height="206" rx="6" fill="#000"/>
+    <!-- iç arka duvar -->
+    <rect x="210" y="206" width="92" height="150" rx="4" fill="#fff"/>
+    <!-- iç zemin/raf çizgisi -->
+    <rect x="210" y="300" width="92" height="9" fill="#000"/>
+  </mask></defs>
+  <rect width="512" height="512" fill="#6cb7e2" mask="url(#m)"/>
 </svg>
 </body></html>
