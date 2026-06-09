@@ -309,9 +309,17 @@
   .tl:last-child .ln{display:none}
   .tl.done .d{background:var(--green);color:#fff}.tl.done .ln{background:var(--green)}
   .tl.cur .d{background:var(--efso);color:#fff;box-shadow:0 0 0 4px #cffafe}
-  .tl .tx{padding-top:4px}
+  .tl .tx{padding-top:4px;flex:1}
   .tl .tx b{font-size:13.5px;display:block}.tl .tx span{font-size:11.5px;color:var(--muted)}
   .tl.future .tx b{color:#94a3b8;font-weight:600}
+  .tl .tm{margin-left:auto;font-size:11px;color:var(--muted);font-weight:700;padding-top:5px;white-space:nowrap;flex:0 0 auto}
+  .tl.cur .tm{color:var(--efso-dark)}
+  /* canlı konum animasyonu */
+  .tmap .pc{transition:left .6s ease}
+  .tmap.driving .pc{animation:drive 3.4s ease-in-out infinite alternate}
+  @keyframes drive{from{left:15%}to{left:74%}}
+  .tmap .eta .ld{display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle;animation:pls2 1.2s infinite}
+  @keyframes pls2{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 6px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
 
   .hide{display:none!important}
 </style>
@@ -1237,20 +1245,24 @@ const ORDERS=[
    modeLabel:'Express', rtText:'A1: Levent, Beşiktaş · T1: Ataşehir', km:18, stops:0, itemsN:2, price:469,
    status:'Yolda', createdAt:'09.06.2026 11:20',
    courier:{name:'Mehmet Yıldız', veh:'Ford Transit · 34 EFS 042', rate:'4.9 ★', eta:'7 dk', phone:'+90 5•• ••• 42 18'},
+   history:[{key:'Beklemede',at:'11:20'},{key:'KuryeAraniyor',at:'11:20'},{key:'KuryeAtandi',at:'11:22'},{key:'AlimAdresinde',at:'11:35'},{key:'Yukleniyor',at:'11:41'},{key:'Yolda',at:'11:48'}],
    routeSnap:[{type:'pick',addr:'Levent, Beşiktaş, İstanbul'},{type:'drop',addr:'Ataşehir, İstanbul'}], fromTo:null},
   {no:'EFSO-2026-000479', cat:'yolcu', catLabel:'Yolcu Taşımacılığı', vehName:'Mercedes Vito', vehEmoji:'🚐',
    modeLabel:'Şimdi', rtText:'Taksim → Sabiha Gökçen Havalimanı', km:42, stops:0, itemsN:0, price:1280,
    status:'Tamamlandi', createdAt:'08.06.2026 19:05',
    courier:{name:'Ayşe Korkmaz', veh:'Mercedes Vito · 34 KRY 188', rate:'4.8 ★', eta:'—', phone:'+90 5•• ••• 11 90'},
+   history:[{key:'Beklemede',at:'19:05'},{key:'KuryeAraniyor',at:'19:05'},{key:'KuryeAtandi',at:'19:07'},{key:'AlimAdresinde',at:'19:12'},{key:'Yukleniyor',at:'19:13'},{key:'Yolda',at:'19:15'},{key:'TeslimatAdresinde',at:'19:46'},{key:'Bosaltiliyor',at:'19:47'},{key:'Tamamlandi',at:'19:50'}],
    routeSnap:[], fromTo:{from:'Taksim, Beyoğlu', to:'Sabiha Gökçen Havalimanı'}},
   {no:'EFSO-2026-000476', cat:'yuk', catLabel:'Yük Taşımacılığı', vehName:'Moto Kurye', vehEmoji:'🛵',
    modeLabel:'Express', rtText:'A1: Kadıköy Rıhtım · T1: Üsküdar Meydanı', km:6, stops:0, itemsN:1, price:140,
    status:'KuryeAraniyor', createdAt:'09.06.2026 14:10', courier:null,
+   history:[{key:'Beklemede',at:'14:10'},{key:'KuryeAraniyor',at:'14:10'}],
    routeSnap:[{type:'pick',addr:'Kadıköy Rıhtım, Kadıköy'},{type:'drop',addr:'Üsküdar Meydanı'}], fromTo:null},
 ];
 
 function nowStr(){ const d=new Date(), p=n=>String(n).padStart(2,'0');
   return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function nowTime(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
 
 function buildOrder(){
   const v=curVeh(), M=S.mode?MODES[S.mode]:null, p=priceModel();
@@ -1262,6 +1274,7 @@ function buildOrder(){
     km:p.km, stops:p.stops, itemsN:(S.cat==='yuk'&&vehNeedsItems(v))?S.items.length:0,
     price:p.sale, meter:p.meter, survey:p.survey,
     status:'KuryeAraniyor', createdAt:nowStr(), courier:null,
+    history:[{key:'Beklemede',at:nowTime()},{key:'KuryeAraniyor',at:nowTime()}],
     routeSnap: S.route.map(s=>({type:s.type, addr:S.addrMap['st_'+s.id]||''})),
     fromTo: S.cat!=='yuk' ? {from:S.addrMap.from||'', to:S.addrMap.to||''} : null,
   };
@@ -1282,6 +1295,8 @@ function statusBadge(o){
 function setStatus(no,key){
   const o=ORDERS.find(x=>x.no===no); if(!o) return;
   o.status=key;
+  o.history=o.history||[];
+  if(key!=='IptalEdildi' && !o.history.find(h=>h.key===key)) o.history.push({key, at:nowTime()});
   if(key==='KuryeAtandi' && !o.courier) o.courier=assignCourier(o);
   renderList();
   if(!document.getElementById('viewTrack').classList.contains('hide') && CUR_TRACK===no) renderTrack();
@@ -1354,19 +1369,29 @@ function renderTrack(){
     </div>`;
   }
 
-  // harita (kurye atandıysa)
+  // harita + CANLI KONUM (kuryenin yeri statüye göre hareket eder)
   const showMap = !cancelled && idx>=2;
-  const mapBox = showMap ? `<div class="tmap">
-      <div class="eta">⏱️ ${o.courier?('ETA '+(o.status==='Tamamlandi'?'—':o.courier.eta)):'—'} · ${o.km} km</div>
-      <span class="pa">📍</span><span class="pc">🚚</span><span class="pb">🏁</span><div class="route"></div>
-      <span class="lbl">Google Maps · canlı</span></div>` : '';
+  let truckLeft='46%', driving=false;
+  if(idx===2)               truckLeft='9%';    // KuryeAtandi → yola çıkıyor
+  else if(idx===3||idx===4) truckLeft='15%';   // alım adresinde / yükleniyor
+  else if(idx===5)          driving=true;       // YOLDA → hareketli animasyon
+  else if(idx>=6)           truckLeft='75%';    // teslimde / boşaltma / tamamlandı
+  const etaTxt = o.status==='Tamamlandi' ? 'Teslim edildi' : (o.courier?('ETA '+o.courier.eta):'—');
+  const mapBox = showMap ? `<div class="tmap ${driving?'driving':''}">
+      <div class="eta">${driving?'<span class="ld"></span>':''}${etaTxt} · ${o.km} km</div>
+      <span class="pa">📍</span>
+      <span class="pc" ${driving?'':`style="left:${truckLeft}"`}>🚚</span>
+      <span class="pb">🏁</span><div class="route"></div>
+      <span class="lbl">${driving?'Canlı konum · Google Maps':'Google Maps'}</span></div>` : '';
 
-  // zaman çizelgesi
+  // zaman çizelgesi (her statüde zaman damgası)
   const tl=STATUSES.map((s,i)=>{
     const cls = cancelled ? 'future' : (i<idx?'done':(i===idx?'cur':'future'));
     const ic  = (!cancelled && i<idx) ? '✓' : s.ic;
+    const hh=(o.history||[]).find(x=>x.key===s.key);
+    const tm = hh ? `<div class="tm">${hh.at}</div>` : '';
     return `<div class="tl ${cls}"><div class="dotc"><div class="d">${ic}</div><div class="ln"></div></div>
-      <div class="tx"><b>${s.label}</b><span>${s.sub}</span></div></div>`;
+      <div class="tx"><b>${s.label}</b><span>${s.sub}</span></div>${tm}</div>`;
   }).join('');
 
   // sağ: özet + aksiyonlar
