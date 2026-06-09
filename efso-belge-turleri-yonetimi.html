@@ -1,0 +1,303 @@
+<!doctype html>
+<!-- EFSO — Belge Türleri Yönetimi (parametrik evrak/onay kuralları). Çalışır mockup; üretim kodu değil. -->
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EFSO — Belge Türleri Yönetimi</title>
+<style>
+  :root{--pri:#3b6ef6;--pri-d:#2f5fe0;--ink:#1e293b;--muted:#64748b;--line:#e7ebf0;--bg:#f4f6fb;--soft:#f8fafc;
+        --ok:#16a34a;--ok-b:#e7f8ee;--warn:#d97706;--warn-b:#fff4e5;--gray:#94a3b8;--gray-b:#eef1f5;--red:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
+  .wrap{max-width:1340px;margin:0 auto;padding:22px}
+  .top{display:flex;align-items:flex-start;gap:16px;margin-bottom:18px}
+  .top h1{margin:0;font-size:22px;font-weight:700}
+  .top p{margin:4px 0 0;color:var(--muted);font-size:12.5px;max-width:640px}
+  .top .acts{margin-left:auto;display:flex;gap:10px}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:9px 14px;font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .btn:hover{background:#f8fafc}
+  .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.pri:hover{background:var(--pri-d)}
+  .btn.sm{padding:6px 10px;font-size:12px}
+  .layout{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
+  @media(max-width:1100px){.layout{grid-template-columns:1fr}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  /* filtreler */
+  .filters{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr 1fr auto;gap:10px;padding:16px;align-items:end}
+  .fl label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin:0 2px 5px}
+  .fl input,.fl select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;background:var(--soft);color:var(--ink);font-family:inherit}
+  .fl input:focus,.fl select:focus{outline:none;border-color:var(--pri);background:#fff}
+  .fbtns{display:flex;gap:8px}
+  /* tablo */
+  table{width:100%;border-collapse:collapse}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);text-align:left;padding:11px 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fbfcfe;white-space:nowrap}
+  tbody td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tbody tr:hover{background:#fafbff}
+  .ad{font-weight:600;font-size:13px}
+  td select{width:100%;min-width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:12px;background:#fff;color:var(--ink);font-family:inherit}
+  td select:focus{outline:none;border-color:var(--pri)}
+  .center{text-align:center}
+  .badge{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:3px 11px;border-radius:999px}
+  .b-ok{background:var(--ok-b);color:var(--ok);cursor:pointer}.b-off{background:var(--gray-b);color:var(--gray);cursor:pointer}
+  .switch{position:relative;display:inline-block;width:40px;height:22px}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;transition:.18s;cursor:pointer}
+  .slider:before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.18s}
+  .switch input:checked + .slider{background:var(--ok)}
+  .switch input:checked + .slider:before{transform:translateX(18px)}
+  .ico{cursor:pointer;font-size:15px;margin:0 3px;color:var(--muted)}
+  .ico.ed:hover{color:var(--pri)}.ico.del:hover{color:var(--red)}
+  .tfoot{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;color:var(--muted);font-size:12px}
+  .pager{display:flex;align-items:center;gap:6px}
+  .pager .pg{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff}
+  .pager .pg.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+  /* sidebar */
+  .side .card{padding:16px;margin-bottom:16px}
+  .side h3{margin:0 0 12px;font-size:13.5px}
+  .stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .st{border:1px solid var(--line);border-radius:11px;padding:11px;display:flex;align-items:center;gap:10px}
+  .st .ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+  .st .lb{font-size:10.5px;color:var(--muted)}.st .vl{font-size:18px;font-weight:800}
+  .ic.blue{background:#e8efff;color:var(--pri)}.ic.green{background:var(--ok-b);color:var(--ok)}
+  .ic.amber{background:var(--warn-b);color:var(--warn)}.ic.purple{background:#f0e9ff;color:#7c3aed}
+  .qa{display:flex;gap:11px;align-items:flex-start;padding:9px 0;cursor:pointer}
+  .qa:hover .qt{color:var(--pri)}
+  .qa .qi{width:30px;height:30px;border-radius:8px;background:#eef2f8;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .qa .qt{font-weight:600;font-size:12.5px}.qa .qs{font-size:11px;color:var(--muted)}
+  .donut{display:flex;align-items:center;gap:16px}
+  .ring{width:118px;height:118px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .ring .in{width:84px;height:84px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .in b{font-size:22px}.ring .in span{font-size:10px;color:var(--muted)}
+  .leg{font-size:12px}.leg div{display:flex;align-items:center;gap:8px;margin:6px 0}
+  .dot{width:9px;height:9px;border-radius:50%}
+  .approvebar{height:14px;border-radius:999px;overflow:hidden;display:flex;margin:6px 0 10px}
+  /* drawer */
+  .mask{position:fixed;inset:0;background:rgba(15,23,42,.4);display:none;z-index:40}.mask.on{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:440px;max-width:94vw;background:#fff;z-index:41;transform:translateX(100%);transition:.26s;display:flex;flex-direction:column;box-shadow:-16px 0 46px rgba(2,8,23,.2)}
+  .drawer.on{transform:translateX(0)}
+  .dh{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center}
+  .dh h3{margin:0;font-size:15px}.dh .x{margin-left:auto;font-size:22px;color:var(--muted);cursor:pointer}
+  .db{flex:1;overflow-y:auto;padding:16px 18px}
+  .db label{display:block;font-size:11px;color:var(--muted);font-weight:600;margin:12px 2px 5px}
+  .db input,.db select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;background:var(--soft)}
+  .db .sw{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+  .df{padding:13px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
+  .flag{background:#f59e0b;color:#fff;font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;align-self:center}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Belge Türleri Yönetimi <span class="flag">MOCKUP</span></h1>
+      <p>Sistemde kullanılan belge türlerini ve bu belgelerin hangi <b>modül / ekran / işlem tipinde</b>, hangi <b>araç cinsi / taşıma koşulunda</b> zorunlu/opsiyonel ve onaya tabi olacağını yönetin.</p>
+    </div>
+    <div class="acts">
+      <button class="btn">⤓ İçe Aktar</button>
+      <button class="btn">⤒ Dışa Aktar</button>
+      <button class="btn pri" id="addBtn">＋ Yeni Belge Türü</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <!-- SOL: filtre + tablo -->
+    <div class="card">
+      <div class="filters">
+        <div class="fl"><label>Belge Adı</label><input id="fAd" placeholder="Belge adı ara..."></div>
+        <div class="fl"><label>Modül</label><select id="fMod"></select></div>
+        <div class="fl"><label>Ekran</label><select id="fEkr"></select></div>
+        <div class="fl"><label>İşlem Tipi</label><select id="fIsl"></select></div>
+        <div class="fl"><label>Durum</label><select id="fDur"><option value="">Tümü</option><option>Aktif</option><option>Pasif</option></select></div>
+        <div class="fl fbtns"><button class="btn pri sm" id="filtBtn">⏳ Filtrele</button><button class="btn sm" id="clrBtn">↺ Temizle</button></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Belge Adı</th><th>Modül</th><th>Ekran</th><th>İşlem Tipi</th>
+            <th class="center">Zorunlu</th><th>Araç Cinsi</th><th>Taşıma Koşulu</th>
+            <th class="center">Onay</th><th class="center">Durum</th><th class="center">İşlemler</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="tfoot">
+        <span id="cnt">Toplam 0 kayıt</span>
+        <div class="pager"><span class="pg">‹</span><span class="pg on">1</span><span class="pg">2</span><span class="pg">›</span></div>
+      </div>
+    </div>
+
+    <!-- SAĞ: özet -->
+    <div class="side">
+      <div class="card">
+        <h3>Özet Bilgiler</h3>
+        <div class="stat">
+          <div class="st"><div class="ic blue">🗂️</div><div><div class="lb">Toplam Belge Türü</div><div class="vl" id="sTop">0</div></div></div>
+          <div class="st"><div class="ic green">✔️</div><div><div class="lb">Aktif</div><div class="vl" id="sAkt">0</div></div></div>
+          <div class="st"><div class="ic amber">⏸️</div><div><div class="lb">Pasif</div><div class="vl" id="sPas">0</div></div></div>
+          <div class="st"><div class="ic purple">🛡️</div><div><div class="lb">Onay Gerektiren</div><div class="vl" id="sOnay">0</div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Hızlı İşlemler</h3>
+        <div class="qa" id="qaAdd"><div class="qi">＋</div><div><div class="qt">Yeni Belge Türü Ekle</div><div class="qs">Sisteme yeni belge türü ekleyin</div></div></div>
+        <div class="qa"><div class="qi">🧩</div><div><div class="qt">Belge Kurallarını Yönet</div><div class="qs">Hangi ekran/araç/koşulda zorunlu belirleyin</div></div></div>
+        <div class="qa"><div class="qi">🕘</div><div><div class="qt">Onay Süreçlerini Yönet</div><div class="qs">Belge onay akışlarını yapılandırın</div></div></div>
+      </div>
+      <div class="card">
+        <h3>Belge Türü Durumu</h3>
+        <div class="donut">
+          <div class="ring" id="ring"><div class="in"><b id="ringTot">0</b><span>Toplam</span></div></div>
+          <div class="leg">
+            <div><span class="dot" style="background:var(--ok)"></span> Aktif <b id="legAkt" style="margin-left:auto"></b></div>
+            <div><span class="dot" style="background:var(--gray)"></span> Pasif <b id="legPas" style="margin-left:auto"></b></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Onaylama Durumu Dağılımı</h3>
+        <div class="approvebar"><div id="barOk" style="background:var(--ok)"></div><div id="barNo" style="background:var(--red)"></div></div>
+        <div class="leg">
+          <div><span class="dot" style="background:var(--ok)"></span> Onay Gereken <b id="legOk" style="margin-left:auto"></b></div>
+          <div><span class="dot" style="background:var(--red)"></span> Onay Gerekmeyen <b id="legNo" style="margin-left:auto"></b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="mask" id="mask"></div>
+<div class="drawer" id="drawer">
+  <div class="dh"><h3 id="dTitle">Yeni Belge Türü</h3><span class="x" id="dClose">&times;</span></div>
+  <div class="db">
+    <label>Belge Adı *</label><input id="dAd" placeholder="örn. Vergi Levhası">
+    <label>Modül *</label><select id="dMod"></select>
+    <label>Ekran *</label><select id="dEkr"></select>
+    <label>İşlem Tipi *</label><select id="dIsl"></select>
+    <label>Araç Cinsi</label><select id="dArac"></select>
+    <label>Taşıma Koşulu</label><select id="dTas"></select>
+    <div class="sw"><span>Zorunlu</span><label class="switch"><input type="checkbox" id="dZor"><span class="slider"></span></label></div>
+    <div class="sw"><span>Onay gerektirir</span><label class="switch"><input type="checkbox" id="dOnay"><span class="slider"></span></label></div>
+    <label>Durum</label><select id="dDur"><option>Aktif</option><option>Pasif</option></select>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Bu kural, seçilen <b>modül + ekran + işlem tipi</b>nde; araç cinsi/taşıma koşulu “Tümü” değilse yalnız o kriterler sağlanınca tetiklenir.</div>
+  </div>
+  <div class="df"><button class="btn pri" id="dSave" style="flex:1">Kaydet</button><button class="btn" id="dCancel">Vazgeç</button></div>
+</div>
+
+<script>
+  var MOD=["Firma","Müşteri","Filo-Araç","Filo-Sürücü","Sipariş","Kullanıcı"];
+  var EKR=["Firma Ekle","Müşteri Ekle","Araç Ekle","Sürücü Ekle","Sipariş","Teslimat","Kullanıcı Ekle"];
+  var ISL=["Kaydetme","Güncelleme","Onaylama","Teslim Etme","Sefer Başlatma"];
+  var ARC=["Tümü","Moto","Küçük Van","Transit","Kamyonet","Kamyon","Tır","Yolcu","Kamyonet, Kamyon","Kamyon, Tır"];
+  var TAS=["Tümü","Standart","Tehlikeli (ADR)","Soğuk Zincir","Ağır / Gabari","Yolcu"];
+
+  var data=[
+    {ad:"Vergi Levhası",mod:"Firma",ekr:"Firma Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"İmza Sirküleri",mod:"Firma",ekr:"Firma Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Ticaret Sicil Gazetesi",mod:"Firma",ekr:"Firma Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Faaliyet Belgesi",mod:"Firma",ekr:"Firma Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Oda Kayıt Belgesi",mod:"Firma",ekr:"Firma Ekle",isl:"Kaydetme",zor:false,arac:"Tümü",tas:"Tümü",onay:false,dur:"Pasif"},
+    {ad:"Ehliyet",mod:"Filo-Sürücü",ekr:"Sürücü Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"SRC Belgesi",mod:"Filo-Sürücü",ekr:"Sürücü Ekle",isl:"Kaydetme",zor:true,arac:"Kamyon, Tır",tas:"Tehlikeli (ADR)",onay:true,dur:"Aktif"},
+    {ad:"Psikoteknik Belgesi",mod:"Filo-Sürücü",ekr:"Sürücü Ekle",isl:"Kaydetme",zor:true,arac:"Kamyon, Tır",tas:"Tehlikeli (ADR)",onay:true,dur:"Aktif"},
+    {ad:"Araç Ruhsatı",mod:"Filo-Araç",ekr:"Araç Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Trafik Sigortası",mod:"Filo-Araç",ekr:"Araç Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Muayene Raporu",mod:"Filo-Araç",ekr:"Araç Ekle",isl:"Güncelleme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"ADR Uygunluk Belgesi",mod:"Filo-Araç",ekr:"Araç Ekle",isl:"Kaydetme",zor:true,arac:"Kamyon, Tır",tas:"Tehlikeli (ADR)",onay:true,dur:"Aktif"},
+    {ad:"Sipariş Teslimat Fotoğrafı",mod:"Sipariş",ekr:"Teslimat",isl:"Teslim Etme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Teslimat İmza Belgesi",mod:"Sipariş",ekr:"Teslimat",isl:"Teslim Etme",zor:true,arac:"Tümü",tas:"Tümü",onay:false,dur:"Aktif"},
+    {ad:"Kimlik Belgesi",mod:"Kullanıcı",ekr:"Kullanıcı Ekle",isl:"Kaydetme",zor:true,arac:"Tümü",tas:"Tümü",onay:true,dur:"Aktif"},
+    {ad:"Sözleşme Belgesi",mod:"Sipariş",ekr:"Sipariş",isl:"Kaydetme",zor:false,arac:"Tümü",tas:"Tümü",onay:false,dur:"Pasif"}
+  ];
+  data.forEach(function(d,i){d.id=i+1;});
+  var nextId=data.length+1;
+
+  function opts(arr,sel){return arr.map(function(o){return '<option'+(o===sel?' selected':'')+'>'+o+'</option>';}).join("");}
+  function fillSel(el,arr,withAll,sel){ el.innerHTML=(withAll?'<option value="">Tümü</option>':'')+opts(arr,sel); }
+
+  // filtre selectleri
+  fillSel(fMod,MOD,true); fillSel(fEkr,EKR,true); fillSel(fIsl,ISL,true);
+  // drawer selectleri
+  fillSel(dMod,MOD,false); fillSel(dEkr,EKR,false); fillSel(dIsl,ISL,false); fillSel(dArac,ARC,false); fillSel(dTas,TAS,false);
+
+  function $(id){return document.getElementById(id);}
+  function filtered(){
+    var ad=$("fAd").value.toLowerCase(), m=$("fMod").value, e=$("fEkr").value, i=$("fIsl").value, du=$("fDur").value;
+    return data.filter(function(d){
+      return (!ad||d.ad.toLowerCase().indexOf(ad)>-1) && (!m||d.mod===m) && (!e||d.ekr===e) && (!i||d.isl===i) && (!du||d.dur===du);
+    });
+  }
+  function rowSel(field,arr,val){return '<select data-f="'+field+'">'+opts(arr,val)+'</select>';}
+  function render(){
+    var rows=filtered();
+    $("tbody").innerHTML=rows.map(function(d){
+      return '<tr data-id="'+d.id+'">'+
+        '<td>'+d.id+'</td>'+
+        '<td class="ad">'+d.ad+'</td>'+
+        '<td>'+rowSel("mod",MOD,d.mod)+'</td>'+
+        '<td>'+rowSel("ekr",EKR,d.ekr)+'</td>'+
+        '<td>'+rowSel("isl",ISL,d.isl)+'</td>'+
+        '<td class="center"><label class="switch"><input type="checkbox" data-f="zor" '+(d.zor?"checked":"")+'><span class="slider"></span></label></td>'+
+        '<td>'+rowSel("arac",ARC,d.arac)+'</td>'+
+        '<td>'+rowSel("tas",TAS,d.tas)+'</td>'+
+        '<td class="center"><label class="switch"><input type="checkbox" data-f="onay" '+(d.onay?"checked":"")+'><span class="slider"></span></label></td>'+
+        '<td class="center"><span class="badge '+(d.dur==="Aktif"?"b-ok":"b-off")+'" data-f="dur">'+d.dur+'</span></td>'+
+        '<td class="center"><span class="ico ed" data-act="edit">✎</span><span class="ico del" data-act="del">🗑️</span></td>'+
+      '</tr>';
+    }).join("");
+    $("cnt").textContent="Toplam "+rows.length+" kayıt"+(rows.length!==data.length?" (filtreli, toplam "+data.length+")":"");
+    summary();
+  }
+  function summary(){
+    var top=data.length, akt=data.filter(function(d){return d.dur==="Aktif";}).length, pas=top-akt;
+    var onay=data.filter(function(d){return d.onay;}).length, noo=top-onay;
+    $("sTop").textContent=top; $("sAkt").textContent=akt; $("sPas").textContent=pas; $("sOnay").textContent=onay;
+    var pAkt=top?Math.round(akt/top*1000)/10:0;
+    $("ring").style.background="conic-gradient(var(--ok) 0 "+pAkt+"%, var(--gray) "+pAkt+"% 100%)";
+    $("ringTot").textContent=top;
+    $("legAkt").textContent=akt+" (%"+pAkt+")"; $("legPas").textContent=pas+" (%"+(Math.round((100-pAkt)*10)/10)+")";
+    var pOk=top?Math.round(onay/top*1000)/10:0;
+    $("barOk").style.width=pOk+"%"; $("barNo").style.width=(100-pOk)+"%";
+    $("legOk").textContent=onay+" (%"+pOk+")"; $("legNo").textContent=noo+" (%"+(Math.round((100-pOk)*10)/10)+")";
+  }
+
+  // tablo etkileşimleri (delegation)
+  $("tbody").addEventListener("change",function(ev){
+    var tr=ev.target.closest("tr"); if(!tr)return; var d=data.find(function(x){return x.id==tr.dataset.id;});
+    var f=ev.target.dataset.f; if(!f)return;
+    if(f==="zor"||f==="onay"){ d[f]=ev.target.checked; summary(); }
+    else { d[f]=ev.target.value; }
+  });
+  $("tbody").addEventListener("click",function(ev){
+    var t=ev.target, tr=t.closest("tr"); if(!tr)return; var d=data.find(function(x){return x.id==tr.dataset.id;});
+    if(t.dataset.f==="dur"){ d.dur=d.dur==="Aktif"?"Pasif":"Aktif"; render(); }
+    else if(t.dataset.act==="del"){ if(confirm(d.ad+" silinsin mi?")){ data=data.filter(function(x){return x.id!=d.id;}); render(); } }
+    else if(t.dataset.act==="edit"){ openDrawer(d); }
+  });
+
+  // filtreler
+  ["fAd","fMod","fEkr","fIsl","fDur"].forEach(function(id){ $(id).addEventListener("input",render); $(id).addEventListener("change",render); });
+  $("filtBtn").addEventListener("click",render);
+  $("clrBtn").addEventListener("click",function(){ ["fAd","fMod","fEkr","fIsl","fDur"].forEach(function(id){$(id).value="";}); render(); });
+
+  // drawer
+  var editId=null;
+  function openDrawer(d){
+    editId = d? d.id : null;
+    $("dTitle").textContent = d? "Belge Türünü Düzenle" : "Yeni Belge Türü";
+    $("dAd").value=d?d.ad:""; $("dMod").value=d?d.mod:MOD[0]; $("dEkr").value=d?d.ekr:EKR[0];
+    $("dIsl").value=d?d.isl:ISL[0]; $("dArac").value=d?d.arac:"Tümü"; $("dTas").value=d?d.tas:"Tümü";
+    $("dZor").checked=d?d.zor:true; $("dOnay").checked=d?d.onay:true; $("dDur").value=d?d.dur:"Aktif";
+    $("mask").classList.add("on"); $("drawer").classList.add("on");
+  }
+  function closeDrawer(){ $("mask").classList.remove("on"); $("drawer").classList.remove("on"); }
+  $("addBtn").addEventListener("click",function(){openDrawer(null);});
+  $("qaAdd").addEventListener("click",function(){openDrawer(null);});
+  $("dClose").addEventListener("click",closeDrawer); $("dCancel").addEventListener("click",closeDrawer); $("mask").addEventListener("click",closeDrawer);
+  $("dSave").addEventListener("click",function(){
+    var ad=$("dAd").value.trim(); if(!ad){alert("Belge adı zorunlu");return;}
+    var rec={ad:ad,mod:$("dMod").value,ekr:$("dEkr").value,isl:$("dIsl").value,arac:$("dArac").value,tas:$("dTas").value,zor:$("dZor").checked,onay:$("dOnay").checked,dur:$("dDur").value};
+    if(editId){ var d=data.find(function(x){return x.id==editId;}); Object.assign(d,rec); }
+    else { rec.id=nextId++; data.push(rec); }
+    closeDrawer(); render();
+  });
+
+  render();
+</script>
+</body></html>
