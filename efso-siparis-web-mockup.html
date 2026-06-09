@@ -125,6 +125,22 @@
   .btn-ghost{flex:1;border:1px dashed var(--efso);color:var(--efso-dark);background:#f0fdff;border-radius:11px;padding:11px;font-weight:600;font-size:12.5px;cursor:pointer}
   .btn-ghost:hover{background:#e0f7fa}
 
+  /* adres otomatik tamamlama (keyless · Photon/OSM + yerel fallback) */
+  .panel.addr{overflow:visible}
+  .acwrap{position:relative;margin-top:4px}
+  .ac-in{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:#fff}
+  .ac-in:focus{outline:none;border-color:var(--efso)}
+  .ac-list{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:45;background:#fff;border:1px solid var(--line);
+           border-radius:12px;box-shadow:0 14px 34px rgba(15,23,42,.16);max-height:264px;overflow:auto;display:none}
+  .ac-list.show{display:block}
+  .ac-item{display:flex;align-items:center;gap:9px;padding:10px 12px;cursor:pointer;font-size:12.5px;border-bottom:1px solid #f1f5f9}
+  .ac-item:last-child{border-bottom:0}
+  .ac-item:hover{background:#f0fdff}
+  .ac-ic{flex:0 0 auto;font-size:14px}
+  .ac-tx{flex:1;min-width:0;line-height:1.35}
+  .ac-src{flex:0 0 auto;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;background:#f1f5f9;border-radius:6px;padding:2px 6px}
+  .ac-loading{padding:9px 12px;font-size:11.5px;color:var(--muted)}
+
   /* kap / package items */
   .kap{border:1px solid var(--line);border-radius:13px;padding:13px;margin-top:12px;background:var(--soft)}
   .kap .h{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
@@ -418,7 +434,7 @@ const MODE_ADJ = { express:1, gunici:0.82, ileri:0.78, simdi:1, randevu:1 };
 /* ============================================================
    DURUM
    ============================================================ */
-let S = { cat:'yolcu', mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount:2, km:12, stops:0 };
+let S = { cat:'yolcu', mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount:2, km:12, stops:0, addr:{from:'',to:''} };
 
 /* ============================================================
    NAVIGASYON
@@ -426,7 +442,7 @@ let S = { cat:'yolcu', mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount
 function toggleGroup(id){ document.getElementById(id).classList.toggle('open'); }
 
 function selectCat(cat){
-  S = { cat, mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount:2, km:12, stops:0 };
+  S = { cat, mode:null, veh:null, slot:null, kaps:[], pax:1, addrCount:2, km:12, stops:0, addr:{from:'',to:''} };
   document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.toggle('active', n.dataset.cat===cat));
   document.getElementById('cbCat').textContent = CATS[cat].label;
   renderStep1();
@@ -522,18 +538,95 @@ function renderStep3(){
   renderLiveSum();
 }
 
+/* ============================================================
+   ADRES OTOMATİK TAMAMLAMA (keyless)
+   1) Photon (photon.komoot.io · OpenStreetMap) — gerçek, anahtarsız, ücretsiz
+   2) İnternet yok/yavaş/limit → yerel dummy İstanbul listesi (her zaman çalışır)
+   Google anahtarın olursa: acFetch içindeki URL'yi Google Places Autocomplete
+   uçuna çevirmek yeterli (UX birebir aynı).
+   ============================================================ */
+const AC_LOCAL = [
+  "Levent, Beşiktaş, İstanbul","Etiler, Beşiktaş, İstanbul","Maslak, Sarıyer, İstanbul",
+  "Taksim Meydanı, Beyoğlu, İstanbul","Şişli Merkez, Şişli, İstanbul","Mecidiyeköy, Şişli, İstanbul",
+  "Kadıköy Rıhtım, Kadıköy, İstanbul","Bağdat Caddesi, Kadıköy, İstanbul","Ataşehir, İstanbul",
+  "Ümraniye Merkez, Ümraniye, İstanbul","Üsküdar Meydanı, Üsküdar, İstanbul","Kartal, İstanbul",
+  "Bakırköy Çarşı, Bakırköy, İstanbul","Ataköy, Bakırköy, İstanbul","Florya, Bakırköy, İstanbul",
+  "Bağcılar Meydan, Bağcılar, İstanbul","Esenyurt, İstanbul","Beylikdüzü, İstanbul",
+  "Avcılar, İstanbul","Başakşehir, İstanbul","Eyüpsultan, İstanbul","Gaziosmanpaşa, İstanbul",
+  "Sultanahmet, Fatih, İstanbul","Eminönü, Fatih, İstanbul","Karaköy, Beyoğlu, İstanbul",
+  "İstanbul Havalimanı (IST), Arnavutköy","Sabiha Gökçen Havalimanı (SAW), Pendik",
+  "İkitelli OSB, Başakşehir, İstanbul","Dudullu OSB, Ümraniye, İstanbul","Tuzla Organize Sanayi, Tuzla, İstanbul",
+  "Pendik Merkez, Pendik, İstanbul","Çekmeköy, İstanbul","Sancaktepe, İstanbul",
+  "Zeytinburnu, İstanbul","Güngören, İstanbul","Kağıthane, İstanbul",
+  "Ankara Kızılay, Çankaya, Ankara","İzmir Alsancak, Konak, İzmir","Bursa Nilüfer, Bursa"
+];
+let acTimer=null, acReqId=0;
+
+function acInput(which,q){
+  S.addr[which]=q;
+  const list=document.getElementById('aclist_'+which); if(!list) return;
+  if(!q || q.trim().length<2){ list.classList.remove('show'); list.innerHTML=''; return; }
+  renderAc(which, acLocal(q));                 // anında yerel öneri
+  clearTimeout(acTimer);
+  const myReq=++acReqId;
+  acTimer=setTimeout(()=>acFetch(which,q,myReq),260);  // debounce → gerçek (Photon)
+}
+function acLocal(q){
+  const s=q.toLocaleLowerCase('tr');
+  return AC_LOCAL.filter(a=>a.toLocaleLowerCase('tr').includes(s)).slice(0,6).map(a=>({label:a,src:'yerel'}));
+}
+async function acFetch(which,q,reqId){
+  try{
+    const url='https://photon.komoot.io/api/?lang=default&limit=6&lat=41.01&lon=28.97&q='+encodeURIComponent(q);
+    const r=await fetch(url); if(!r.ok) throw 0;
+    const j=await r.json();
+    if(reqId!==acReqId) return;                // eski istek → at
+    const items=(j.features||[]).map(f=>{
+      const p=f.properties||{};
+      const street=p.street?(p.street+(p.housenumber?' '+p.housenumber:'')):null;
+      const parts=[p.name,street,p.district,p.city||p.county,p.state,p.country].filter(Boolean);
+      return {label:[...new Set(parts)].join(', '), src:'harita'};
+    }).filter(x=>x.label);
+    if(items.length) renderAc(which,items);
+  }catch(e){ /* yerel öneri zaten gösterildi */ }
+}
+function renderAc(which,items){
+  const list=document.getElementById('aclist_'+which); if(!list) return;
+  if(!items.length){ list.classList.remove('show'); list.innerHTML=''; return; }
+  list.innerHTML=items.map(it=>`<div class="ac-item" onmousedown="acPick('${which}',this)" data-v="${it.label.replace(/"/g,'&quot;')}">
+      <span class="ac-ic">📍</span><span class="ac-tx">${it.label}</span><span class="ac-src">${it.src}</span></div>`).join('');
+  list.classList.add('show');
+}
+function acPick(which,el){
+  const v=el.getAttribute('data-v'); S.addr[which]=v;
+  const inp=document.getElementById('ac_'+which); if(inp) inp.value=v;
+  const list=document.getElementById('aclist_'+which); if(list){list.classList.remove('show');list.innerHTML='';}
+  toast('📍 '+(which==='from'?'Alım/Çıkış':'Teslim/Varış')+' adresi seçildi');
+}
+function acBlur(which){ setTimeout(()=>{const l=document.getElementById('aclist_'+which); if(l) l.classList.remove('show');},160); }
+
+/* Adres giriş satırı (pin + label + autocomplete input) */
+function addrInput(which,label,placeholder,pinClass,icon){
+  const val=(S.addr[which]||'').replace(/"/g,'&quot;');
+  return `<div class="stop"><div class="top">
+    <div class="pin ${pinClass}">${icon}</div>
+    <div class="meta" style="flex:1">
+      <b>${label}</b>
+      <div class="acwrap">
+        <input class="ac-in" id="ac_${which}" autocomplete="off" placeholder="${placeholder}" value="${val}"
+          oninput="acInput('${which}',this.value)" onfocus="acInput('${which}',this.value)" onblur="acBlur('${which}')">
+        <div class="ac-list" id="aclist_${which}"></div>
+      </div>
+    </div>
+  </div></div>`;
+}
+
 /* ---- ADRES bloğu ---- */
 function addrBlock(M){
   const multi = M && M.multi;
-  let stops = `
-    <div class="stop"><div class="top">
-      <div class="pin pick0">📍</div>
-      <div class="meta"><b>Alım Adresi (A)</b><span>Mahalle, sokak, no — harita üzerinden seç</span></div>
-    </div></div>
-    <div class="stop"><div class="top">
-      <div class="pin drop0">🏁</div>
-      <div class="meta"><b>Teslim Adresi (B)</b><span>Mahalle, sokak, no — harita üzerinden seç</span></div>
-    </div></div>`;
+  let stops =
+    addrInput('from','Alım Adresi (A)','Adres yazın — öneriler gelir…','pick0','📍') +
+    addrInput('to','Teslim Adresi (B)','Adres yazın — öneriler gelir…','drop0','🏁');
   const addBtns = multi ? `
     <div class="addrow">
       <button class="btn-ghost" onclick="addStop('Ara durak (B→C)')">+ Ara Durak (A-B + B-C)</button>
@@ -542,7 +635,7 @@ function addrBlock(M){
     ${S.stops>0?`<div class="hintbox" style="margin-top:9px;display:flex;justify-content:space-between;align-items:center">
       <span>🚏 ${S.stops} ek durak eklendi — fiyata yansıdı.</span>
       <span style="color:var(--red);cursor:pointer;font-weight:600" onclick="setStops(0)">Sıfırla ✕</span></div>`:''}` : '';
-  return `<div class="panel"><div class="panel-h"><div class="n">1</div><b>Adres Bilgileri</b>
+  return `<div class="panel addr"><div class="panel-h"><div class="n">1</div><b>Adres Bilgileri</b>
       <span class="badge">${multi?'A-B · A-B+B-C · A-N · N-N':'A → B Direkt'}</span></div>
     <div class="panel-b">${stops}${addBtns}</div></div>`;
 }
@@ -687,10 +780,10 @@ function pickSlot(id){ S.slot=id; renderStep3(); }
 /* ---- YOLCU formu ---- */
 function formYolcu(v){
   const M=MODES[S.mode];
-  return `<div class="panel"><div class="panel-h"><div class="n">1</div><b>Güzergah</b><span class="badge">A → B</span></div>
+  return `<div class="panel addr"><div class="panel-h"><div class="n">1</div><b>Güzergah</b><span class="badge">A → B</span></div>
     <div class="panel-b">
-      <div class="stop"><div class="top"><div class="pin pick0">📍</div><div class="meta"><b>Nereden</b><span>Kalkış noktası</span></div></div></div>
-      <div class="stop"><div class="top"><div class="pin drop0">🏁</div><div class="meta"><b>Nereye</b><span>Varış noktası</span></div></div></div>
+      ${addrInput('from','Nereden','Kalkış noktası — adres yazın…','pick0','📍')}
+      ${addrInput('to','Nereye','Varış noktası — adres yazın…','drop0','🏁')}
       <label class="check"><input type="checkbox"> <span>Dönüş / bekleme ekle</span></label>
     </div></div>
   <div class="panel"><div class="panel-h"><div class="n">2</div><b>Yolcu &amp; Zaman</b></div><div class="panel-b">
@@ -708,11 +801,11 @@ function formYolcu(v){
 
 /* ---- EV & OFİS formu ---- */
 function formEvOfis(){
-  return `<div class="panel"><div class="panel-h"><div class="n">1</div><b>Adresler</b><span class="badge">Çıkış → Varış</span></div>
+  return `<div class="panel addr"><div class="panel-h"><div class="n">1</div><b>Adresler</b><span class="badge">Çıkış → Varış</span></div>
     <div class="panel-b">
-      <div class="stop"><div class="top"><div class="pin pick0">🏠</div><div class="meta"><b>Mevcut Adres (Çıkış)</b><span>Bina, kat, daire</span></div></div></div>
+      ${addrInput('from','Mevcut Adres (Çıkış)','Bina/sokak — adres yazın…','pick0','🏠')}
       <div class="grid2"><div><label class="fld">Kat</label><input type="number" placeholder="3"></div><div><label class="fld">Asansör</label><select><option>Var</option><option>Yok</option><option>Eşya asansörü gerekli</option></select></div></div>
-      <div class="stop"><div class="top"><div class="pin drop0">🏡</div><div class="meta"><b>Yeni Adres (Varış)</b><span>Bina, kat, daire</span></div></div></div>
+      ${addrInput('to','Yeni Adres (Varış)','Bina/sokak — adres yazın…','drop0','🏡')}
       <div class="grid2"><div><label class="fld">Kat</label><input type="number" placeholder="5"></div><div><label class="fld">Asansör</label><select><option>Var</option><option>Yok</option><option>Eşya asansörü gerekli</option></select></div></div>
     </div></div>
   <div class="panel"><div class="panel-h"><div class="n">2</div><b>Taşıma Kapsamı</b></div><div class="panel-b">
@@ -827,6 +920,7 @@ function renderStep4(){
     ['Kategori', CATS[S.cat].label],
     M?['Zamanlama', M.name]:null,
     ['Araç Tipi', `${v.name} — ${v.sub}`],
+    (S.addr.from||S.addr.to)?['Güzergah', `${S.addr.from||'—'} → ${S.addr.to||'—'}`]:null,
     ['Mesafe / Durak', `${p.km} km · ${p.stops} ek durak`],
     S.slot?['Teslimat Slotu', (()=>{const s=SLOTS.find(x=>x.id===S.slot);return `${s.name} · ${s.win} · ${s.taahhut}`;})()]:null,
     S.cat==='yolcu'?['Yolcu', S.pax+' kişi']:null,
