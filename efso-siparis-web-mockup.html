@@ -483,15 +483,15 @@ const CATS = {
     label:'Yük Taşımacılığı', icon:'📦',
     modes:['express','gunici','ileri'],
     vehicles:[
-      {id:'moto',    name:'Moto Kurye',        sub:'Courier',            ph:'🛵', specs:['≤ 5 kg','≤ 20 desi'],      maxKg:5,    maxDesi:20,   kap:['Zarf/Dosya','Koli','Diğer'], dosyaSkip:true},
+      {id:'moto',    name:'Moto Kurye',        sub:'Courier',            ph:'🛵', specs:['≤ 5 kg','≤ 20 desi'],      maxKg:5,    maxDesi:20,   kap:['Koli','Diğer']},
       {id:'courier', name:'Van Ford Courier',  sub:'Hafif kargo',        ph:'🚐', specs:['≤ 600 kg','≤ 4.5 m³'],     maxKg:600,  maxDesi:800,  kap:['Dosya','Koli','Diğer'], dosyaSkip:true},
       {id:'transit', name:'Van Ford Transit',  sub:'Orta hacim',         ph:'🚐', specs:['≤ 1200 kg','≤ 8.5 m³'],    maxKg:1200, maxDesi:1500, kap:['Koli','Palet','Diğer']},
       {id:'kamyonet',name:'Kamyonet',          sub:'Mercedes Sprinter',  ph:'🚚', specs:['≤ 1400 kg','≤ 16.8 m³'],   maxKg:1400, maxDesi:3000, kap:['Koli','Palet','Diğer']},
-      {id:'kamyon_ls',name:'Kamyon (Liftsiz)', sub:'Açık/kapalı kasa',   ph:'🚛', specs:['≤ 7000 kg','≤ 42.3 m³'],   maxKg:7000, maxDesi:7600, selectOnly:true, photo:true},
-      {id:'kamyon_l',name:'Kamyon (Liftli)',   sub:'Hidrolik lift',      ph:'🚛', specs:['≤ 7000 kg','Liftli'],      maxKg:7000, maxDesi:7600, selectOnly:true, photo:true},
-      {id:'tir_tnt', name:'TIR — Tenteli',     sub:'Açılır tente',       ph:'🚚', specs:['≤ 25.5 t','≤ 91.6 m³'],    maxKg:25500,maxDesi:16500,selectOnly:true, photo:true},
-      {id:'tir_sal', name:'TIR — Sal / Dorse', sub:'Düz platform',       ph:'🚛', specs:['≤ 25.5 t','Açık dorse'],   maxKg:25500,maxDesi:16500,selectOnly:true, photo:true},
-      {id:'tir_low', name:'TIR — Lowbed',      sub:'Ağır / gabari',      ph:'🚜', specs:['Ağır iş mak.','Gabari'],   maxKg:45000,maxDesi:30000,selectOnly:true, photo:true},
+      {id:'kamyon_ls',name:'Kamyon (Liftsiz)', sub:'Açık/kapalı kasa',   ph:'🚛', specs:['≤ 7000 kg','≤ 42.3 m³'],   maxKg:7000, maxDesi:7600, kap:['Palet','Koli','Sandık/Kasa','Big-Bag','Diğer'], truckSkip:true, photo:true},
+      {id:'kamyon_l',name:'Kamyon (Liftli)',   sub:'Hidrolik lift',      ph:'🚛', specs:['≤ 7000 kg','Liftli'],      maxKg:7000, maxDesi:7600, kap:['Palet','Koli','Sandık/Kasa','Big-Bag','Diğer'], truckSkip:true, photo:true},
+      {id:'tir_tnt', name:'TIR — Tenteli',     sub:'Açılır tente',       ph:'🚚', specs:['≤ 25.5 t','≤ 91.6 m³'],    maxKg:25500,maxDesi:16500,kap:['Palet','Koli','Sandık/Kasa','Big-Bag','Diğer'], truckSkip:true, photo:true},
+      {id:'tir_sal', name:'TIR — Sal / Dorse', sub:'Düz platform',       ph:'🚛', specs:['≤ 25.5 t','Açık dorse'],   maxKg:25500,maxDesi:16500,kap:['Konteyner','Makine/Ekipman','Sandık/Kasa','Proje/Gabari yük','Diğer'], truckSkip:true, photo:true},
+      {id:'tir_low', name:'TIR — Lowbed',      sub:'Ağır / gabari',      ph:'🚜', specs:['Ağır iş mak.','Gabari'],   maxKg:45000,maxDesi:30000,kap:['İş makinesi','Konteyner','Trafo/Tank','Proje/Gabari yük','Diğer'], truckSkip:true, photo:true},
     ]
   },
   evofis:{
@@ -555,7 +555,7 @@ const MODE_ADJ = { express:1, gunici:0.82, ileri:0.78, simdi:1, randevu:1 };
    DURUM
    ============================================================ */
 let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
-          route:[], items:[], addrMap:{} };
+          route:[], items:[], addrMap:{}, truckSkip:true };
 
 /* ============================================================
    NAVIGASYON
@@ -563,7 +563,7 @@ let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
 function toggleGroup(id){ document.getElementById(id).classList.toggle('open'); }
 
 function selectCat(cat){
-  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{} };
+  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{}, truckSkip:true };
   document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.toggle('active', n.dataset.cat===cat));
   document.getElementById('cbCat').textContent = CATS[cat].label;
   showView('new');
@@ -651,12 +651,18 @@ function renderStep2(){
   document.getElementById('s2title').textContent = S.cat==='yolcu'?'Araç Tipini Seçin':'Araç Tipini Seçin';
 }
 function pickVeh(id){
-  S.veh=id; S.slot=null;
+  S.veh=id; S.slot=null; S.truckSkip=true;   // büyük araçta varsayılan: araç seçimi yeterli (01)
   S.km = id.startsWith('tir') ? 250 : (id.startsWith('kamyon') ? 60 : 12); // tahmini varsayılan mesafe
+  // araç değişince kap cinsini yeni aracın listesine uyarla
+  const v=CATS[S.cat].vehicles.find(x=>x.id===id);
+  if(v && v.kap) S.items.forEach(it=>{ if(!v.kap.includes(it.cat)) it.cat=v.kap[0]; });
   recalcStops();   // ek durak sayısı route'tan türetilir
   renderStep2(); setTimeout(()=>goStep(3),160);
 }
 function curVeh(){ return CATS[S.cat].vehicles.find(v=>v.id===S.veh); }
+/* ürün kartları gösterilsin mi: hafif araçta hep; büyük araçta yalnız "01 atla" kapalıyken */
+function vehNeedsItems(v){ return v && (v.truckSkip ? !S.truckSkip : true); }
+function isDosya(name){ return /dosya|zarf|evrak/i.test(name||''); }
 
 /* ============================================================
    STEP 3 — SİPARİŞ DETAYI (forma göre)
@@ -673,8 +679,8 @@ function renderStep3(){
   else                     html=formYuk(v,M);
 
   document.getElementById('formHost').innerHTML = html;
-  // yük: kategori-bazlı ürün kartlarını çiz (araç-seçimi-yeterli tiplerde ürün yok)
-  if(S.cat==='yuk' && !v.selectOnly){ ensureItems(); renderItems(); }
+  // yük: araca-özel kap cinsiyle ürün kartlarını çiz (büyük araçta "01 atla" kapalıysa)
+  if(S.cat==='yuk' && vehNeedsItems(v)){ ensureItems(); renderItems(); }
   renderLiveSum();
 }
 
@@ -852,21 +858,29 @@ function formYuk(v,M){
       </div></div>`;
   }
 
-  const nKap = (M&&M.slot)?3:2;
+  let n = (M&&M.slot)?2:1;   // routeBlock=1, slot=2 (varsa)
 
-  // Kap bilgileri
-  if(v.selectOnly){
-    h += `<div class="panel"><div class="panel-h"><div class="n">${nKap}</div><b>Yük Bilgisi</b>
-        <span class="badge">Araç Seçimi Yeterli</span></div><div class="panel-b">
-      <div class="hintbox" style="margin-top:0">Yükünüzün detaylı adet ve ağırlığını bilmiyor, ancak hangi araca sığacağından eminseniz; adet/ağırlık girmeden yalnızca araç seçerek hızlıca devam edebilirsiniz.</div>
-      <label class="check"><input type="checkbox" id="skipKap" checked> <span>Adet/ağırlık girmeden devam et (araç seçimi yeterli)</span></label>
-      <label class="fld">Yük Tanımı (opsiyonel)</label>
-      <textarea placeholder="Örn: 12 palet beyaz eşya, paletli, forkliftli yükleme..."></textarea>
-      <label class="fld">Tahmini Toplam Ağırlık (opsiyonel)</label>
-      <input type="number" placeholder="kg">
+  // ---- KAP / ÜRÜNLER (araca özel kap cinsi) ----
+  if(v.truckSkip){
+    // Büyük araç: "01" — araç seçimi yeterli VEYA kap girişi (Excel)
+    n++;
+    h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük Bilgisi</b>
+        <span class="badge">${S.truckSkip?'Araç Seçimi Yeterli (01)':'Kap Girişi'}</span></div><div class="panel-b">
+      <div class="hintbox" style="margin-top:0"><b>01 —</b> Yükünüzün detaylı adet/ağırlığını bilmiyor ama hangi araca sığacağından eminseniz; adet/ağırlık girmeden yalnızca araç seçerek hızlıca devam edebilirsiniz. Kap detayı girmek isterseniz aşağıdaki kutunun işaretini kaldırın.</div>
+      <label class="check"><input type="checkbox" ${S.truckSkip?'checked':''} onchange="toggleTruckSkip(this.checked)"> <span><b>Adet/ağırlık girmeden devam et</b> — araç seçimi yeterli (01)</span></label>
+      ${S.truckSkip ? `<label class="fld">Yük Tanımı (opsiyonel)</label>
+        <textarea placeholder="Örn: 12 palet beyaz eşya, paletli, forkliftli yükleme..."></textarea>
+        <label class="fld">Tahmini Toplam Ağırlık (opsiyonel)</label><input type="number" placeholder="kg">` : ''}
       </div></div>`;
+    if(!S.truckSkip){
+      n++;
+      h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük / Ürünler</b>
+          <span class="badge">Kap cinsi: ${v.kap.join(' · ')}</span></div>
+        <div class="panel-b" id="itemHost"></div></div>`;
+    }
     if(v.photo){
-      h += `<div class="panel"><div class="panel-h"><div class="n">${nKap+1}</div><b>Araç Detayı &amp; Sorumluluk Bildirimi</b>
+      n++;
+      h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Araç Detayı &amp; Sorumluluk Bildirimi</b>
           <span class="badge" style="background:#fef3c7;color:#b45309">Onay Gerekli</span></div><div class="panel-b">
         <div class="hintbox" style="margin-top:0">Aracın kasa–kapı–dingil–ölçü–tonaj fotoğraflı detay sayfası gösterilir. Müşteri tüm detayları görür ve sorumluluk bildirimini onaylar.</div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
@@ -874,18 +888,21 @@ function formYuk(v,M){
           <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">🚪 Kapı</div>
           <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">⚖️ Tonaj</div>
         </div>
-        <label class="check"><input type="checkbox" id="sorum"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün bu araca uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
+        <label class="check"><input type="checkbox"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün bu araca uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
         </div></div>`;
     }
   } else {
-    h += `<div class="panel"><div class="panel-h"><div class="n">${nKap}</div><b>Yük / Ürünler</b>
-        <span class="badge" id="itemBadge">${(S.items&&S.items.length)||0} ürün</span></div>
+    // Hafif araç: kap cinsi her zaman seçilir (Moto/Courier/Transit/Kamyonet)
+    n++;
+    h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük / Ürünler</b>
+        <span class="badge">Kap cinsi: ${v.kap.join(' · ')}</span></div>
       <div class="panel-b" id="itemHost"></div></div>`;
   }
 
   // Gün içi/ileri ek alanları (yükleyen/boşaltan + süre)
   if(M && M.slot){
-    h += `<div class="panel"><div class="panel-h"><div class="n">${v.selectOnly?(v.photo?nKap+2:nKap+1):nKap+1}</div><b>Yükleme / Boşaltma Detayı</b>
+    n++;
+    h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yükleme / Boşaltma Detayı</b>
         <span class="badge">Planlama için</span></div><div class="panel-b">
       <div class="grid2">
         <div><label class="fld">Yükleyecek Kişi (ad / tel)</label><input placeholder="Ad Soyad · 05xx"></div>
@@ -905,25 +922,18 @@ function formYuk(v,M){
    YÜK / ÜRÜNLER — kategori-bazlı ürün kartları · detaylı ekran mantığı
    kategori → dinamik alanlar (ölçü/kırılabilir/soğuk) · desi otomatik · hangi alım→teslim
    ============================================================ */
-const ITEM_CATS = {
-  'Koli / Paket':{dims:true},
-  'Palet':{dims:true},
-  'Beyaz eşya':{dims:true,fragile:true},
-  'Mobilya':{dims:true,fragile:true},
-  'Gıda (soğuk)':{cold:true},
-  'Evrak / Zarf':{},
-  'Diğer':{dims:true},
-};
 let itemSeq=0;
+function toggleTruckSkip(c){ S.truckSkip=!!c; renderStep3(); }   // 01 butonu (araç seçimi yeterli ↔ kap girişi)
+function vehKap(){ const v=curVeh(); return (v&&v.kap)||['Koli','Diğer']; }
 function ensureItems(){ if(!S.items) S.items=[]; if(S.items.length===0) addItem(true); }
 function addItem(silent){
-  S.items.push({id:'i'+(++itemSeq), cat:Object.keys(ITEM_CATS)[0], qty:1, kg:10, val:0, w:40, l:50, hh:60, from:1, to:1});
+  S.items.push({id:'i'+(++itemSeq), cat:vehKap()[0], qty:1, kg:10, val:0, w:40, l:50, hh:60, fragile:false, cold:false, from:1, to:1});
   if(!silent) renderItems(true);
 }
 function rmItem(id){ S.items=S.items.filter(x=>x.id!==id); renderItems(true); }
 function setItem(id,f,v){
   const it=S.items.find(x=>x.id===id); if(!it) return;
-  it[f] = (f==='cat') ? v : (+v||0);
+  it[f] = (f==='cat') ? v : (f==='fragile'||f==='cold') ? !!v : (+v||0);
   renderItems(true);
 }
 function itemDesi(it){
@@ -934,36 +944,43 @@ function itemDesi(it){
 }
 function totals(){
   let kg=0,desi=0,qty=0;
-  (S.items||[]).forEach(it=>{ const {d}=itemDesi(it); qty+=(+it.qty||0); desi+=d; kg+=(+it.kg||0)*(+it.qty||0); });
+  (S.items||[]).forEach(it=>{ if(isDosya(it.cat)) return;   // Dosya/zarf → adet/ağırlık yok
+    const {d}=itemDesi(it); qty+=(+it.qty||0); desi+=d; kg+=(+it.kg||0)*(+it.qty||0); });
   return {kg,desi,qty};
 }
 function renderItems(check){
   const host=document.getElementById('itemHost'); if(!host) return;
+  const kap=vehKap(), vname=curVeh().name;
   host.innerHTML = S.items.map((it,idx)=>{
-    const cfg=ITEM_CATS[it.cat]||{};
-    const opts=Object.keys(ITEM_CATS).map(k=>`<option ${k===it.cat?'selected':''}>${k}</option>`).join('');
+    if(!kap.includes(it.cat)) it.cat=kap[0];           // araç değişince kap cinsini uyarla
+    const dosya=isDosya(it.cat);
+    const opts=kap.map(k=>`<option ${k===it.cat?'selected':''}>${k}</option>`).join('');
     const {d,ekg}=itemDesi(it);
-    let dyn=`<span class="tag">${it.cat} için alanlar</span>`;
-    if(cfg.dims) dyn+=`<div class="grid3">
-        <div><label class="fld">En cm</label><input type="number" min="0" value="${it.w}" onchange="setItem('${it.id}','w',this.value)"></div>
-        <div><label class="fld">Boy cm</label><input type="number" min="0" value="${it.l}" onchange="setItem('${it.id}','l',this.value)"></div>
-        <div><label class="fld">Yük. cm</label><input type="number" min="0" value="${it.hh}" onchange="setItem('${it.id}','hh',this.value)"></div></div>`;
-    if(cfg.fragile) dyn+=`<label class="check"><input type="checkbox" checked> <span>Kırılabilir — dikkatli taşıma</span></label>`;
-    if(cfg.cold)    dyn+=`<label class="check"><input type="checkbox" checked> <span>Soğuk zincir (+2°C / +8°C)</span></label>`;
-    if(it.cat==='Evrak / Zarf') dyn+=`<div class="note">Evrak/zarf için boyut ve ağırlık opsiyoneldir.</div>`;
     const pOpts=picks().map((s,i)=>`<option value="${i+1}" ${it.from===i+1?'selected':''}>Alım ${i+1}</option>`).join('');
     const dOpts=drops().map((s,i)=>`<option value="${i+1}" ${it.to===i+1?'selected':''}>Teslim ${i+1}</option>`).join('');
+    const details = dosya
+      ? `<div class="hintbox" style="margin-top:11px">📄 <b>${it.cat}</b> seçildi — adet ve ağırlık sorulmadan devam edilir (Excel kuralı). Dilerseniz beyan değeri girin.</div>
+         <div class="grid2" style="margin-top:8px">
+           <div><label class="fld">Adet (ops.)</label><input type="number" min="1" value="${it.qty}" onchange="setItem('${it.id}','qty',this.value)"></div>
+           <div><label class="fld">Değer ₺ (ops.)</label><input type="number" min="0" value="${it.val}" onchange="setItem('${it.id}','val',this.value)"></div></div>`
+      : `<div class="grid3" style="margin-top:6px">
+           <div><label class="fld">Adet</label><input type="number" min="1" value="${it.qty}" onchange="setItem('${it.id}','qty',this.value)"></div>
+           <div><label class="fld">Ağırlık kg</label><input type="number" min="0" value="${it.kg}" onchange="setItem('${it.id}','kg',this.value)"></div>
+           <div><label class="fld">Değer ₺</label><input type="number" min="0" value="${it.val}" onchange="setItem('${it.id}','val',this.value)"></div></div>
+         <div class="dyn"><span class="tag">${it.cat} ölçüleri (desi için)</span>
+           <div class="grid3">
+             <div><label class="fld">En cm</label><input type="number" min="0" value="${it.w}" onchange="setItem('${it.id}','w',this.value)"></div>
+             <div><label class="fld">Boy cm</label><input type="number" min="0" value="${it.l}" onchange="setItem('${it.id}','l',this.value)"></div>
+             <div><label class="fld">Yük. cm</label><input type="number" min="0" value="${it.hh}" onchange="setItem('${it.id}','hh',this.value)"></div></div>
+           <label class="check"><input type="checkbox" ${it.fragile?'checked':''} onchange="setItem('${it.id}','fragile',this.checked)"> <span>Kırılabilir — dikkatli taşıma</span></label>
+           <label class="check"><input type="checkbox" ${it.cold?'checked':''} onchange="setItem('${it.id}','cold',this.checked)"> <span>Soğuk zincir (+2°C / +8°C)</span></label>
+         </div>
+         ${d?`<div class="desi"><span>Hesaplanan desi: ${d}</span><span>ücrete esas: ${ekg} (desi/kg max)</span></div>`:''}`;
     return `<div class="kap">
       <div class="h"><b>Ürün ${idx+1}</b>${S.items.length>1?`<span class="rm" onclick="rmItem('${it.id}')">Kaldır ✕</span>`:''}</div>
-      <label class="fld">Kategori <span class="req">*</span></label>
+      <label class="fld">Kap Cinsi <span class="req">*</span> <span style="color:var(--muted);font-weight:400">· ${vname}</span></label>
       <select onchange="setItem('${it.id}','cat',this.value)">${opts}</select>
-      <div class="grid3" style="margin-top:6px">
-        <div><label class="fld">Adet</label><input type="number" min="1" value="${it.qty}" onchange="setItem('${it.id}','qty',this.value)"></div>
-        <div><label class="fld">Ağırlık kg</label><input type="number" min="0" value="${it.kg}" onchange="setItem('${it.id}','kg',this.value)"></div>
-        <div><label class="fld">Değer ₺</label><input type="number" min="0" value="${it.val}" onchange="setItem('${it.id}','val',this.value)"></div>
-      </div>
-      <div class="dyn">${dyn}</div>
-      ${d?`<div class="desi"><span>Hesaplanan desi: ${d}</span><span>ücrete esas: ${ekg} (desi/kg max)</span></div>`:''}
+      ${details}
       <div class="grid2" style="margin-top:10px">
         <div><label class="fld">Hangi alımdan?</label><select onchange="setItem('${it.id}','from',this.value)">${pOpts}</select></div>
         <div><label class="fld">Hangi teslime?</label><select onchange="setItem('${it.id}','to',this.value)">${dOpts}</select></div>
@@ -971,7 +988,6 @@ function renderItems(check){
     </div>`;
   }).join('') + `<div class="addrow"><button class="btn-ghost" onclick="addItem()">+ Ürün Ekle</button></div>
     <div class="desi"><span>Toplam</span><span>${(()=>{const t=totals();return `${t.qty} adet · ${t.kg} kg${t.desi?` · ${t.desi} desi`:''}`;})()}</span></div>`;
-  const ib=document.getElementById('itemBadge'); if(ib) ib.textContent=S.items.length+' ürün';
   if(check) checkCapacity();   // modal yalnız kullanıcı değişikliğinde
   renderLiveSum();
 }
@@ -1106,7 +1122,7 @@ function internalControl(p){
 function renderLiveSum(){
   const host=document.getElementById('liveSum'); if(!host) return;
   const v=curVeh(), M=S.mode?MODES[S.mode]:null, p=priceModel();
-  const t=(S.cat==='yuk'&&!v.selectOnly)?totals():null;
+  const t=(S.cat==='yuk'&&vehNeedsItems(v))?totals():null;
   const rows=[];
   rows.push(['Kategori', CATS[S.cat].label]);
   if(M) rows.push(['Zamanlama', M.name.split('—')[0].trim()]);
@@ -1114,7 +1130,7 @@ function renderLiveSum(){
   if(S.slot){ const s=SLOTS.find(x=>x.id===S.slot); rows.push(['Slot', `${s.name} (${s.win})`]); }
   if(S.cat==='yolcu') rows.push(['Yolcu', S.pax+' kişi']);
   if(t) rows.push(['Yük', `${t.qty} adet · ${t.kg} kg`]);
-  if(v.selectOnly) rows.push(['Kap', 'Araç seçimi yeterli']);
+  if(v.truckSkip && S.truckSkip) rows.push(['Yük', 'Araç seçimi yeterli (01)']);
 
   host.innerHTML = `
     <div class="sh">🧮 Canlı Fiyat — km × tarife</div>
@@ -1146,7 +1162,7 @@ function routeText(){
 }
 function renderStep4(){
   const v=curVeh(), M=S.mode?MODES[S.mode]:null, p=priceModel();
-  const t=(S.cat==='yuk'&&!v.selectOnly)?totals():null;
+  const t=(S.cat==='yuk'&&vehNeedsItems(v))?totals():null;
   const items=[
     ['Kategori', CATS[S.cat].label],
     M?['Zamanlama', M.name]:null,
@@ -1156,9 +1172,9 @@ function renderStep4(){
     ['Mesafe / Ek Durak', `${p.km} km · ${p.stops} ek durak`],
     S.slot?['Teslimat Slotu', (()=>{const s=SLOTS.find(x=>x.id===S.slot);return `${s.name} · ${s.win} · ${s.taahhut}`;})()]:null,
     S.cat==='yolcu'?['Yolcu', S.pax+' kişi']:null,
-    (S.cat==='yuk'&&!v.selectOnly)?['Ürünler', `${S.items.length} kalem`]:null,
+    (S.cat==='yuk'&&vehNeedsItems(v))?['Ürünler', `${S.items.length} kalem`]:null,
     t?['Toplam Yük', `${t.qty} adet · ${t.kg} kg${t.desi?` · ${t.desi} desi`:''}`]:null,
-    v.selectOnly?['Yük Bilgisi', 'Araç seçimi yeterli (adet/ağırlık girilmedi)']:null,
+    (v.truckSkip&&S.truckSkip)?['Yük Bilgisi', 'Araç seçimi yeterli — adet/ağırlık girilmedi (01)']:null,
   ].filter(Boolean);
 
   document.getElementById('confHost').innerHTML = `
@@ -1243,7 +1259,7 @@ function buildOrder(){
     no:'EFSO-2026-'+String(orderSeq).padStart(6,'0'),
     cat:S.cat, catLabel:CATS[S.cat].label, vehName:v.name, vehEmoji:v.ph||'🚚',
     modeLabel:M?M.name.split('—')[0].trim():'Randevu', rtText:routeText(),
-    km:p.km, stops:p.stops, itemsN:(S.cat==='yuk'&&!v.selectOnly)?S.items.length:0,
+    km:p.km, stops:p.stops, itemsN:(S.cat==='yuk'&&vehNeedsItems(v))?S.items.length:0,
     price:p.sale, meter:p.meter, survey:p.survey,
     status:'KuryeAraniyor', createdAt:nowStr(), courier:null,
     routeSnap: S.route.map(s=>({type:s.type, addr:S.addrMap['st_'+s.id]||''})),
