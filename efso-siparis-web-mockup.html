@@ -882,17 +882,21 @@ function formYuk(v,M){
          <label class="fld">Tahmini Toplam Ağırlık (opsiyonel)</label><input type="number" placeholder="kg">`
       : `<div id="itemHost" style="margin-top:4px"></div>`}
     </div></div>`;
-  if(v.photo){
+  // 01 seçildiyse (adet/ağırlık girilmeden) → araç ölçü/foto detayı + SORUMLULUK onayı (her araçta, Excel)
+  if(S.truckSkip){
     n++;
+    const cap = (v.maxKg?`≤ ${v.maxKg.toLocaleString('tr-TR')} kg`:'') + (v.maxDesi?` · ≤ ${v.maxDesi.toLocaleString('tr-TR')} desi`:'');
     h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Araç Detayı &amp; Sorumluluk Bildirimi</b>
-        <span class="badge" style="background:#fef3c7;color:#b45309">Onay Gerekli</span></div><div class="panel-b">
-      <div class="hintbox" style="margin-top:0">Aracın kasa–kapı–dingil–ölçü–tonaj fotoğraflı detay sayfası gösterilir. Müşteri tüm detayları görür ve sorumluluk bildirimini onaylar.</div>
+        <span class="badge" style="background:#fef3c7;color:#b45309">01 · Onay Gerekli</span></div><div class="panel-b">
+      <div class="hintbox" style="margin-top:0">Adet/ağırlık girmediniz (01). <b>${v.name}</b> en detaylı <b>kasa–kapı–dingil–ölçü–tonaj</b> fotoğraflı sayfası gösterilir; yükünüzün bu araca sığacağına dair <b>sorumluluğu</b> onaylamanız gerekir.${cap?` <b>Kapasite: ${cap}.</b>`:''}</div>
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">📐 Kasa</div>
-        <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">🚪 Kapı</div>
-        <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">⚖️ Tonaj</div>
+        <div style="flex:1;min-width:84px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#475569">📐 Kasa</div>
+        <div style="flex:1;min-width:84px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#475569">🚪 Kapı</div>
+        <div style="flex:1;min-width:84px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#475569">📏 Dingil/DS</div>
+        <div style="flex:1;min-width:84px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#475569">⚖️ Tonaj</div>
       </div>
-      <label class="check"><input type="checkbox"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün bu araca uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
+      <label class="check"><input type="checkbox"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün <b>${v.name}</b> aracına uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
+      <div style="margin-top:8px"><span style="color:var(--efso);font-weight:600;cursor:pointer;font-size:12.5px" onclick="goStep(2)">↺ Araç tipini tekrar seç / değiştir</span></div>
       </div></div>`;
   }
 
@@ -1222,11 +1226,9 @@ const STATUSES=[
   {key:'Bosaltiliyor',      label:'Boşaltılıyor',       ic:'📥', sub:'Yük indiriliyor'},
   {key:'Tamamlandi',        label:'Tamamlandı',         ic:'🎉', sub:'Teslim edildi'},
 ];
-const COURIERS=[
-  {name:'Mehmet Yıldız', veh:'Ford Transit · 34 EFS 042', rate:'4.9 ★'},
-  {name:'Ayşe Korkmaz',  veh:'Mercedes Vito · 34 KRY 188', rate:'4.8 ★'},
-  {name:'Hasan Demir',   veh:'Moto Kurye · 34 MTO 771',    rate:'5.0 ★'},
-];
+const COURIER_NAMES=['Mehmet Yıldız','Ayşe Korkmaz','Hasan Demir','Elif Şahin','Murat Aslan','Zeynep Ak','Emre Çelik'];
+const PLATE_PREFIX={moto:'34 MTR',courier:'34 VAN',transit:'34 TRS',kamyonet:'34 KMT',kamyon_ls:'34 KMN',kamyon_l:'34 KMN',tir_tnt:'34 TIR',tir_sal:'34 TIR',tir_low:'34 LWB',
+  taksi:'34 TKS',vito:'34 VIP',sprinter:'34 GRP',evofis:'34 EVO'};
 let orderSeq=482, CUR_TRACK=null, LIST_FILTER='all';
 
 const ORDERS=[
@@ -1258,7 +1260,7 @@ function buildOrder(){
   orderSeq++;
   return {
     no:'EFSO-2026-'+String(orderSeq).padStart(6,'0'),
-    cat:S.cat, catLabel:CATS[S.cat].label, vehName:v.name, vehEmoji:v.ph||'🚚',
+    cat:S.cat, catLabel:CATS[S.cat].label, veh:S.veh, vehName:v.name, vehEmoji:v.ph||'🚚',
     modeLabel:M?M.name.split('—')[0].trim():'Randevu', rtText:routeText(),
     km:p.km, stops:p.stops, itemsN:(S.cat==='yuk'&&vehNeedsItems(v))?S.items.length:0,
     price:p.sale, meter:p.meter, survey:p.survey,
@@ -1269,8 +1271,16 @@ function buildOrder(){
   };
 }
 function assignCourier(o){
-  const c=COURIERS[orderSeq%COURIERS.length];
-  return {...c, eta:(4+(o.km%12))+' dk', phone:'+90 5•• ••• '+String(10+(orderSeq%89)).padStart(2,'0')+' '+String(o.km%90).padStart(2,'0')};
+  // Kurye, SİPARİŞİN ARACIYLA aynı araç tipinde atanır (Moto sipariş → Moto kurye)
+  const i=orderSeq % COURIER_NAMES.length;
+  const plate=`${PLATE_PREFIX[o.veh]||'34 EFS'} ${String(100+(orderSeq*7)%900)}`;
+  return {
+    name: COURIER_NAMES[i],
+    veh: `${o.vehName} · ${plate}`,
+    rate: ['4.9 ★','4.8 ★','5.0 ★','4.7 ★'][orderSeq%4],
+    eta: (4+(o.km%12))+' dk',
+    phone:'+90 5•• ••• '+String(10+(orderSeq%89)).padStart(2,'0')+' '+String(o.km%90).padStart(2,'0')
+  };
 }
 function statusBadge(o){
   if(o.status==='IptalEdildi') return {cls:'st-cancel', ic:'✕', label:'İptal Edildi'};
