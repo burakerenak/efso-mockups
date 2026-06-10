@@ -343,6 +343,9 @@
   .fillbar{height:7px;border-radius:999px;background:#e2e8f0;overflow:hidden}
   .fillbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#0ea5b7)}
   .afcap{font-size:10.5px;color:var(--efso-dark);font-weight:600;margin-top:4px}
+  .afwhy{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .afchip{font-size:9.5px;font-weight:600;color:#475569;background:#f1f5f9;border:1px solid var(--line);border-radius:7px;padding:2px 6px;white-space:nowrap}
+  .afchip.g{color:#15803d;background:#dcfce7;border-color:#bbf7d0}
   .afgo{color:var(--efso);font-weight:800;font-size:12.5px;white-space:nowrap;flex:0 0 auto}
   .afbadge{display:inline-block;font-size:9.5px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:6px;padding:1px 7px;margin-left:6px}
   .cap-types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -1047,13 +1050,23 @@ function checkCapacity(){
 }
 /* DEMO: şu an aktif (çevrimiçi) filo — gerçekte canlı konum + doluluk + rota backend'den gelir */
 const ACTIVE_FLEET = [
-  {id:'af1', name:'Hasan Demir',  veh:'courier',  plate:'34 VAN 074', fill:35, distKm:1.2},
-  {id:'af2', name:'Mehmet Yıldız',veh:'transit',  plate:'34 TRS 210', fill:58, distKm:2.4},
-  {id:'af3', name:'Elif Şahin',   veh:'transit',  plate:'34 TRS 355', fill:22, distKm:6.8},
-  {id:'af4', name:'Ayşe Korkmaz', veh:'kamyonet', plate:'34 KMT 118', fill:46, distKm:4.1},
-  {id:'af5', name:'Murat Aslan',  veh:'kamyon_ls',plate:'34 KMN 902', fill:51, distKm:9.0},
-  {id:'af6', name:'Zeynep Ak',    veh:'transit',  plate:'34 TRS 487', fill:70, distKm:3.3},
+  {id:'af1', name:'Hasan Demir',  veh:'courier',  plate:'34 VAN 074', fill:35, distKm:1.2, route:84, shift:'18:00', pool:3},
+  {id:'af2', name:'Mehmet Yıldız',veh:'transit',  plate:'34 TRS 210', fill:58, distKm:2.4, route:76, shift:'19:00', pool:5},
+  {id:'af3', name:'Elif Şahin',   veh:'transit',  plate:'34 TRS 355', fill:22, distKm:6.8, route:55, shift:'17:30', pool:2},
+  {id:'af4', name:'Ayşe Korkmaz', veh:'kamyonet', plate:'34 KMT 118', fill:46, distKm:4.1, route:68, shift:'18:30', pool:4},
+  {id:'af5', name:'Murat Aslan',  veh:'kamyon_ls',plate:'34 KMN 902', fill:51, distKm:9.0, route:40, shift:'20:00', pool:1},
+  {id:'af6', name:'Zeynep Ak',    veh:'transit',  plate:'34 TRS 487', fill:70, distKm:3.3, route:72, shift:'18:00', pool:6},
 ];
+/* "neden bu sırada?" — Excel dağıtım kriterleri (rota uygunluğu, doluluk, yakınlık, teslim/mesai) */
+function fleetReasons(a){
+  return [
+    {ic:'🧭', t:`Rotaya %${a.route} uygun`,        good:a.route>=70},
+    {ic:'📍', t:`${a.distKm} km yakın`,             good:a.distKm<=3},
+    {ic:'📦', t:`%${a.fill} dolu · yer var`,        good:a.fill<=55},
+    {ic:'⏱️', t:`Teslim saatine uygun`,             good:true},
+    {ic:'🕐', t:`Mesai ${a.shift}'a dek`,           good:true},
+  ];
+}
 function vehName(id){ const v=CATS.yuk.vehicles.find(x=>x.id===id); return v?v.name:id; }
 function vehById(id){ return CATS.yuk.vehicles.find(x=>x.id===id); }
 /* araç tipini sayfa içinde değiştir (km/kap uyarla) — toast/render çağırana ait */
@@ -1070,7 +1083,7 @@ function showCap(v,t){
     const remKg=Math.round(ty.maxKg*(1-af.fill/100));
     const remDesi=Math.round((ty.maxDesi||ty.maxKg)*(1-af.fill/100));
     const fits = remKg>=t.kg && (!ty.maxDesi || remDesi>=t.desi);
-    const score = af.distKm + af.fill/25;   // yakın + düşük doluluk öncelik
+    const score = af.distKm + af.fill/25 - af.route/15;   // rota uygunluğu + yakınlık + düşük doluluk öncelik
     return {...af, ty, remKg, remDesi, fits, score};
   }).filter(a=>a.fits).sort((a,b)=>a.score-b.score).slice(0,3);
 
@@ -1080,14 +1093,14 @@ function showCap(v,t){
   let html = `<p style="margin:0 0 2px">Girdiğiniz yük <b>${v.name}</b> kapasitesini aşıyor — limit <b>${v.maxKg} kg${v.maxDesi?` / ${v.maxDesi} desi`:''}</b>, girilen <b>${t.kg} kg${t.desi?` / ${t.desi} desi`:''}</b>. Aşağıdan seçim yapabilir ya da kap bilgilerini düzeltebilirsiniz.</p>`;
 
   if(active.length){
-    html += `<div class="cap-sec">⭐ Önce — yükünüzü <b>şimdi alabilecek aktif araçlar</b> <span class="cap-sub">(doluluk &amp; rotaya göre · konsolide = daha uygun fiyat)</span></div>`;
+    html += `<div class="cap-sec">⭐ Önce — yükünüzü <b>şimdi alabilecek aktif araçlar</b> <span class="cap-sub">(rota uygunluğu + doluluk + yakınlığa göre sıralı · konsolide = daha uygun fiyat)</span></div>`;
     html += active.map((a,i)=>`<div class="afrow" onclick="chooseActive('${a.id}')">
         <div class="afic">${a.ty.ph}</div>
         <div class="afmain">
           <div class="afn">${a.name} · ${a.ty.name}${i===0?'<span class="afbadge">EN UYGUN</span>':''}</div>
-          <div class="afmeta">${a.plate} · ${a.distKm} km uzakta · ETA ~${Math.round(a.distKm*3+6)} dk · çevrimiçi</div>
+          <div class="afmeta">${a.plate} · ETA ~${Math.round(a.distKm*3+6)} dk · çevrimiçi · bu yüke kalan ~${a.remKg.toLocaleString('tr-TR')} kg${a.ty.maxDesi?` / ${a.remDesi.toLocaleString('tr-TR')} desi`:''}</div>
           <div class="fillbar"><i style="width:${a.fill}%"></i></div>
-          <div class="afcap">Doluluk %${a.fill} · bu yüke kalan ~${a.remKg.toLocaleString('tr-TR')} kg${a.ty.maxDesi?` / ${a.remDesi.toLocaleString('tr-TR')} desi`:''}</div>
+          <div class="afwhy">${fleetReasons(a).map(r=>`<span class="afchip ${r.good?'g':''}">${r.ic} ${r.t}</span>`).join('')}</div>
         </div>
         <div class="afgo">Seç →</div></div>`).join('');
   } else {
