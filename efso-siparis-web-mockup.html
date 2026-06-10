@@ -321,6 +321,15 @@
   .tmap .eta .ld{display:inline-block;width:7px;height:7px;border-radius:50%;background:#16a34a;margin-right:6px;vertical-align:middle;animation:pls2 1.2s infinite}
   @keyframes pls2{0%{box-shadow:0 0 0 0 rgba(22,163,74,.55)}70%{box-shadow:0 0 0 6px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
 
+  /* 01 panelinde küçük araç-tipi kartları (sayfadan çıkmadan değiştir) */
+  .vmini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
+  @media(max-width:560px){.vmini{grid-template-columns:repeat(2,1fr)}}
+  .vm{border:1.5px solid var(--line);border-radius:11px;padding:9px 5px;text-align:center;cursor:pointer;background:var(--soft);transition:.12s;position:relative}
+  .vm:hover{border-color:var(--efso)}
+  .vm.sel{border-color:var(--efso);background:#f0fdff;box-shadow:0 0 0 2px rgba(14,165,183,.15)}
+  .vm.sel::after{content:"✓";position:absolute;top:4px;right:6px;color:var(--efso);font-weight:800;font-size:11px}
+  .vm .e{font-size:22px;line-height:1}.vm .n{font-size:11px;font-weight:600;margin-top:4px;line-height:1.2}.vm .c{font-size:9.5px;color:var(--muted);margin-top:2px}
+
   .hide{display:none!important}
 </style>
 </head>
@@ -668,6 +677,21 @@ function pickVeh(id){
   renderStep2(); setTimeout(()=>goStep(3),160);
 }
 function curVeh(){ return CATS[S.cat].vehicles.find(v=>v.id===S.veh); }
+/* 01 panelinde sayfadan çıkmadan araç tipini değiştir (truckSkip korunur) */
+function switchVeh(id){
+  if(id===S.veh) return;
+  S.veh=id;
+  S.km = id.startsWith('tir') ? 250 : (id.startsWith('kamyon') ? 60 : 12);
+  const v=curVeh(); if(v && v.kap) S.items.forEach(it=>{ if(!v.kap.includes(it.cat)) it.cat=v.kap[0]; });
+  toast('🚚 Araç tipi değiştirildi: '+v.name);
+  renderStep3();   // aynı ekranda kal, yeniden çiz
+}
+function vehMiniCards(){
+  return `<div class="vmini">${CATS.yuk.vehicles.map(x=>`
+    <div class="vm ${x.id===S.veh?'sel':''}" onclick="switchVeh('${x.id}')">
+      <div class="e">${x.ph}</div><div class="n">${x.name}</div><div class="c">${x.specs[0]}</div>
+    </div>`).join('')}</div>`;
+}
 /* ürün kartları gösterilsin mi: "01 atla" kapalıysa (her araç için) */
 function vehNeedsItems(v){ return !S.truckSkip; }
 function isDosya(name){ return /dosya|zarf|evrak/i.test(name||''); }
@@ -896,7 +920,8 @@ function formYuk(v,M){
         <div style="flex:1;min-width:84px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#475569">⚖️ Tonaj</div>
       </div>
       <label class="check"><input type="checkbox"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün <b>${v.name}</b> aracına uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
-      <div style="margin-top:8px"><span style="color:var(--efso);font-weight:600;cursor:pointer;font-size:12.5px" onclick="goStep(2)">↺ Araç tipini tekrar seç / değiştir</span></div>
+      <div style="margin-top:13px;font-size:11.5px;color:var(--muted);font-weight:600">↺ Araç tipini buradan tekrar seçebilirsiniz:</div>
+      ${vehMiniCards()}
       </div></div>`;
   }
 
