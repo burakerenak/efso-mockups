@@ -456,7 +456,7 @@ function freshS(v){ return { v:v, step:0, km:12,
   stops:[ {id:1,type:'alim',addr:'',giris:6,ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false},
           {id:2,type:'teslim',addr:'',giris:6,ac:'09:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false} ],
   items:[ {id:1,cat:'koli',adet:1,en:'',boy:'',yuk:'',kg:'',kirilgan:false,dik:false,ustuste:true,sogukC:'',alim:1,teslim:2} ],
-  nsid:3, niid:2, bilmiyorum:false, vehOnly:false, vehOnlyOk:false,
+  nsid:3, niid:2, bilmiyorum:false, vehOnly:false, vehOnlyOk:false, multiOk:false,
   veh:null, vehManual:false,
   kisi:1, bagaj:false, bagajNot:'', beklemeVar:false, from:'', to:'',
   kat:'3', asansor:false, yukAsansor:false, oda:'2+1', paket:'efso', mutfak:'efso', kesif:'video',
@@ -507,7 +507,9 @@ function validate(){
     if(ix>=0){ toast('⚠️ Ürün '+(ix+1)+' için kategori/ölçü girin.'); return false; }
     const errs=eslesmeHatalari();
     if(errs.length){ toast('🚫 Nokta–yük eşleştirmesi eksik, sipariş ilerletilmedi:\n• '+errs.slice(0,4).join('\n• ')); return false; }
+    if(feas().infeasible && !S.multiOk){ toast('🚫 Bu güzergah TEK ARAÇLA planlanamaz (giriş kısıtı + kapasite çelişkisi).\nÇoklu araç planını kabul edin, kısıtı düzeltin ya da operasyona gönderin.'); return false; }
   }
+  if(S.v==='yuk' && S.step===2 && feas().infeasible && !S.multiOk){ toast('🚫 Tek araç çözümü yok — çoklu araç planı veya manuel planlama gerekli.'); return false; }
   if(S.v==='yuk' && S.step===1 && S.vehOnly && !S.vehOnlyOk){ toast('⚠️ "Araç seçimi yeterli" yolunda sorumluluk onayı zorunludur.'); return false; }
   if((S.v!=='ev') && S.step===3 && S.mode===null){ toast('⚠️ Bir teslimat zamanı kartı seçin.'); return false; }
   return true;
@@ -620,30 +622,112 @@ function curVehId(){
   if(S.v==='yolcu') return (PAX_VEH.find(p=>S.kisi<=p.pax)||PAX_VEH[2]).id;
   if(S.v==='ev') return 'evofis';
   if(S.veh) return S.veh;
-  return suggestVeh().main.id;
+  const f=feas();
+  if(f.main) return f.main.id;
+  const legs=splitPlan().filter(l=>l.veh);
+  return legs.length ? legs.reduce((a,b)=>a.veh.maxDesi>b.veh.maxDesi?a:b).veh.id : 'transit';
 }
 function curVeh(){ return YUK_VEH.find(v=>v.id===curVehId()) || PAX_VEH.find(v=>v.id===curVehId()) || {id:'evofis',name:'Ev / Ofis Taşıması',ph:'🏠'}; }
-function suggestVeh(){
+/* fizibilite analizi: aynı araç TÜM noktaları gezmek zorunda → kapasite + en dar giriş kısıtı BİRLİKTE sağlanmalı */
+function feas(){
   const d=S.vehOnly?0:ucreteEsas(), kg=S.vehOnly?0:totKg(), mg=minGiris();
   const fit=YUK_VEH.filter(v=>v.maxDesi>=d&&v.maxKg>=kg);
-  let main=fit.find(v=>v.rank<=mg) || YUK_VEH.filter(v=>v.rank<=mg).slice(-1)[0] || YUK_VEH[2];
-  const idx=YUK_VEH.indexOf(main);
-  const alt=YUK_VEH[idx+1]&&YUK_VEH[idx+1].rank<=mg?YUK_VEH[idx+1]:null;
-  const blocked=fit.filter(v=>v.rank>mg);
-  return {main,alt,blocked,mg};
+  const main=fit.find(v=>v.rank<=mg)||null;
+  const tight=S.stops.filter(s=>s.giris===mg)[0];
+  return {d,kg,mg,fit,main,tight, infeasible: !main && !S.bilmiyorum && !S.vehOnly && S.v==='yuk'};
 }
+function suggestVeh(){
+  const f=feas();
+  if(!f.main) return {main:null,alt:null,blocked:f.fit.filter(v=>v.rank>f.mg),mg:f.mg};
+  const idx=YUK_VEH.indexOf(f.main);
+  const alt=YUK_VEH[idx+1]&&YUK_VEH[idx+1].rank<=f.mg?YUK_VEH[idx+1]:null;
+  return {main:f.main,alt,blocked:f.fit.filter(v=>v.rank>f.mg),mg:f.mg};
+}
+/* çoklu araç (bölünmüş sipariş) planı: her alım grubu kendi kısıtına uyan en küçük araçla taşınır */
+function splitPlan(){
+  const groups=[];
+  S.stops.filter(s=>s.type==='alim').forEach(s=>{
+    const its=S.items.map((it,ix)=>({it,ix})).filter(x=>x.it.alim===s.id);
+    if(!its.length) return;
+    const d=its.reduce((t,x)=>t+itemDesi(x.it),0), kg=its.reduce((t,x)=>t+itemKg(x.it),0);
+    const rank=Math.min(s.giris, ...its.map(x=>{ const t=stopById(x.it.teslim); return t?t.giris:6; }));
+    const veh=YUK_VEH.find(v=>v.maxDesi>=d&&v.maxKg>=kg&&v.rank<=rank)||null;
+    groups.push({stop:s, items:its.map(x=>x.ix+1), d, kg, veh, rank});
+  });
+  return groups;
+}
+function useMulti(){ return S.v==='yuk' && S.multiOk && feas().infeasible; }
+function sendToOps(){
+  orderSeq++;
+  const o={no:'EFSO-2026-'+String(orderSeq).padStart(6,'0'),cat:'yuk',catLabel:'Yük Taşımacılığı',veh:'transit',
+    vehName:'Operasyon planlayacak',vehEmoji:'🧑‍💼',modeLabel:'Manuel planlama',rtText:routeText(),km:S.km,
+    itemsN:S.items.length,price:null,meter:false,doluluk:0,status:'Beklemede',createdAt:nowStr(),courier:null,
+    history:[{key:'Beklemede',at:nowTime()}]};
+  ORDERS.unshift(o); updateNavListBadge();
+  MANUAL.unshift({id:o.no,neden:'Tek araçla planlanamaz — giriş kısıtı + kapasite çelişkisi (çoklu araç / keşif gerekli)',sla:0,esk:'Operatör'});
+  toast('🧑‍💼 Sipariş manuel planlama kuyruğuna alındı — operasyon ekibi sizi arayacak. (Operasyon › Manuel Kuyruk'+"'"+'ta görünür)');
+  showTrack(o.no);
+}
+function feasBlock(){
+  const f=feas(); if(!f.infeasible) return '';
+  const legs=splitPlan(); const ok=legs.length>0&&legs.every(l=>l.veh);
+  if(S.multiOk&&ok) return `<div class="hintbox" style="border-color:#86efac;background:#f0fdf4">
+    <b>✅ Çoklu araç planı kabul edildi — sipariş ${legs.length} araçla taşınacak:</b>
+    ${legs.map(l=>`<div class="price-line"><span class="muted">${stopLabel(l.stop)} → Ürün ${l.items.join(', ')} (${l.d} desi / ${l.kg} kg)</span><span>${l.veh.ph} ${l.veh.name}</span></div>`).join('')}
+    <div class="navrow" style="margin-top:8px"><button class="btn sm sec" onclick="S.multiOk=false;render()">✕ Plandan vazgeç</button></div></div>`;
+  return `<div class="hintbox" style="border-color:#fecaca;background:#fef2f2">
+    <b>🚫 Bu güzergah TEK ARAÇLA planlanamaz.</b><br>
+    "${stopLabel(f.tight)}" noktasına en fazla <b>${(GIRIS.find(g=>g.id===f.mg)||{}).ad}</b> sınıfı girebiliyor; aynı araç tüm noktaları gezmek zorunda olduğundan araç bu sınıftan olmalı — ama toplam yük (<b>${totDesi()} desi / ${totKg()} kg</b>) bu sınıfa sığmıyor.
+    ${ok?`<div style="margin-top:10px"><b>Önerilen çoklu araç planı (bölünmüş sipariş):</b>
+    ${legs.map(l=>`<div class="price-line"><span class="muted">${stopLabel(l.stop)} → Ürün ${l.items.join(', ')} (${l.d} desi / ${l.kg} kg)</span><span>${l.veh?l.veh.ph+' '+l.veh.name:'—'}</span></div>`).join('')}</div>`
+    :'<div style="margin-top:8px">Bölünmüş plan da kurulamadı (bir alım grubu kendi kısıtına da sığmıyor) — operasyon keşfi gerekli.</div>'}
+    <div class="navrow" style="margin-top:10px">
+      ${ok?`<button class="btn sm pri" onclick="S.multiOk=true;toast('🚛 Çoklu araç planı kabul edildi — fiyat araç başına hesaplanır.');render()">🚛 Çoklu araç planıyla devam</button>`:''}
+      <button class="btn sm sec" onclick="sendToOps()">🧑‍💼 Operasyon planlasın (manuel kuyruk)</button>
+    </div></div>`;
+}
+function legKm(l){ return Math.max(3, Math.round(S.km*(l.d/Math.max(1,totDesi())))); }
 function fiyat(modeIdx){
-  const t=TARIFF[curVehId()]; const m=MODES[modeIdx===undefined?(S.mode??0):modeIdx]||MODES[0];
+  const m=MODES[modeIdx===undefined?(S.mode??0):modeIdx]||MODES[0];
   const bek=beklemeToplam();
+  if(useMulti()){
+    let tot=0;
+    splitPlan().forEach(l=>{ if(!l.veh) return; const t=TARIFF[l.veh.id]; tot+=t.base+legKm(l)*t.skm; });
+    tot += durakSayisi()*25 + (bek>30?(bek-30)*2:0);
+    return Math.round(tot*m.carpan);
+  }
+  const t=TARIFF[curVehId()];
   const taban=t.base + S.km*t.skm + durakSayisi()*(t.stop||25) + (bek>30?(bek-30)*2:0);
   return Math.round(taban*m.carpan);
 }
-function maliyet(modeIdx){ const t=TARIFF[curVehId()]; const m=MODES[modeIdx===undefined?(S.mode??0):modeIdx]||MODES[0];
+function maliyet(modeIdx){ const m=MODES[modeIdx===undefined?(S.mode??0):modeIdx]||MODES[0];
+  if(useMulti()){ let tot=0; splitPlan().forEach(l=>{ if(!l.veh) return; const t=TARIFF[l.veh.id]; tot+=t.base*0.7+legKm(l)*t.ckm; });
+    return Math.round(tot*m.carpan); }
+  const t=TARIFF[curVehId()];
   return Math.round((t.base*0.7 + S.km*t.ckm)*m.carpan); }
 function eta(modeIdx){ const hiz=30/MODES[modeIdx].trafik; return Math.round(S.km/hiz*60)+12; }
 function onerilenMode(){ const online=14; if(online<5) return 2; if(S.km>40) return 2; return S.v==='yolcu'?0:1; }
 
 function pricePanel(){
+  const fz=feas();
+  if(S.v==='yuk' && fz.infeasible && !S.multiOk){
+    return `<div class="panel"><div class="panel-h"><b>💰 Fiyat</b></div><div class="panel-b">
+      <div class="hintbox" style="border-color:#fecaca;background:#fef2f2"><b>🚫 Tek araç çözümü yok</b> — fiyat hesaplanamıyor. Soldaki uyarıdan <b>çoklu araç planını</b> kabul edin, <b>giriş kısıtını düzeltin</b> veya <b>operasyona gönderin</b>.</div>
+    </div></div>`;
+  }
+  if(useMulti()){
+    const legs=splitPlan().filter(l=>l.veh); const f=fiyat(), m=maliyet(); const dks=durakSayisi(), bek=beklemeToplam();
+    return `<div class="panel"><div class="panel-h"><b>💰 Fiyat — çoklu araç</b><span class="badge">onay öncesi tam kırılım — 6502</span></div>
+    <div class="panel-b">
+      ${legs.map(l=>{ const t=TARIFF[l.veh.id]; return `<div class="price-line"><span class="muted">${l.veh.ph} ${l.veh.name} (${stopLabel(l.stop)} · ~${legKm(l)} km)</span><span>${money(t.base+legKm(l)*t.skm)}</span></div>`; }).join('')}
+      ${dks?`<div class="price-line"><span class="muted">Ek durak (${dks} × ₺25)</span><span>${money(dks*25)}</span></div>`:''}
+      ${bek>30?`<div class="price-line"><span class="muted">Bekleme (${bek-30} dk × ₺2)</span><span>${money((bek-30)*2)}</span></div>`:''}
+      <div class="price-line"><span class="muted">Zamanlama çarpanı</span><span>×${S.mode!==null?MODES[S.mode].carpan.toFixed(2):'—'}</span></div>
+      <div class="price-line tot"><span>Toplam (${legs.length} araç)</span><span>${S.mode!==null?money(f):'—'}</span></div>
+      ${S.mode!==null?`<details class="karwrap"><summary>Maliyet &amp; Kâr (iç görünüm — demo)</summary>
+        <div class="kar">Müşteri ${money(f)} · taşıyıcı payları ${money(m)} → <b>kâr ${money(f-m)} (%${Math.max(0,Math.round((f-m)/f*100))})</b></div></details>`:''}
+    </div></div>`;
+  }
   const vid=curVehId(), t=TARIFF[vid], v=curVeh();
   const f=fiyat(), m=maliyet(); const dks=durakSayisi(), bek=beklemeToplam();
   const isMeter=t.meter, isSurvey=t.survey;
@@ -812,12 +896,20 @@ function stepYuk(){
   if(S.step===1){ const sv=suggestVeh();
     return `<div class="formwrap"><div>${itemsPanel()}</div>
     <div>${pricePanel()}
-      ${(!S.bilmiyorum&&!S.vehOnly)?`<div class="panel"><div class="panel-h"><b>🚚 Ön araç önerisi</b></div><div class="panel-b">
+      ${(!S.bilmiyorum&&!S.vehOnly)?(feas().infeasible?`<div class="panel"><div class="panel-h"><b>🚚 Araç planlaması</b></div><div class="panel-b">${feasBlock()}</div></div>`
+      :`<div class="panel"><div class="panel-h"><b>🚚 Ön araç önerisi</b></div><div class="panel-b">
         <div style="font-size:13px"><b>${sv.main.ph} ${sv.main.name}</b> — toplam ${totDesi()} desi / ${totKg()} kg (${S.items.length} ürün) için en küçük yeterli araç.</div>
         ${sv.blocked.length?`<div class="hintbox" style="border-color:#fecaca;background:#fef2f2;color:#991b1b">⚠️ ${sv.blocked.map(b=>b.name).join(', ')} yüke uyar ama <b>giriş kısıtına takılır</b>.</div>`:''}
-      </div></div>`:''}</div></div>`;
+      </div></div>`):''}</div></div>`;
   }
-  if(S.step===2) return `<div class="formwrap"><div>${vehPanel()}</div><div>${pricePanel()}</div></div>`;
+  if(S.step===2){
+    if(feas().infeasible) return `<div class="formwrap"><div>
+      <div class="panel"><div class="panel-h"><b>🚚 Araç Planlaması</b><span class="badge">tek araç çözümü yok</span></div>
+      <div class="panel-b">${feasBlock()}
+      <div class="hintbox">Gerçek sistemde bu karar <b>dispatch motoru</b> tarafından verilir: bölünmüş sipariş iki ayrı atama olarak havuza çıkar; manuel seçenekte operasyoncu kuyruğuna düşer (K10/K13). Kısıtı düzeltmek için Güzergah adımına dönebilirsiniz.</div>
+      </div></div></div><div>${pricePanel()}</div></div>`;
+    return `<div class="formwrap"><div>${vehPanel()}</div><div>${pricePanel()}</div></div>`;
+  }
   if(S.step===3) return `<div class="formwrap"><div>${matrixPanel()}</div><div>${pricePanel()}</div></div>`;
   return confirmPanel();
 }
@@ -891,7 +983,7 @@ function confirmPanel(){
     <div class="panel"><div class="panel-h"><b>✅ ${isEv?'Keşif Talebi Özeti':'Sipariş Özeti'}</b></div><div class="panel-b">
       <div class="price-line"><span class="muted">Hizmet</span><span>${WIZ[S.v].title}</span></div>
       <div class="price-line"><span class="muted">Güzergah</span><span>${S.v==='yuk'?`${S.stops.length} nokta (${S.km} km)`:`${S.from||'—'} → ${S.to||'—'} (${S.km} km)`}</span></div>
-      <div class="price-line"><span class="muted">Araç</span><span>${v.ph} ${v.name}${t.meter?' (taksimetre ~tahmini)':''}</span></div>
+      <div class="price-line"><span class="muted">Araç</span><span>${useMulti()?splitPlan().filter(l=>l.veh).map(l=>l.veh.ph+' '+l.veh.name).join(' + ')+' (çoklu araç)':`${v.ph} ${v.name}${t.meter?' (taksimetre ~tahmini)':''}`}</span></div>
       ${S.v==='yuk'?`<div class="price-line"><span class="muted">Yük</span><span>${S.bilmiyorum?'Foto ile — keşifte belirlenecek':S.vehOnly?'Komple araç (müşteri sorumluluğunda)':`${S.items.length} ürün · ${totDesi()} desi / ${totKg()} kg · ücrete esas ${ucreteEsas()}`}</span></div>
       ${(!S.bilmiyorum&&!S.vehOnly)?`<div style="margin:8px 0 4px;padding:10px 12px;background:var(--soft);border:1px solid var(--line);border-radius:10px">
         <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">NOKTA–YÜK EŞLEŞTİRMESİ ✅</div>
@@ -938,9 +1030,11 @@ function routeText(){
 function placeOrder(){
   if(S.v==='ev'){ toast('✅ Keşif talebiniz alındı! (demo) Operasyon ekibi '+(S.kesif==='video'?'video keşif için arayacak.':'yerinde keşif planlayacak.')); showView('home'); return; }
   const v=curVeh();
+  const multi=useMulti()?splitPlan().filter(l=>l.veh):null;
   orderSeq++;
   const o={ no:'EFSO-2026-'+String(orderSeq).padStart(6,'0'), cat:S.v, catLabel:WIZ[S.v].title.replace(/^\S+\s/,''),
-    veh:curVehId(), vehName:v.name, vehEmoji:v.ph, modeLabel:S.mode!==null?MODES[S.mode].ad.split('—')[0].split('(')[0].trim():'—',
+    veh:curVehId(), vehName:multi?'Çoklu araç: '+multi.map(l=>l.veh.name).join(' + '):v.name, vehEmoji:multi?'🚛':v.ph,
+    modeLabel:S.mode!==null?MODES[S.mode].ad.split('—')[0].split('(')[0].trim():'—',
     rtText:routeText(), km:S.km, itemsN:S.v==='yuk'?S.items.length:0, price:fiyat(), meter:TARIFF[curVehId()].meter,
     doluluk:S.v==='yuk'?Math.min(99,Math.round(ucreteEsas()/( (YUK_VEH.find(x=>x.id===curVehId())||{maxDesi:1500}).maxDesi )*100)):0,
     status:'KuryeAraniyor', createdAt:nowStr(), courier:null,
@@ -997,7 +1091,7 @@ function renderList(){
     <div class="oemoji">${o.vehEmoji}</div>
     <div class="omain"><div class="ol1"><span class="ono">${o.no}</span><span class="ovh">${o.vehName}</span><span class="odim">${o.catLabel} · ${o.modeLabel} · ${o.createdAt}</span></div>
       <div class="oroute">${o.rtText||'—'}</div></div>
-    <div class="oend"><span class="sbadge ${b.cls}">${b.ic} ${b.label}</span><span class="oamt">${o.meter?'~':''}${money(o.price)}</span><span class="ogo">Takip →</span></div>
+    <div class="oend"><span class="sbadge ${b.cls}">${b.ic} ${b.label}</span><span class="oamt">${o.price==null?'planlamada':(o.meter?'~':'')+money(o.price)}</span><span class="ogo">Takip →</span></div>
   </div>`; }).join('');
 }
 function showTrack(no){ CUR_TRACK=no; showView('track'); renderTrack(); }
