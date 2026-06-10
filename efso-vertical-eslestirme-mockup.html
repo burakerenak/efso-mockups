@@ -402,6 +402,10 @@ const STATUSES = ['Beklemede','Kurye Aranıyor','Kurye Atandı','Alım Adresinde
 let S = {};
 function freshS(v){ return { v:v, step:0, km:12, durak:0, from:'', to:'',
   fromGiris:6, toGiris:6, fromAc:'08:00', fromKa:'18:00', bekleme:15,
+  stops:[ {id:1,type:'alim',addr:'',giris:6,ac:'08:00',ka:'18:00',bekleme:15},
+          {id:2,type:'teslim',addr:'',giris:6,ac:'09:00',ka:'18:00',bekleme:15} ],
+  items:[ {id:1,kaynak:'preset',preset:1,en:'',boy:'',yuk:'',kg:'',adet:1,kirilgan:false,dik:false,ustuste:true,soguk:false,sogukC:'',alim:1,teslim:2} ],
+  nsid:3, niid:2,
   desi:0, kg:0, urunCins:'Koli', kategori:'Genel', deger:'', kirilgan:false, ustuste:true, dik:false, bulk:false, soguk:false, sogukC:'',
   bilmiyorum:false, preset:-1, en:'', boy:'', yuk:'', agirlik:'',
   veh:null, vehManual:false,
@@ -436,8 +440,18 @@ function nav(d){
 }
 let lastWasConfirm=false;
 function validate(){
-  if(S.step===0 && (!S.from || !S.to)){ toast('⚠️ Lütfen alım ve teslim adresini girin.'); return false; }
-  if(S.v==='yuk' && S.step===1 && !S.bilmiyorum && S.preset<0 && !(S.desi>0||S.kg>0) && !(S.en&&S.boy&&S.yuk)){ toast('⚠️ Yük bilgisi girin ya da "Ölçüleri bilmiyorum" seçin.'); return false; }
+  if(S.step===0){
+    if(S.v==='yuk'){
+      if(S.stops.some(s=>!s.addr)){ toast('⚠️ Tüm noktaların adresini girin.'); return false; }
+    } else if(!S.from || !S.to){ toast('⚠️ Lütfen alım ve teslim adresini girin.'); return false; }
+  }
+  if(S.v==='yuk' && S.step===1 && !S.bilmiyorum){
+    if(!S.items.length){ toast('⚠️ En az bir ürün ekleyin.'); return false; }
+    const olcusuzIx = S.items.findIndex(it=>itemDesi(it)<=0 && itemKg(it)<=0);
+    if(olcusuzIx>=0){ toast('⚠️ Ürün '+(olcusuzIx+1)+' için katalog seçin ya da ölçü/ağırlık girin.'); return false; }
+    const errs = eslesmeHatalari();
+    if(errs.length){ toast('🚫 Nokta–yük eşleştirmesi eksik, sipariş ilerletilmedi:\n• '+errs.slice(0,4).join('\n• ')); return false; }
+  }
   if((S.v!=='ev') && S.step===3 && S.mode===null){ toast('⚠️ Bir teslimat zamanı kartı seçin.'); return false; }
   return true;
 }
@@ -450,18 +464,57 @@ function baseVeh(){
 }
 function suggestVeh(){
   const d = etkinDesi(), k = etkinKg();
-  const maxGiris = Math.min(S.fromGiris, S.toGiris);
+  const maxGiris = S.v==='yuk' ? Math.min(...S.stops.map(s=>s.giris)) : Math.min(S.fromGiris, S.toGiris);
   let main = VEH.find(v=>v.desi>=d && v.kg>=k && v.rank<=maxGiris) || VEH[Math.min(maxGiris-1,5)];
   const idx = VEH.indexOf(main);
   const alt = VEH[idx+1] && VEH[idx+1].rank<=maxGiris ? VEH[idx+1] : null;
   const blocked = VEH.filter(v=>v.desi>=d && v.kg>=k && v.rank>maxGiris);
   return {main, alt, blocked, maxGiris};
 }
-function etkinDesi(){ if(S.preset>=0) return PRESETS[S.preset].desi; if(S.en&&S.boy&&S.yuk) return Math.round(S.en*S.boy*S.yuk/3000); return S.desi||0; }
-function etkinKg(){ if(S.preset>=0) return PRESETS[S.preset].kg; return Number(S.agirlik)||S.kg||0; }
+/* ---- durak & ürün yardımcıları (Stops+Items) ---- */
+function stopById(id){ return S.stops.find(s=>s.id===id); }
+function stopLabel(s){ if(!s) return '?'; const i=S.stops.filter(x=>x.type===s.type).indexOf(s)+1;
+  const t=s.type==='alim'?'Alım':s.type==='ugrama'?'Uğrama':'Teslim';
+  return t+' '+i+(s.addr?' — '+s.addr.slice(0,24):''); }
+function uS(id,k,v){ stopById(id)[k]=v; render(); }
+function uI(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; if(k==='kaynak'&&v==='preset'&&it.preset<0) it.preset=1; render(); }
+function addStop(t){ S.stops.push({id:S.nsid++,type:t,addr:'',giris:6,ac:'08:00',ka:'18:00',bekleme:15}); render(); }
+function delStop(id){ const s=stopById(id);
+  if(s.type==='alim'&&S.stops.filter(x=>x.type==='alim').length<=1){ toast('⚠️ En az 1 alım noktası gerekli.'); return; }
+  if(s.type==='teslim'&&S.stops.filter(x=>x.type==='teslim').length<=1){ toast('⚠️ En az 1 teslim noktası gerekli.'); return; }
+  S.stops=S.stops.filter(x=>x.id!==id);
+  S.items.forEach(it=>{ if(it.alim===id) it.alim=null; if(it.teslim===id) it.teslim=null; }); render(); }
+function addItem(){ const al=S.stops.find(s=>s.type==='alim'), te=S.stops.find(s=>s.type==='teslim');
+  S.items.push({id:S.niid++,kaynak:'preset',preset:1,en:'',boy:'',yuk:'',kg:'',adet:1,kirilgan:false,dik:false,ustuste:true,soguk:false,sogukC:'',alim:al?al.id:null,teslim:te?te.id:null}); render(); }
+function delItem(id){ if(S.items.length<=1){ toast('⚠️ En az 1 ürün kalmalı.'); return; } S.items=S.items.filter(i=>i.id!==id); render(); }
+function itemDesi(it){ const a=Number(it.adet)||1;
+  if(it.kaynak==='preset') return PRESETS[it.preset].desi*a;
+  return (it.en&&it.boy&&it.yuk)?Math.round(it.en*it.boy*it.yuk/3000)*a:0; }
+function itemKg(it){ const a=Number(it.adet)||1;
+  if(it.kaynak==='preset') return PRESETS[it.preset].kg*a;
+  return (Number(it.kg)||0)*a; }
+function etkinDesi(){ if(S.v!=='yuk') return S.desi||0; return S.items.reduce((t,it)=>t+itemDesi(it),0); }
+function etkinKg(){ if(S.v!=='yuk') return S.kg||0; return S.items.reduce((t,it)=>t+itemKg(it),0); }
+function durakSayisi(){ return S.v==='yuk' ? Math.max(0,S.stops.length-2) : S.durak; }
+function beklemeToplam(){ return S.v==='yuk' ? S.stops.reduce((t,s)=>t+(Number(s.bekleme)||0),0) : S.bekleme; }
+/* hatalı teslimat önleme: nokta–yük eşleştirme denetimi */
+function eslesmeHatalari(){
+  const errs=[];
+  if(S.bilmiyorum) return errs;
+  S.items.forEach((it,ix)=>{
+    if(!it.alim||!stopById(it.alim)) errs.push('Ürün '+(ix+1)+' için ALIM noktası seçilmedi.');
+    if(!it.teslim||!stopById(it.teslim)) errs.push('Ürün '+(ix+1)+' için TESLİM noktası seçilmedi.');
+  });
+  S.stops.filter(s=>s.type==='alim').forEach(s=>{
+    if(!S.items.some(it=>it.alim===s.id)) errs.push(stopLabel(s)+' noktasından alınacak ürün atanmadı.'); });
+  S.stops.filter(s=>s.type==='teslim').forEach(s=>{
+    if(!S.items.some(it=>it.teslim===s.id)) errs.push(stopLabel(s)+' noktasına teslim edilecek ürün atanmadı.'); });
+  return errs;
+}
 function fiyat(modeIdx){
   const v = baseVeh(); const m = MODES[modeIdx];
-  const taban = v.acilis + S.km*v.km + S.durak*25 + (S.bekleme>30 ? (S.bekleme-30)*2 : 0);
+  const bek=beklemeToplam();
+  const taban = v.acilis + S.km*v.km + durakSayisi()*25 + (bek>30 ? (bek-30)*2 : 0);
   return Math.round(taban * m.carpan);
 }
 function maliyet(modeIdx){ const v=baseVeh(); return Math.round((v.acilis*0.7 + S.km*v.maliyet) * MODES[modeIdx].carpan); }
@@ -514,13 +567,14 @@ function addrPanel(){
 }
 function pricePanel(modeIdx){
   const v=baseVeh(); const f=fiyat(modeIdx===undefined?(S.mode??0):modeIdx); const m=maliyet(S.mode??0);
+  const dks=durakSayisi(), bek=beklemeToplam();
   return `<div class="panel"><div class="panel-h"><b>💰 Fiyat</b><span class="badge">onay öncesi tam kırılım — 6502</span></div>
   <div class="panel-b">
     <div class="price-line"><span class="muted">Araç</span><span>${v.emoji} ${v.ad}</span></div>
     <div class="price-line"><span class="muted">Açılış ücreti</span><span>₺${v.acilis}</span></div>
     <div class="price-line"><span class="muted">Mesafe (${S.km} km × ₺${v.km})</span><span>₺${S.km*v.km}</span></div>
-    ${S.durak?`<div class="price-line"><span class="muted">Ek durak (${S.durak} × ₺25)</span><span>₺${S.durak*25}</span></div>`:''}
-    ${S.bekleme>30?`<div class="price-line"><span class="muted">Bekleme (${S.bekleme-30} dk × ₺2)</span><span>₺${(S.bekleme-30)*2}</span></div>`:'<div class="price-line"><span class="muted">Bekleme (ilk 30 dk)</span><span>ücretsiz</span></div>'}
+    ${dks?`<div class="price-line"><span class="muted">Ek durak (${dks} × ₺25)</span><span>₺${dks*25}</span></div>`:''}
+    ${bek>30?`<div class="price-line"><span class="muted">Bekleme (${bek-30} dk × ₺2)</span><span>₺${(bek-30)*2}</span></div>`:'<div class="price-line"><span class="muted">Bekleme (ilk 30 dk)</span><span>ücretsiz</span></div>'}
     <div class="price-line"><span class="muted">Zamanlama çarpanı</span><span>×${S.mode!==null?MODES[S.mode].carpan.toFixed(2):'—'}</span></div>
     <div class="price-line tot"><span>Toplam</span><span>₺${S.mode!==null?f:'—'}</span></div>
     ${S.mode!==null?`<div class="kar">İç görünüm (demo): taşıyıcı payı ₺${m} → kâr ₺${f-m} (%${Math.round((f-m)/f*100)})</div>`:''}
@@ -544,46 +598,95 @@ function matrixPanel(){
   </div></div>`;
 }
 
+/* ---- YÜK: güzergah (N alım / N uğrama / N teslim) ---- */
+function routePanel(){
+  const tipInfo = {alim:{e:'🟢',cls:'a'}, ugrama:{e:'🟡',cls:'a'}, teslim:{e:'🔴',cls:'b'}};
+  return `<div class="panel"><div class="panel-h"><b>📍 Güzergah — N alım / N uğrama / N teslim</b><span class="badge">${S.km} km — Google rota (simülasyon)</span></div>
+  <div class="panel-b">
+    ${S.stops.map(s=>{ const t=tipInfo[s.type]; return `
+    <div class="stop"><div class="head"><div class="pin ${t.cls}">${t.e}</div><b>${stopLabel(s)}</b>
+      <button class="btn sm ghost" onclick="delStop(${s.id})" title="Noktayı sil">🗑</button></div>
+      <input placeholder="Mahalle, cadde, no… (otomatik tamamlama)" value="${s.addr}" onchange="uS(${s.id},'addr',this.value)">
+      <div class="grid3" style="margin-top:10px">
+        <div><label class="fld">Açılış</label><input type="time" value="${s.ac}" onchange="uS(${s.id},'ac',this.value)"></div>
+        <div><label class="fld">Kapanış</label><input type="time" value="${s.ka}" onchange="uS(${s.id},'ka',this.value)"></div>
+        <div><label class="fld">${s.type==='teslim'?'Boşaltma':'Yükleme'} bekleme (dk)</label><input type="number" value="${s.bekleme}" onchange="uS(${s.id},'bekleme',Number(this.value))"></div>
+      </div>
+      <label class="fld">Bu adrese girebilen en büyük araç</label>
+      <select onchange="uS(${s.id},'giris',Number(this.value))">${GIRIS.map(g=>`<option value="${g.id}" ${s.giris===g.id?'selected':''}>${g.ad}</option>`).join('')}</select>
+    </div>`; }).join('')}
+    <div class="navrow" style="margin-top:14px;flex-wrap:wrap">
+      <button class="btn sm sec" onclick="addStop('alim')">＋ Alım noktası</button>
+      <button class="btn sm sec" onclick="addStop('ugrama')">＋ Uğrama noktası</button>
+      <button class="btn sm sec" onclick="addStop('teslim')">＋ Teslim noktası</button>
+    </div>
+    <label class="fld" style="margin-top:14px">Mesafe (demo — gerçekte Google hesaplar)</label>
+    <input type="range" min="2" max="80" value="${S.km}" oninput="S.km=Number(this.value);render()">
+    <div style="font-size:12px;color:var(--muted)">${S.km} km · ${S.stops.length} nokta (${durakSayisi()} ek durak ücreti)</div>
+    <div class="hintbox">🧠 <b>Adres profili hatırlanır:</b> giriş kısıtı ve çalışma saatleri tekrar eden adreslerde otomatik dolar; giriş kısıtı <b>hard filter</b>'dır. Bir sonraki adımda her ürünü <b>hangi noktadan alınıp hangi noktaya teslim edileceğiyle eşleştireceksiniz</b> — eşleşmeyen nokta/yük varsa sipariş İLERLEMEZ (hatalı teslimat engeli).</div>
+  </div></div>`;
+}
+/* ---- YÜK: ürünler + nokta eşleştirme ---- */
+function itemsPanel(){
+  const alimOpts = it => S.stops.filter(s=>s.type==='alim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.alim===s.id?'selected':''}>${stopLabel(s)}</option>`).join('');
+  const teslimOpts = it => S.stops.filter(s=>s.type==='teslim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.teslim===s.id?'selected':''}>${stopLabel(s)}</option>`).join('');
+  const errs = eslesmeHatalari();
+  return `<div class="panel"><div class="panel-h"><b>📦 Ürünler + Nokta Eşleştirme</b><span class="badge">hatalı teslimat önleme</span></div>
+  <div class="panel-b">
+    <label class="chk" style="margin:0 0 8px"><input type="checkbox" ${S.bilmiyorum?'checked':''} onchange="S.bilmiyorum=this.checked;render()">🤷 Ölçüleri bilmiyorum — foto yükleyeceğim, operasyon keşfiyle belirlensin</label>
+    ${S.bilmiyorum?`<div class="hintbox">📷 Fotoğraf yükleyin (demo). Operasyon ekibi keşifle desi + ürün-nokta eşleştirmesini belirler; F2'de yapay zekâ tahmini planlı (AQ-9).</div>`:`
+    ${S.items.map((it,ix)=>`
+    <div class="stop"><div class="head"><div class="pin a">📦</div><b>Ürün ${ix+1} — ${it.kaynak==='preset'?PRESETS[it.preset].ad:'Özel ölçü'} · ${itemDesi(it)} desi / ${itemKg(it)} kg</b>
+      <button class="btn sm ghost" onclick="delItem(${it.id})" title="Ürünü sil">🗑</button></div>
+      <div class="grid3">
+        <div><label class="fld">Tanım</label><select onchange="uI(${it.id},'kaynak',this.value)"><option value="preset" ${it.kaynak==='preset'?'selected':''}>Katalogdan</option><option value="ozel" ${it.kaynak==='ozel'?'selected':''}>Özel — ölçü gir</option></select></div>
+        ${it.kaynak==='preset'?`<div><label class="fld">Katalog</label><select onchange="uI(${it.id},'preset',Number(this.value))">${PRESETS.map((p,i)=>`<option value="${i}" ${it.preset===i?'selected':''}>${p.ad}</option>`).join('')}</select></div>`:`<div><label class="fld">Ağırlık (kg/adet)</label><input type="number" value="${it.kg}" onchange="uI(${it.id},'kg',this.value)"></div>`}
+        <div><label class="fld">Adet</label><input type="number" min="1" value="${it.adet}" onchange="uI(${it.id},'adet',Number(this.value))"></div>
+      </div>
+      ${it.kaynak==='ozel'?`<div class="grid3" style="margin-top:8px">
+        <div><label class="fld">En (cm)</label><input type="number" value="${it.en}" onchange="uI(${it.id},'en',this.value)"></div>
+        <div><label class="fld">Boy (cm)</label><input type="number" value="${it.boy}" onchange="uI(${it.id},'boy',this.value)"></div>
+        <div><label class="fld">Yükseklik (cm)</label><input type="number" value="${it.yuk}" onchange="uI(${it.id},'yuk',this.value)"></div>
+      </div>`:''}
+      <div class="grid2" style="margin-top:4px">
+        <label class="chk"><input type="checkbox" ${it.kirilgan?'checked':''} onchange="uI(${it.id},'kirilgan',this.checked)">🔻 Kırılgan</label>
+        <label class="chk"><input type="checkbox" ${it.dik?'checked':''} onchange="uI(${it.id},'dik',this.checked)">⬆️ Dik konulmalı</label>
+        <label class="chk"><input type="checkbox" ${!it.ustuste?'checked':''} onchange="uI(${it.id},'ustuste',!this.checked)">🚫 Üst üste yüklenemez</label>
+        <label class="chk"><input type="checkbox" ${it.soguk?'checked':''} onchange="uI(${it.id},'soguk',this.checked)">❄️ Soğuk zincir</label>
+      </div>
+      ${it.soguk?`<label class="fld">Taşıma sıcaklığı (°C)</label><input type="number" placeholder="örn. -18" value="${it.sogukC}" onchange="uI(${it.id},'sogukC',this.value)">`:''}
+      <div class="grid2" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+        <div><label class="fld">📍 Hangi noktadan alınacak?</label><select onchange="uI(${it.id},'alim',Number(this.value))"><option value="">— Seçin —</option>${alimOpts(it)}</select></div>
+        <div><label class="fld">🎯 Hangi noktaya teslim?</label><select onchange="uI(${it.id},'teslim',Number(this.value))"><option value="">— Seçin —</option>${teslimOpts(it)}</select></div>
+      </div>
+    </div>`).join('')}
+    <div class="navrow" style="margin-top:12px"><button class="btn sm sec" onclick="addItem()">＋ Ürün ekle</button></div>
+    ${eslesmeOzeti(errs)}`}
+  </div></div>`;
+}
+function eslesmeOzeti(errs){
+  const satir = S.stops.map(s=>{
+    const alinan=S.items.map((it,ix)=>it.alim===s.id?'Ürün '+(ix+1):null).filter(Boolean);
+    const verilen=S.items.map((it,ix)=>it.teslim===s.id?'Ürün '+(ix+1):null).filter(Boolean);
+    let tx=[]; if(alinan.length) tx.push('🔼 alınacak: '+alinan.join(', ')); if(verilen.length) tx.push('🔽 teslim: '+verilen.join(', '));
+    const bos=(s.type==='alim'&&!alinan.length)||(s.type==='teslim'&&!verilen.length);
+    return `<div class="price-line"><span class="muted">${stopLabel(s)}</span><span>${bos?'<span class="no">⚠️ atanmamış</span>':(tx.join(' · ')||'<span class="muted">uğrama — yük işlemi yok</span>')}</span></div>`;
+  }).join('');
+  return `<div class="hintbox" style="margin-top:14px;${errs.length?'border-color:#fecaca;background:#fef2f2':'border-color:#86efac;background:#f0fdf4'}">
+    <b>${errs.length?'🚫 Eşleştirme eksik — sipariş bu haliyle İLERLEMEZ:':'✅ Nokta–yük eşleştirmesi tamam (hatalı teslimat engeli aktif)'}</b>
+    ${errs.length?'<br>• '+errs.join('<br>• '):''}
+    <div style="margin-top:8px">${satir}</div></div>`;
+}
 /* ---- YÜK ---- */
 function stepYuk(){
-  if(S.step===0) return `<div class="formwrap"><div>${addrPanel()}</div><div>${pricePanel()}</div></div>`;
+  if(S.step===0) return `<div class="formwrap"><div>${routePanel()}</div><div>${pricePanel()}</div></div>`;
   if(S.step===1){
     const sv=suggestVeh();
-    return `<div class="formwrap"><div>
-    <div class="panel"><div class="panel-h"><b>📦 Yük Bilgisi</b><span class="badge">desi otomatik hesaplanır</span></div>
-      <div class="panel-b">
-        <div class="grid g3" style="margin-bottom:6px">
-          <div class="pick ${!S.bilmiyorum&&S.preset<0?'sel':''}" onclick="S.bilmiyorum=false;S.preset=-1;render()" style="padding:13px"><b style="font-size:13px">📐 Ölçüleri biliyorum</b><p>En/boy/yükseklik + ağırlık gir</p></div>
-          <div class="pick ${S.preset>=0?'sel':''}" onclick="S.bilmiyorum=false;S.preset=S.preset<0?1:S.preset;render()" style="padding:13px"><b style="font-size:13px">🗂️ Katalogdan seç</b><p>"5 koli", "buzdolabı", "1 palet"…</p></div>
-          <div class="pick ${S.bilmiyorum?'sel':''}" onclick="S.bilmiyorum=true;S.preset=-1;render()" style="padding:13px"><b style="font-size:13px">🤷 Bilmiyorum</b><p>Foto yükle → operasyon belirlesin</p></div>
-        </div>
-        ${S.preset>=0?`<label class="fld">Hazır katalog</label><select onchange="S.preset=Number(this.value);render()">${PRESETS.map((p,i)=>`<option value="${i}" ${S.preset===i?'selected':''}>${p.ad} (~${p.desi} desi / ${p.kg} kg)</option>`).join('')}</select>`:''}
-        ${S.bilmiyorum?`<div class="hintbox">📷 Fotoğraf yükleyin (demo). Operasyon ekibi keşifle desi belirler; F2'de yapay zekâ ile otomatik tahmin planlanıyor (AQ-9).</div>`:''}
-        ${!S.bilmiyorum&&S.preset<0?`
-        <div class="grid3"><div><label class="fld">En (cm)</label><input type="number" value="${S.en}" onchange="S.en=this.value;render()"></div>
-        <div><label class="fld">Boy (cm)</label><input type="number" value="${S.boy}" onchange="S.boy=this.value;render()"></div>
-        <div><label class="fld">Yükseklik (cm)</label><input type="number" value="${S.yuk}" onchange="S.yuk=this.value;render()"></div></div>
-        <div class="grid2"><div><label class="fld">Ağırlık (kg)</label><input type="number" value="${S.agirlik}" onchange="S.agirlik=this.value;render()"></div>
-        <div><label class="fld">Hesaplanan desi</label><input disabled value="${etkinDesi()||'—'}"></div></div>`:''}
-        <div class="grid3" style="margin-top:12px">
-          <div><label class="fld">Ürün cinsi</label><select onchange="S.urunCins=this.value"><option>Koli</option><option>Palet</option><option>Beyaz Eşya</option><option>Mobilya</option><option>Makine</option><option>Gıda</option><option>Diğer</option></select></div>
-          <div><label class="fld">Kategori</label><select onchange="S.kategori=this.value"><option>Genel</option><option>Elektronik</option><option>Tekstil</option><option>İnşaat</option><option>Gıda</option></select></div>
-          <div><label class="fld">Ürün değeri (₺ — sigorta)</label><input type="number" placeholder="ops." value="${S.deger}" onchange="S.deger=this.value"></div>
-        </div>
-        <label class="fld">Yükleme nitelikleri (eşleştirme + yerleşim kuralları)</label>
-        <div class="grid2">
-          <label class="chk"><input type="checkbox" ${S.kirilgan?'checked':''} onchange="S.kirilgan=this.checked">🔻 Kırılgan</label>
-          <label class="chk"><input type="checkbox" ${S.dik?'checked':''} onchange="S.dik=this.checked">⬆️ Dik konulmalı</label>
-          <label class="chk"><input type="checkbox" ${!S.ustuste?'checked':''} onchange="S.ustuste=!this.checked">🚫 Üst üste yüklenemez</label>
-          <label class="chk"><input type="checkbox" ${S.bulk?'checked':''} onchange="S.bulk=this.checked">🧱 Bölünemez / bulk</label>
-          <label class="chk"><input type="checkbox" ${S.soguk?'checked':''} onchange="S.soguk=this.checked;render()">❄️ Soğuk zincir</label>
-        </div>
-        ${S.soguk?`<label class="fld">Taşıma sıcaklığı (°C)</label><input type="number" placeholder="örn. -18" value="${S.sogukC}" onchange="S.sogukC=this.value"><div class="hintbox">❄️ Soğuk zincirde yalnız frigorifik + sıcaklık kaydı tutan araçlar eşleştirilir (gıda mevzuatı).</div>`:''}
-      </div></div></div>
+    return `<div class="formwrap"><div>${itemsPanel()}</div>
     <div>${pricePanel()}
       <div class="panel"><div class="panel-h"><b>🚚 Ön araç önerisi</b></div><div class="panel-b">
-        <div style="font-size:13px"><b>${sv.main.emoji} ${sv.main.ad}</b> — ${etkinDesi()||0} desi / ${etkinKg()||0} kg için en küçük yeterli araç.</div>
-        ${sv.blocked.length?`<div class="hintbox" style="border-color:#fecaca;background:#fef2f2;color:#991b1b">⚠️ ${sv.blocked.map(b=>b.ad).join(', ')} bu yüke uyar ama <b>adres giriş kısıtına takılır</b> — önerilmedi.</div>`:''}
+        <div style="font-size:13px"><b>${sv.main.emoji} ${sv.main.ad}</b> — toplam ${etkinDesi()||0} desi / ${etkinKg()||0} kg (${S.items.length} ürün) için en küçük yeterli araç.</div>
+        ${sv.blocked.length?`<div class="hintbox" style="border-color:#fecaca;background:#fef2f2;color:#991b1b">⚠️ ${sv.blocked.map(b=>b.ad).join(', ')} bu yüke uyar ama <b>güzergahtaki giriş kısıtına takılır</b> — önerilmedi.</div>`:''}
       </div></div></div></div>`;
   }
   if(S.step===2){
@@ -664,9 +767,18 @@ function confirmPanel(){
   return `<div class="formwrap"><div>
     <div class="panel"><div class="panel-h"><b>✅ ${isEv?'Keşif Talebi Özeti':'Sipariş Özeti'}</b></div><div class="panel-b">
       <div class="price-line"><span class="muted">Hizmet</span><span>${WIZ[S.v].title}</span></div>
-      <div class="price-line"><span class="muted">Güzergah</span><span>${S.from||'—'} → ${S.to||'—'} (${S.km} km${S.durak?` + ${S.durak} durak`:''})</span></div>
+      <div class="price-line"><span class="muted">Güzergah</span><span>${S.v==='yuk'?`${S.stops.length} nokta (${S.km} km)`:`${S.from||'—'} → ${S.to||'—'} (${S.km} km${S.durak?` + ${S.durak} durak`:''})`}</span></div>
       <div class="price-line"><span class="muted">Araç</span><span>${v.emoji} ${v.ad}</span></div>
-      ${S.v==='yuk'?`<div class="price-line"><span class="muted">Yük</span><span>${S.preset>=0?PRESETS[S.preset].ad:S.bilmiyorum?'Foto ile — keşif':`${etkinDesi()} desi / ${etkinKg()} kg`}${S.kirilgan?' · kırılgan':''}${S.soguk?` · ❄️ ${S.sogukC||'?'}°C`:''}${S.dik?' · dik':''}</span></div>`:''}
+      ${S.v==='yuk'?`<div class="price-line"><span class="muted">Yük</span><span>${S.bilmiyorum?'Foto ile — keşifte belirlenecek':`${S.items.length} ürün · toplam ${etkinDesi()} desi / ${etkinKg()} kg`}</span></div>
+      ${!S.bilmiyorum?`<div style="margin:8px 0 4px;padding:10px 12px;background:var(--soft);border:1px solid var(--line);border-radius:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">NOKTA–YÜK EŞLEŞTİRMESİ ✅</div>
+        ${S.stops.map(s=>{
+          const al=S.items.map((it,ix)=>it.alim===s.id?'Ürün '+(ix+1):null).filter(Boolean);
+          const te=S.items.map((it,ix)=>it.teslim===s.id?'Ürün '+(ix+1):null).filter(Boolean);
+          const tx=[]; if(al.length) tx.push('🔼 '+al.join(', ')); if(te.length) tx.push('🔽 '+te.join(', '));
+          return `<div class="price-line" style="padding:3px 0"><span class="muted">${stopLabel(s)}</span><span style="font-size:11.5px">${tx.join(' · ')||'uğrama'}</span></div>`;
+        }).join('')}
+      </div>`:''}`:''}
       ${S.v==='yolcu'?`<div class="price-line"><span class="muted">Yolcu</span><span>${S.kisi} kişi${S.bagaj?' + bagaj':''}${S.beklemeVar?' + bekleme':''}</span></div>`:''}
       ${isEv?`<div class="price-line"><span class="muted">Ev</span><span>${S.oda} · ${S.kat}. kat · asansör ${S.asansor?'var':'yok'} · keşif: ${S.kesif}</span></div>`:''}
       ${!isEv&&S.mode!==null?`<div class="price-line"><span class="muted">Zamanlama</span><span>${MODES[S.mode].ad}${S.mode===1?` (${SLOTS[S.slot]})`:''}${S.mode===2&&S.tarih?` (${S.tarih})`:''} — ETA ~${eta(S.mode)} dk</span></div>`:''}
@@ -684,7 +796,12 @@ let trkTimer=null, trkIdx=1, trkPos=0;
 const ROUTE_PTS=[[14,78],[14,56],[40,56],[40,22],[68,22],[88,22]]; /* % koordinatlar — rotayla uyumlu */
 function showTrack(){
   show('vTrack'); trkIdx=2; trkPos=0;
-  document.getElementById('trkSub').textContent='EF-2025-0612 · ' + (S.v==='yolcu'?'Yolcu':'Yük') + ' · ' + (S.from||'Bahçelievler') + ' → ' + (S.to||'Maslak');
+  let rotaTx;
+  if(S.v==='yuk' && S.stops && S.stops.length){
+    const ilkAlim=S.stops.find(s=>s.type==='alim'), sonTeslim=[...S.stops].reverse().find(s=>s.type==='teslim');
+    rotaTx=(ilkAlim&&ilkAlim.addr?ilkAlim.addr:'Bahçelievler')+' → '+(sonTeslim&&sonTeslim.addr?sonTeslim.addr:'Maslak')+(S.stops.length>2?' (+'+(S.stops.length-2)+' durak)':'');
+  } else rotaTx=(S.from||'Bahçelievler')+' → '+(S.to||'Maslak');
+  document.getElementById('trkSub').textContent='EF-2025-0612 · ' + (S.v==='yolcu'?'Yolcu':'Yük') + ' · ' + rotaTx;
   renderTl(); moveVeh();
   clearInterval(trkTimer);
   trkTimer=setInterval(()=>{
