@@ -330,6 +330,24 @@
   .vm.sel::after{content:"✓";position:absolute;top:4px;right:6px;color:var(--efso);font-weight:800;font-size:11px}
   .vm .e{font-size:22px;line-height:1}.vm .n{font-size:11px;font-weight:600;margin-top:4px;line-height:1.2}.vm .c{font-size:9.5px;color:var(--muted);margin-top:2px}
 
+  /* kapasite modalı — akıllı öneri (aktif araç + araç tipi) */
+  .cap-sec{font-size:12px;font-weight:700;color:var(--ink);margin:16px 0 8px}
+  .cap-sec:first-child{margin-top:6px}
+  .cap-sub{color:var(--muted);font-weight:500;font-size:11px}
+  .afrow{display:flex;align-items:center;gap:12px;border:1.5px solid var(--line);border-radius:13px;padding:11px 12px;margin-bottom:9px;cursor:pointer;transition:.12s;background:#fff}
+  .afrow:hover{border-color:var(--efso);background:#f0fdff;transform:translateY(-1px)}
+  .afic{width:42px;height:42px;border-radius:11px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto}
+  .afmain{flex:1;min-width:0}
+  .afn{font-weight:700;font-size:13.5px}
+  .afmeta{font-size:11px;color:var(--muted);margin:2px 0 5px}
+  .fillbar{height:7px;border-radius:999px;background:#e2e8f0;overflow:hidden}
+  .fillbar>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#0ea5b7)}
+  .afcap{font-size:10.5px;color:var(--efso-dark);font-weight:600;margin-top:4px}
+  .afgo{color:var(--efso);font-weight:800;font-size:12.5px;white-space:nowrap;flex:0 0 auto}
+  .afbadge{display:inline-block;font-size:9.5px;font-weight:700;background:#dcfce7;color:#15803d;border-radius:6px;padding:1px 7px;margin-left:6px}
+  .cap-types{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  @media(max-width:560px){.cap-types{grid-template-columns:repeat(2,1fr)}}
+
   .hide{display:none!important}
 </style>
 </head>
@@ -468,14 +486,13 @@
   </div>
 </div>
 
-<!-- KAPASİTE UYARI MODALI -->
+<!-- KAPASİTE UYARI MODALI (akıllı öneri: önce aktif araç, sonra araç tipi) -->
 <div class="ovl" id="capModal">
-  <div class="modal">
-    <div class="mh"><div class="ic">⚠️</div><b>Yük araca uymuyor</b></div>
-    <div class="mb" id="capText"></div>
+  <div class="modal" style="max-width:580px">
+    <div class="mh"><div class="ic">⚠️</div><b>Yük seçili araca sığmıyor</b></div>
+    <div class="mb" id="capBody" style="max-height:62vh;overflow-y:auto"></div>
     <div class="mf">
-      <button class="btn ghost" onclick="closeCap()">Ürün Bilgisini Düzenle</button>
-      <button class="btn primary" id="capRedirect">Uygun Araca Yönlendir →</button>
+      <button class="btn ghost" style="flex:1" onclick="closeCap()">← Kap bilgilerini düzenle</button>
     </div>
   </div>
 </div>
@@ -572,7 +589,7 @@ const MODE_ADJ = { express:1, gunici:0.82, ileri:0.78, simdi:1, randevu:1 };
    DURUM
    ============================================================ */
 let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
-          route:[], items:[], addrMap:{}, truckSkip:false };
+          route:[], items:[], addrMap:{}, truckSkip:false, preferredCourier:null };
 
 /* ============================================================
    NAVIGASYON
@@ -580,7 +597,7 @@ let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
 function toggleGroup(id){ document.getElementById(id).classList.toggle('open'); }
 
 function selectCat(cat){
-  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{}, truckSkip:false };
+  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{}, truckSkip:false, preferredCourier:null };
   document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.toggle('active', n.dataset.cat===cat));
   document.getElementById('cbCat').textContent = CATS[cat].label;
   showView('new');
@@ -1028,16 +1045,78 @@ function checkCapacity(){
   }
   return false;
 }
+/* DEMO: şu an aktif (çevrimiçi) filo — gerçekte canlı konum + doluluk + rota backend'den gelir */
+const ACTIVE_FLEET = [
+  {id:'af1', name:'Hasan Demir',  veh:'courier',  plate:'34 VAN 074', fill:35, distKm:1.2},
+  {id:'af2', name:'Mehmet Yıldız',veh:'transit',  plate:'34 TRS 210', fill:58, distKm:2.4},
+  {id:'af3', name:'Elif Şahin',   veh:'transit',  plate:'34 TRS 355', fill:22, distKm:6.8},
+  {id:'af4', name:'Ayşe Korkmaz', veh:'kamyonet', plate:'34 KMT 118', fill:46, distKm:4.1},
+  {id:'af5', name:'Murat Aslan',  veh:'kamyon_ls',plate:'34 KMN 902', fill:51, distKm:9.0},
+  {id:'af6', name:'Zeynep Ak',    veh:'transit',  plate:'34 TRS 487', fill:70, distKm:3.3},
+];
+function vehName(id){ const v=CATS.yuk.vehicles.find(x=>x.id===id); return v?v.name:id; }
+function vehById(id){ return CATS.yuk.vehicles.find(x=>x.id===id); }
+/* araç tipini sayfa içinde değiştir (km/kap uyarla) — toast/render çağırana ait */
+function setVehInline(id){
+  S.veh=id;
+  S.km = id.startsWith('tir') ? 250 : (id.startsWith('kamyon') ? 60 : 12);
+  const v=curVeh(); if(v && v.kap) S.items.forEach(it=>{ if(!v.kap.includes(it.cat)) it.cat=v.kap[0]; });
+}
+
 function showCap(v,t){
-  document.getElementById('capText').innerHTML =
-    `Ürün bilgileriniz <b>${v.name}</b> kapasitesini aşıyor (limit: ${v.maxKg} kg${v.maxDesi?` / ${v.maxDesi} desi`:''}; girilen: <b>${t.kg} kg${t.desi?` / ${t.desi} desi`:''}</b>).<br><br>
-     Ürün bilgilerinizi mi düzenlemek istersiniz, yoksa yükünüze uygun araç tipine mi yönlendirelim?`;
-  // uygun aracı bul
-  const fit = CATS[S.cat].vehicles.find(x=>x.maxKg && x.maxKg>=t.kg && (!x.maxDesi || x.maxDesi>=t.desi));
-  const btn=document.getElementById('capRedirect');
-  if(fit){ btn.textContent=`${fit.name} ekranına yönlendir →`; btn.onclick=()=>{closeCap(); pickVeh(fit.id);}; }
-  else { btn.textContent='Uygun araç bulunamadı'; btn.disabled=true; }
+  // 1) ÖNCELİKLİ: yükü alabilecek AKTİF araçlar (doluluk & rota & kalan kapasite)
+  const active = ACTIVE_FLEET.map(af=>{
+    const ty=vehById(af.veh);
+    const remKg=Math.round(ty.maxKg*(1-af.fill/100));
+    const remDesi=Math.round((ty.maxDesi||ty.maxKg)*(1-af.fill/100));
+    const fits = remKg>=t.kg && (!ty.maxDesi || remDesi>=t.desi);
+    const score = af.distKm + af.fill/25;   // yakın + düşük doluluk öncelik
+    return {...af, ty, remKg, remDesi, fits, score};
+  }).filter(a=>a.fits).sort((a,b)=>a.score-b.score).slice(0,3);
+
+  // 2) SONRA: kapasiteye göre araç tipi önerisi (mevcut hariç)
+  const types = CATS.yuk.vehicles.filter(x=>x.id!==v.id && x.maxKg>=t.kg && (!x.maxDesi || x.maxDesi>=t.desi)).slice(0,3);
+
+  let html = `<p style="margin:0 0 2px">Girdiğiniz yük <b>${v.name}</b> kapasitesini aşıyor — limit <b>${v.maxKg} kg${v.maxDesi?` / ${v.maxDesi} desi`:''}</b>, girilen <b>${t.kg} kg${t.desi?` / ${t.desi} desi`:''}</b>. Aşağıdan seçim yapabilir ya da kap bilgilerini düzeltebilirsiniz.</p>`;
+
+  if(active.length){
+    html += `<div class="cap-sec">⭐ Önce — yükünüzü <b>şimdi alabilecek aktif araçlar</b> <span class="cap-sub">(doluluk &amp; rotaya göre · konsolide = daha uygun fiyat)</span></div>`;
+    html += active.map((a,i)=>`<div class="afrow" onclick="chooseActive('${a.id}')">
+        <div class="afic">${a.ty.ph}</div>
+        <div class="afmain">
+          <div class="afn">${a.name} · ${a.ty.name}${i===0?'<span class="afbadge">EN UYGUN</span>':''}</div>
+          <div class="afmeta">${a.plate} · ${a.distKm} km uzakta · ETA ~${Math.round(a.distKm*3+6)} dk · çevrimiçi</div>
+          <div class="fillbar"><i style="width:${a.fill}%"></i></div>
+          <div class="afcap">Doluluk %${a.fill} · bu yüke kalan ~${a.remKg.toLocaleString('tr-TR')} kg${a.ty.maxDesi?` / ${a.remDesi.toLocaleString('tr-TR')} desi`:''}</div>
+        </div>
+        <div class="afgo">Seç →</div></div>`).join('');
+  } else {
+    html += `<div class="cap-sec">Şu an yükünüzü alabilecek müsait <b>aktif araç</b> yok — aşağıdan araç tipi seçin.</div>`;
+  }
+
+  if(types.length){
+    html += `<div class="cap-sec">🚚 Sonra — <b>araç tipi önerisi</b> <span class="cap-sub">(kapasiteye göre)</span></div>
+      <div class="cap-types">`+types.map(ty=>`<div class="vm" onclick="chooseType('${ty.id}')">
+        <div class="e">${ty.ph}</div><div class="n">${ty.name}</div><div class="c">≤ ${ty.maxKg.toLocaleString('tr-TR')} kg</div></div>`).join('')+`</div>`;
+  } else if(!active.length){
+    html += `<div class="cap-sec">Bu yüke uygun araç tipi bulunamadı; lütfen kap bilgilerini gözden geçirin.</div>`;
+  }
+
+  document.getElementById('capBody').innerHTML = html;
   document.getElementById('capModal').classList.add('show');
+}
+function chooseActive(id){
+  const af=ACTIVE_FLEET.find(x=>x.id===id); if(!af) return;
+  S.preferredCourier={name:af.name, veh:af.veh, plate:af.plate, fill:af.fill};
+  setVehInline(af.veh); closeCap();
+  toast('✅ '+af.name+' ('+vehName(af.veh)+') atanmak üzere seçildi — konsolide, daha uygun fiyat');
+  renderStep3();
+}
+function chooseType(id){
+  S.preferredCourier=null;
+  setVehInline(id); closeCap();
+  toast('🚚 Araç tipi: '+vehName(id));
+  renderStep3();
 }
 function closeCap(){ document.getElementById('capModal').classList.remove('show'); }
 
@@ -1153,6 +1232,7 @@ function renderLiveSum(){
   rows.push(['Kategori', CATS[S.cat].label]);
   if(M) rows.push(['Zamanlama', M.name.split('—')[0].trim()]);
   rows.push(['Araç', v.name]);
+  if(S.preferredCourier) rows.push(['Seçilen Kurye', `${S.preferredCourier.name} · konsolide`]);
   if(S.slot){ const s=SLOTS.find(x=>x.id===S.slot); rows.push(['Slot', `${s.name} (${s.win})`]); }
   if(S.cat==='yolcu') rows.push(['Yolcu', S.pax+' kişi']);
   if(t) rows.push(['Yük', `${t.qty} adet · ${t.kg} kg`]);
@@ -1231,7 +1311,7 @@ function placeOrder(){
   ORDERS.unshift(o);
   updateNavListBadge();
   toast('✅ Sipariş oluşturuldu — '+o.no+' · Takip ekranı açılıyor…');
-  S.route=[]; S.items=[]; S.addrMap={}; S.slot=null; S.stops=0; S.mode=null; S.veh=null;  // yeni sipariş için temizle
+  S.route=[]; S.items=[]; S.addrMap={}; S.slot=null; S.stops=0; S.mode=null; S.veh=null; S.preferredCourier=null;  // yeni sipariş için temizle
   showTrack(o.no);
   // DEMO: kurye ~3.5 sn sonra otomatik atanır (gerçekte dispatch motoru)
   setTimeout(()=>{ const cur=ORDERS.find(x=>x.no===o.no); if(cur && cur.status==='KuryeAraniyor') setStatus(o.no,'KuryeAtandi'); }, 3500);
@@ -1289,14 +1369,19 @@ function buildOrder(){
     modeLabel:M?M.name.split('—')[0].trim():'Randevu', rtText:routeText(),
     km:p.km, stops:p.stops, itemsN:(S.cat==='yuk'&&vehNeedsItems(v))?S.items.length:0,
     price:p.sale, meter:p.meter, survey:p.survey,
-    status:'KuryeAraniyor', createdAt:nowStr(), courier:null,
+    status:'KuryeAraniyor', createdAt:nowStr(), courier:null, preferred:S.preferredCourier||null,
     history:[{key:'Beklemede',at:nowTime()},{key:'KuryeAraniyor',at:nowTime()}],
     routeSnap: S.route.map(s=>({type:s.type, addr:S.addrMap['st_'+s.id]||''})),
     fromTo: S.cat!=='yuk' ? {from:S.addrMap.from||'', to:S.addrMap.to||''} : null,
   };
 }
 function assignCourier(o){
-  // Kurye, SİPARİŞİN ARACIYLA aynı araç tipinde atanır (Moto sipariş → Moto kurye)
+  // Kapasite modalında seçilen aktif araç/kurye varsa onu ata (konsolide)
+  if(o.preferred){
+    return { name:o.preferred.name, veh:`${o.vehName} · ${o.preferred.plate}`, rate:'4.8 ★',
+      eta:(4+(o.km%12))+' dk', phone:'+90 5•• ••• 33 21' };
+  }
+  // Aksi halde: SİPARİŞİN ARACIYLA aynı araç tipinde atanır (Moto sipariş → Moto kurye)
   const i=orderSeq % COURIER_NAMES.length;
   const plate=`${PLATE_PREFIX[o.veh]||'34 EFS'} ${String(100+(orderSeq*7)%900)}`;
   return {
