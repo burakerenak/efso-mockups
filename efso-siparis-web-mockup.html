@@ -491,7 +491,7 @@ const CATS = {
     label:'Yük Taşımacılığı', icon:'📦',
     modes:['express','gunici','ileri'],
     vehicles:[
-      {id:'moto',    name:'Moto Kurye',        sub:'Courier',            ph:'🛵', specs:['≤ 5 kg','≤ 20 desi'],      maxKg:5,    maxDesi:20,   kap:['Koli','Diğer']},
+      {id:'moto',    name:'Moto Kurye',        sub:'Courier',            ph:'🛵', specs:['≤ 5 kg','≤ 20 desi'],      maxKg:5,    maxDesi:20,   kap:['Dosya','Koli','Diğer'], dosyaSkip:true},
       {id:'courier', name:'Van Ford Courier',  sub:'Hafif kargo',        ph:'🚐', specs:['≤ 600 kg','≤ 4.5 m³'],     maxKg:600,  maxDesi:800,  kap:['Dosya','Koli','Diğer'], dosyaSkip:true},
       {id:'transit', name:'Van Ford Transit',  sub:'Orta hacim',         ph:'🚐', specs:['≤ 1200 kg','≤ 8.5 m³'],    maxKg:1200, maxDesi:1500, kap:['Koli','Palet','Diğer']},
       {id:'kamyonet',name:'Kamyonet',          sub:'Mercedes Sprinter',  ph:'🚚', specs:['≤ 1400 kg','≤ 16.8 m³'],   maxKg:1400, maxDesi:3000, kap:['Koli','Palet','Diğer']},
