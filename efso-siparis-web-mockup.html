@@ -563,7 +563,7 @@ const MODE_ADJ = { express:1, gunici:0.82, ileri:0.78, simdi:1, randevu:1 };
    DURUM
    ============================================================ */
 let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
-          route:[], items:[], addrMap:{}, truckSkip:true };
+          route:[], items:[], addrMap:{}, truckSkip:false };
 
 /* ============================================================
    NAVIGASYON
@@ -571,7 +571,7 @@ let S = { cat:'yolcu', mode:null, veh:null, slot:null, pax:1, km:12, stops:0,
 function toggleGroup(id){ document.getElementById(id).classList.toggle('open'); }
 
 function selectCat(cat){
-  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{}, truckSkip:true };
+  S = { cat, mode:null, veh:null, slot:null, pax:1, km:12, stops:0, route:[], items:[], addrMap:{}, truckSkip:false };
   document.querySelectorAll('.nsub .nitem').forEach(n=>n.classList.toggle('active', n.dataset.cat===cat));
   document.getElementById('cbCat').textContent = CATS[cat].label;
   showView('new');
@@ -659,17 +659,17 @@ function renderStep2(){
   document.getElementById('s2title').textContent = S.cat==='yolcu'?'Araç Tipini Seçin':'Araç Tipini Seçin';
 }
 function pickVeh(id){
-  S.veh=id; S.slot=null; S.truckSkip=true;   // büyük araçta varsayılan: araç seçimi yeterli (01)
+  S.veh=id; S.slot=null;
   S.km = id.startsWith('tir') ? 250 : (id.startsWith('kamyon') ? 60 : 12); // tahmini varsayılan mesafe
-  // araç değişince kap cinsini yeni aracın listesine uyarla
   const v=CATS[S.cat].vehicles.find(x=>x.id===id);
-  if(v && v.kap) S.items.forEach(it=>{ if(!v.kap.includes(it.cat)) it.cat=v.kap[0]; });
+  S.truckSkip = !!(v && v.truckSkip);   // 01 varsayılanı: büyük araçta açık, hafif araçta kapalı
+  if(v && v.kap) S.items.forEach(it=>{ if(!v.kap.includes(it.cat)) it.cat=v.kap[0]; }); // kap cinsini uyarla
   recalcStops();   // ek durak sayısı route'tan türetilir
   renderStep2(); setTimeout(()=>goStep(3),160);
 }
 function curVeh(){ return CATS[S.cat].vehicles.find(v=>v.id===S.veh); }
-/* ürün kartları gösterilsin mi: hafif araçta hep; büyük araçta yalnız "01 atla" kapalıyken */
-function vehNeedsItems(v){ return v && (v.truckSkip ? !S.truckSkip : true); }
+/* ürün kartları gösterilsin mi: "01 atla" kapalıysa (her araç için) */
+function vehNeedsItems(v){ return !S.truckSkip; }
 function isDosya(name){ return /dosya|zarf|evrak/i.test(name||''); }
 
 /* ============================================================
@@ -868,43 +868,32 @@ function formYuk(v,M){
 
   let n = (M&&M.slot)?2:1;   // routeBlock=1, slot=2 (varsa)
 
-  // ---- KAP / ÜRÜNLER (araca özel kap cinsi) ----
-  if(v.truckSkip){
-    // Büyük araç: "01" — araç seçimi yeterli VEYA kap girişi (Excel)
+  // ---- YÜK / ÜRÜNLER — HER ARAÇTA "01" hızlı atlama (Excel) ----
+  // 01: adet/ağırlık girmeden sadece araç seçerek devam. Varsayılan: hafif araçta kapalı (kap girişi),
+  // büyük araçta açık (araç seçimi yeterli). Her durumda işaret kaldırılınca araca-özel kap cinsi açılır.
+  n++;
+  h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük / Ürünler</b>
+      <span class="badge">${S.truckSkip?'Araç Seçimi Yeterli (01)':'Kap cinsi: '+v.kap.join(' · ')}</span></div><div class="panel-b">
+    <div class="hintbox" style="margin-top:0"><b>01 —</b> Yükünüzün detaylı adet/ağırlığını bilmiyor ama hangi araca sığacağından eminseniz; adet/ağırlık girmeden yalnızca araç seçerek hızlıca devam edebilirsiniz. Kap cinsi/adet/ağırlık girmek için işareti kaldırın.</div>
+    <label class="check"><input type="checkbox" ${S.truckSkip?'checked':''} onchange="toggleTruckSkip(this.checked)"> <span><b>Adet/ağırlık girmeden devam et</b> — araç seçimi yeterli (01)</span></label>
+    ${S.truckSkip
+      ? `<label class="fld">Yük Tanımı (opsiyonel)</label>
+         <textarea placeholder="Örn: 1 koli ~3 kg, kırılabilir / 12 palet beyaz eşya, forkliftli..."></textarea>
+         <label class="fld">Tahmini Toplam Ağırlık (opsiyonel)</label><input type="number" placeholder="kg">`
+      : `<div id="itemHost" style="margin-top:4px"></div>`}
+    </div></div>`;
+  if(v.photo){
     n++;
-    h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük Bilgisi</b>
-        <span class="badge">${S.truckSkip?'Araç Seçimi Yeterli (01)':'Kap Girişi'}</span></div><div class="panel-b">
-      <div class="hintbox" style="margin-top:0"><b>01 —</b> Yükünüzün detaylı adet/ağırlığını bilmiyor ama hangi araca sığacağından eminseniz; adet/ağırlık girmeden yalnızca araç seçerek hızlıca devam edebilirsiniz. Kap detayı girmek isterseniz aşağıdaki kutunun işaretini kaldırın.</div>
-      <label class="check"><input type="checkbox" ${S.truckSkip?'checked':''} onchange="toggleTruckSkip(this.checked)"> <span><b>Adet/ağırlık girmeden devam et</b> — araç seçimi yeterli (01)</span></label>
-      ${S.truckSkip ? `<label class="fld">Yük Tanımı (opsiyonel)</label>
-        <textarea placeholder="Örn: 12 palet beyaz eşya, paletli, forkliftli yükleme..."></textarea>
-        <label class="fld">Tahmini Toplam Ağırlık (opsiyonel)</label><input type="number" placeholder="kg">` : ''}
+    h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Araç Detayı &amp; Sorumluluk Bildirimi</b>
+        <span class="badge" style="background:#fef3c7;color:#b45309">Onay Gerekli</span></div><div class="panel-b">
+      <div class="hintbox" style="margin-top:0">Aracın kasa–kapı–dingil–ölçü–tonaj fotoğraflı detay sayfası gösterilir. Müşteri tüm detayları görür ve sorumluluk bildirimini onaylar.</div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">📐 Kasa</div>
+        <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">🚪 Kapı</div>
+        <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">⚖️ Tonaj</div>
+      </div>
+      <label class="check"><input type="checkbox"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün bu araca uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
       </div></div>`;
-    if(!S.truckSkip){
-      n++;
-      h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük / Ürünler</b>
-          <span class="badge">Kap cinsi: ${v.kap.join(' · ')}</span></div>
-        <div class="panel-b" id="itemHost"></div></div>`;
-    }
-    if(v.photo){
-      n++;
-      h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Araç Detayı &amp; Sorumluluk Bildirimi</b>
-          <span class="badge" style="background:#fef3c7;color:#b45309">Onay Gerekli</span></div><div class="panel-b">
-        <div class="hintbox" style="margin-top:0">Aracın kasa–kapı–dingil–ölçü–tonaj fotoğraflı detay sayfası gösterilir. Müşteri tüm detayları görür ve sorumluluk bildirimini onaylar.</div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">📐 Kasa</div>
-          <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">🚪 Kapı</div>
-          <div style="width:90px;height:64px;border-radius:9px;background:#eef6f8;display:flex;align-items:center;justify-content:center;font-size:24px">⚖️ Tonaj</div>
-        </div>
-        <label class="check"><input type="checkbox"> <span>Araç ölçü/tonaj detaylarını gördüm; yükümün bu araca uygunluğunun sorumluluğunu kabul ediyorum.</span></label>
-        </div></div>`;
-    }
-  } else {
-    // Hafif araç: kap cinsi her zaman seçilir (Moto/Courier/Transit/Kamyonet)
-    n++;
-    h += `<div class="panel"><div class="panel-h"><div class="n">${n}</div><b>Yük / Ürünler</b>
-        <span class="badge">Kap cinsi: ${v.kap.join(' · ')}</span></div>
-      <div class="panel-b" id="itemHost"></div></div>`;
   }
 
   // Gün içi/ileri ek alanları (yükleyen/boşaltan + süre)
@@ -1138,7 +1127,7 @@ function renderLiveSum(){
   if(S.slot){ const s=SLOTS.find(x=>x.id===S.slot); rows.push(['Slot', `${s.name} (${s.win})`]); }
   if(S.cat==='yolcu') rows.push(['Yolcu', S.pax+' kişi']);
   if(t) rows.push(['Yük', `${t.qty} adet · ${t.kg} kg`]);
-  if(v.truckSkip && S.truckSkip) rows.push(['Yük', 'Araç seçimi yeterli (01)']);
+  if(S.cat==='yuk' && S.truckSkip) rows.push(['Yük', 'Araç seçimi yeterli (01)']);
 
   host.innerHTML = `
     <div class="sh">🧮 Canlı Fiyat — km × tarife</div>
@@ -1182,7 +1171,7 @@ function renderStep4(){
     S.cat==='yolcu'?['Yolcu', S.pax+' kişi']:null,
     (S.cat==='yuk'&&vehNeedsItems(v))?['Ürünler', `${S.items.length} kalem`]:null,
     t?['Toplam Yük', `${t.qty} adet · ${t.kg} kg${t.desi?` · ${t.desi} desi`:''}`]:null,
-    (v.truckSkip&&S.truckSkip)?['Yük Bilgisi', 'Araç seçimi yeterli — adet/ağırlık girilmedi (01)']:null,
+    (S.cat==='yuk'&&S.truckSkip)?['Yük Bilgisi', 'Araç seçimi yeterli — adet/ağırlık girilmedi (01)']:null,
   ].filter(Boolean);
 
   document.getElementById('confHost').innerHTML = `
