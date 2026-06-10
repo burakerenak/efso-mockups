@@ -1037,7 +1037,8 @@ function placeOrder(){
     modeLabel:S.mode!==null?MODES[S.mode].ad.split('—')[0].split('(')[0].trim():'—',
     rtText:routeText(), km:S.km, itemsN:S.v==='yuk'?S.items.length:0, price:fiyat(), meter:TARIFF[curVehId()].meter,
     doluluk:S.v==='yuk'?Math.min(99,Math.round(ucreteEsas()/( (YUK_VEH.find(x=>x.id===curVehId())||{maxDesi:1500}).maxDesi )*100)):0,
-    status:'KuryeAraniyor', createdAt:nowStr(), courier:null,
+    legs:multi?multi.map(l=>({veh:l.veh.id, vehName:l.veh.name, ph:l.veh.ph, stop:stopLabel(l.stop), items:l.items, d:l.d, kg:l.kg})):null,
+    status:'KuryeAraniyor', createdAt:nowStr(), courier:null, couriers:null,
     history:[{key:'Beklemede',at:nowTime()},{key:'KuryeAraniyor',at:nowTime()}] };
   ORDERS.unshift(o); updateNavListBadge();
   toast('✅ Sipariş oluşturuldu — '+o.no+' · Takip ekranı açılıyor…');
@@ -1049,6 +1050,14 @@ function assignCourier(o){
   const plate=`${PLATE_PREFIX[o.veh]||'34 EFS'} ${String(100+(orderSeq*7)%900)}`;
   return { name:COURIER_NAMES[i], veh:`${o.vehName} · ${plate}`, rate:['4.9 ★','4.8 ★','5.0 ★','4.7 ★'][orderSeq%4],
     eta:(4+(o.km%12))+' dk', phone:'+90 5•• ••• '+String(10+(orderSeq%89)).padStart(2,'0')+' '+String(o.km%90).padStart(2,'0') };
+}
+/* bölünmüş siparişte HER BACAK = ayrı atama = ayrı sürücü + plaka + ETA */
+function assignCourierLeg(o,l,i){
+  const name=COURIER_NAMES[(orderSeq+i*3)%COURIER_NAMES.length];
+  const plate=`${PLATE_PREFIX[l.veh]||'34 EFS'} ${String(100+((orderSeq+i*5)*7)%900)}`;
+  return { name, veh:`${l.vehName} · ${plate}`, ph:l.ph, stop:l.stop, items:l.items,
+    rate:['4.9 ★','4.8 ★','5.0 ★','4.7 ★'][(orderSeq+i)%4], eta:(4+((o.km+i*6)%12))+' dk',
+    phone:'+90 5•• ••• '+String(10+((orderSeq+i*11)%89)).padStart(2,'0')+' '+String((o.km+i*7)%90).padStart(2,'0') };
 }
 function statusBadge(o){
   if(o.status==='IptalEdildi') return {cls:'st-cancel',ic:'✕',label:'İptal Edildi'};
@@ -1063,7 +1072,10 @@ function setStatus(no,key){
   const o=ORDERS.find(x=>x.no===no); if(!o) return;
   o.status=key; o.history=o.history||[];
   if(key!=='IptalEdildi'&&!o.history.find(h=>h.key===key)) o.history.push({key,at:nowTime()});
-  if(key==='KuryeAtandi'&&!o.courier) o.courier=assignCourier(o);
+  if(key==='KuryeAtandi'&&!o.courier&&!o.couriers){
+    if(o.legs&&o.legs.length>1) o.couriers=o.legs.map((l,i)=>assignCourierLeg(o,l,i));
+    else o.courier=assignCourier(o);
+  }
   if(!document.getElementById('vList').classList.contains('hide')) renderList();
   if(!document.getElementById('vTrack').classList.contains('hide')&&CUR_TRACK===no) renderTrack();
   updateNavListBadge();
@@ -1117,7 +1129,9 @@ function renderTrack(){
               <circle cx="100" cy="250" r="9" fill="#16a34a"/><text x="114" y="255" font-size="12" fill="#14532d">Alım</text>
               <circle cx="540" cy="80" r="9" fill="#dc2626"/><text x="468" y="64" font-size="12" fill="#7f1d1d">Teslim</text>
             </svg>
-            ${idx>=2&&o.status!=='IptalEdildi'?`<div class="veh-dot" style="left:${p[0]}%;top:${p[1]}%">${o.vehEmoji}</div><div class="live" style="left:${p[0]+1.4}%;top:${p[1]-2}%"></div>`:''}
+            ${idx>=2&&o.status!=='IptalEdildi'?(o.legs&&o.legs.length>1
+              ?o.legs.map((l,i)=>`<div class="veh-dot" style="left:${p[0]+i*5}%;top:${p[1]-i*4}%" title="Araç ${i+1}: ${l.vehName}">${l.ph}</div><div class="live" style="left:${p[0]+i*5+1.4}%;top:${p[1]-i*4-2}%"></div>`).join('')
+              :`<div class="veh-dot" style="left:${p[0]}%;top:${p[1]}%">${o.vehEmoji}</div><div class="live" style="left:${p[0]+1.4}%;top:${p[1]-2}%"></div>`):''}
           </div>
           <div class="hintbox">📡 Konum taşıyıcı uygulamasından <b>SignalR</b> ile saniyelik gelir; ETA <b>Google Distance Matrix</b> (trafik dahil) ile yenilenir — simülasyon. KVKK: konum yalnız sefer süresince izlenir.</div>
         </div>
@@ -1125,7 +1139,19 @@ function renderTrack(){
       ${o.status==='KuryeAraniyor'?`<div class="panel"><div class="panel-b">
         <div class="seekbox"><div class="spin"></div><div><b>Eşleştirme motoru çalışıyor…</b><br>Online taşıyıcılar taranıyor (hard filter → soft score). Uygun aday bulunamazsa sipariş <b>manuel kuyruğa</b> düşer, operasyoncu devreye girer.</div></div>
       </div></div>`:''}
-      ${o.courier?`<div class="panel"><div class="panel-h"><b>🚚 Taşıyıcınız</b></div>
+      ${o.couriers?`<div class="panel"><div class="panel-h"><b>🚚 Taşıyıcılarınız</b><span class="badge">${o.couriers.length} araç · ${o.couriers.length} ayrı atama</span></div>
+        ${o.couriers.map((c,i)=>`<div class="panel-b courier-card" style="${i>0?'border-top:1px dashed var(--line)':''}">
+          <div class="cav">${c.name.split(' ').map(x=>x[0]).join('')}</div>
+          <div style="flex:1;min-width:180px"><span class="pill info" style="margin:0 0 4px">Araç ${i+1} ${c.ph} — ${c.stop} · Ürün ${c.items.join(', ')}</span><br>
+            <b>${c.name}</b> <span class="pill ok">${c.rate}</span><br>
+            <span style="font-size:12px;color:var(--muted)">${c.veh} · K1 ✓ · ETA ${c.eta}</span><br>
+            <span style="font-size:11.5px;color:var(--muted)">📞 ${c.phone} (maskeli)</span></div>
+          <button class="btn sm sec" onclick="toast('📞 Maskeli arama (Araç ${i+1} sürücüsü ${c.name}) başlatıldı — demo.')">Ara</button>
+          <button class="btn sm sec" onclick="toast('💬 Mesaj penceresi (Araç ${i+1}) — demo.')">Mesaj</button>
+        </div>`).join('')}
+        <div class="panel-b" style="padding-top:0"><div class="hintbox">ℹ️ Bölünmüş sipariş = her araç <b>ayrı atama/sefer</b>: kendi sürücüsü, plakası, ETA'sı ve konumu vardır. Demo'da tek özet zaman çizelgesi gösteriliyor; gerçek sistemde her bacağın statüsü ayrı izlenir.</div></div>
+      </div>`:''}
+      ${(!o.couriers&&o.courier)?`<div class="panel"><div class="panel-h"><b>🚚 Taşıyıcınız</b></div>
         <div class="panel-b courier-card">
           <div class="cav">${o.courier.name.split(' ').map(x=>x[0]).join('')}</div>
           <div style="flex:1;min-width:180px"><b>${o.courier.name}</b> <span class="pill ok">${o.courier.rate}</span><br>
