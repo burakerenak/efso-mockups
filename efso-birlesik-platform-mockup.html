@@ -482,8 +482,8 @@ const PLATE_PREFIX={moto:'34 MTR',courier:'34 VAN',transit:'34 TRS',kamyonet:'34
 /* ====================== DURUM ====================== */
 let S = {};
 function freshS(v){ return { v:v, step:0, km:12,
-  stops:[ {id:1,type:'alim',addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false},
-          {id:2,type:'teslim',addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'09:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false} ],
+  stops:[ {id:1,type:'alim',addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'08:00',ka:'18:00',bekleme:15,firma:'',kisi:'',tel:'',detay:false},
+          {id:2,type:'teslim',addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'09:00',ka:'18:00',bekleme:15,firma:'',kisi:'',tel:'',detay:false} ],
   ileriSaat:'10:00',
   items:[ {id:1,cat:'koli',adet:1,en:'',boy:'',yuk:'',kg:'',kirilgan:false,dik:false,ustuste:true,sogukC:'',alim:1,teslim:2} ],
   nsid:3, niid:2, bilmiyorum:false, vehOnly:false, vehOnlyOk:false, multiOk:false,
@@ -570,7 +570,7 @@ function uS(id,k,v){ stopById(id)[k]=v; render(); }
 function uSq(id,k,v){ stopById(id)[k]=v; } /* render'sız (yazarken odak kaybolmasın) */
 function uI(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; render(); }
 function uIq(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; }
-function addStop(t){ S.stops.push({id:S.nsid++,type:t,addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false}); toast('+ '+(t==='alim'?'Alım':t==='ugrama'?'Uğrama':'Teslim')+' noktası eklendi'); render(); }
+function addStop(t){ S.stops.push({id:S.nsid++,type:t,addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'08:00',ka:'18:00',bekleme:15,firma:'',kisi:'',tel:'',detay:false}); toast('+ '+(t==='alim'?'Alım':t==='ugrama'?'Uğrama':'Teslim')+' noktası eklendi'); render(); }
 function delStop(id){ const s=stopById(id);
   if(s.type==='alim'&&S.stops.filter(x=>x.type==='alim').length<=1){ toast('⚠️ En az 1 alım noktası gerekli.'); return; }
   if(s.type==='teslim'&&S.stops.filter(x=>x.type==='teslim').length<=1){ toast('⚠️ En az 1 teslim noktası gerekli.'); return; }
@@ -836,7 +836,8 @@ function routePanel(){
         <div><label class="fld">İstisna saatleri</label><div style="display:flex;gap:6px"><input type="time" value="${s.cFrom}" onchange="uS(${s.id},'cFrom',this.value)"><input type="time" value="${s.cTo}" onchange="uS(${s.id},'cTo',this.value)"></div></div>
       </div>`:''}
       <div style="font-size:11px;color:var(--muted);margin-top:6px">⏰ Şu an (${String(NOWH()).padStart(2,'0')}:00): <b>${rankKisa(stopRankAt(s,NOWH()))}</b> · Gün içinde en geniş: <b>${rankKisa(stopBestRank(s))}</b></div>
-      ${s.detay?`<div class="grid2" style="margin-top:10px">
+      ${s.detay?`<div class="grid3" style="margin-top:10px">
+        <div><label class="fld">Firma adı <span style="font-weight:400">(opsiyonel)</span></label><input value="${s.firma}" onchange="uSq(${s.id},'firma',this.value)" placeholder="örn. ABC Lojistik A.Ş."></div>
         <div><label class="fld">İlgili kişi</label><input value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
         <div><label class="fld">Telefon (maskelenir)</label><input value="${s.tel}" onchange="uSq(${s.id},'tel',this.value)" placeholder="05__ ___ __ __"></div>
       </div>`:''}
@@ -1050,7 +1051,7 @@ function confirmPanel(){
           const al=S.items.map((it,ix)=>it.alim===s.id?'Ürün '+(ix+1):null).filter(Boolean);
           const te=S.items.map((it,ix)=>it.teslim===s.id?'Ürün '+(ix+1):null).filter(Boolean);
           const tx=[]; if(al.length) tx.push('🔼 '+al.join(', ')); if(te.length) tx.push('🔽 '+te.join(', '));
-          return `<div class="price-line" style="padding:3px 0"><span class="muted">${stopLabel(s)}</span><span style="font-size:11.5px">${tx.join(' · ')||'uğrama'}</span></div>`;
+          return `<div class="price-line" style="padding:3px 0"><span class="muted">${stopLabel(s)}${s.firma?` · 🏢 ${s.firma}`:''}</span><span style="font-size:11.5px">${tx.join(' · ')||'uğrama'}</span></div>`;
         }).join('')}
       </div>`:''}`:''}
       ${S.v==='yolcu'?`<div class="price-line"><span class="muted">Yolcu</span><span>${S.kisi} kişi${S.bagaj?' + bagaj':''}${S.beklemeVar?' + bekleme':''}</span></div>`:''}
