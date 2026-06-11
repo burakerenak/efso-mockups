@@ -436,6 +436,35 @@ const GIRIS = [
   {id:3, ad:'Transit\'e kadar (site/AVM rampası)'},
   {id:2, ad:'Courier\'e kadar (çok dar)'},
 ];
+/* Araç giriş kuralı = SINIF + SAAT PENCERESİ (birden fazla durum). Şablonlar + özel kural. */
+const GIRIS_RULES = [
+  {id:'r724',       ad:'Kısıt yok — 7/24 her araç girebilir',                              f:h=>6},
+  {id:'kamyonYasak',ad:'Şehir içi kamyon yasağı — Kamyon/TIR yalnız 22:00–06:00',          f:h=>(h>=22||h<6)?6:4},
+  {id:'avm',        ad:'AVM mal kabul — Kamyonet ve üstü yalnız 06:00–10:00',              f:h=>(h>=6&&h<10)?6:3},
+  {id:'site',       ad:'Site — 08:00–18:00 Transit\'e kadar, gece araç girişi yok',        f:h=>(h>=8&&h<18)?3:0},
+  {id:'dar',        ad:'Dar sokak — her zaman Kamyonete kadar',                            f:h=>4},
+  {id:'cokdar',     ad:'Çok dar — her zaman Courier\'e kadar',                             f:h=>2},
+  {id:'ozel',       ad:'Özel kural… (sınıf + saatli istisna)',                             custom:true},
+];
+function rankKisa(r){ return ({6:'TIR dahil hepsi',5:'Kamyona kadar',4:'Kamyonete kadar',3:'Transit\'e kadar',2:'Courier\'e kadar',1:'Yalnız Moto',0:'araç girişi YOK'})[r]||'?'; }
+function NOWH(){ return (window.__demoHour!=null)?window.__demoHour:new Date().getHours(); }
+function inWin(h,from,to){ const f=parseInt(from)||0, t=parseInt(to)||0; return f<=t ? (h>=f&&h<t) : (h>=f||h<t); }
+function stopRankAt(s,h){
+  const r=GIRIS_RULES.find(x=>x.id===s.rule)||GIRIS_RULES[0];
+  if(r.custom) return inWin(h,s.cFrom,s.cTo)?Math.max(s.cGiris,s.cBig):s.cGiris;
+  return r.f(h);
+}
+function stopBestRank(s){ let b=0; for(let h=0;h<24;h++) b=Math.max(b,stopRankAt(s,h)); return b; }
+function minGirisAt(h){ return Math.min(...S.stops.map(s=>stopRankAt(s,h))); }
+function rankBestFor(stopsArr){ let b=0; for(let h=0;h<24;h++) b=Math.max(b,Math.min(...stopsArr.map(st=>stopRankAt(st,h)))); return b; }
+function modeHour(i){ if(i===0) return NOWH(); if(i===1) return [10,15,19][S.slot]??15; return parseInt(S.ileriSaat||'10')||10; }
+function modeOk(i){
+  if(S.v!=='yuk'||S.bilmiyorum) return true;
+  const h=modeHour(i);
+  if(useMulti()) return splitPlan().every(l=>l.veh && [l.stop,...(l.tStops||[])].every(st=>stopRankAt(st,h)>=l.veh.rank));
+  const vr=(curVeh().rank)||1;
+  return S.stops.every(st=>stopRankAt(st,h)>=vr);
+}
 const STATUSES=[
   {key:'Beklemede',        label:'Beklemede',          ic:'🕒', sub:'Sipariş alındı, işleniyor'},
   {key:'KuryeAraniyor',    label:'Kurye Aranıyor',     ic:'🔎', sub:'Eşleştirme motoru en uygun taşıyıcıyı arıyor'},
@@ -453,8 +482,9 @@ const PLATE_PREFIX={moto:'34 MTR',courier:'34 VAN',transit:'34 TRS',kamyonet:'34
 /* ====================== DURUM ====================== */
 let S = {};
 function freshS(v){ return { v:v, step:0, km:12,
-  stops:[ {id:1,type:'alim',addr:'',giris:6,ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false},
-          {id:2,type:'teslim',addr:'',giris:6,ac:'09:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false} ],
+  stops:[ {id:1,type:'alim',addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false},
+          {id:2,type:'teslim',addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'09:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false} ],
+  ileriSaat:'10:00',
   items:[ {id:1,cat:'koli',adet:1,en:'',boy:'',yuk:'',kg:'',kirilgan:false,dik:false,ustuste:true,sogukC:'',alim:1,teslim:2} ],
   nsid:3, niid:2, bilmiyorum:false, vehOnly:false, vehOnlyOk:false, multiOk:false,
   veh:null, vehManual:false,
@@ -513,6 +543,7 @@ function validate(){
   if(S.v==='yuk' && S.step===2 && feas().infeasible && !S.multiOk){ toast('🚫 Tek araç çözümü yok — çoklu araç planı veya manuel planlama gerekli.'); return false; }
   if(S.v==='yuk' && S.step===1 && S.vehOnly && !S.vehOnlyOk){ toast('⚠️ "Araç seçimi yeterli" yolunda sorumluluk onayı zorunludur.'); return false; }
   if((S.v!=='ev') && S.step===3 && S.mode===null){ toast('⚠️ Bir teslimat zamanı kartı seçin.'); return false; }
+  if(S.v==='yuk' && S.step===3 && S.mode!==null && !modeOk(S.mode)){ toast('🚫 Seçilen zamanlama, güzergahtaki saatli giriş kurallarıyla çelişiyor — uygun bir kart/saat seçin.'); return false; }
   return true;
 }
 function render(){
@@ -539,7 +570,7 @@ function uS(id,k,v){ stopById(id)[k]=v; render(); }
 function uSq(id,k,v){ stopById(id)[k]=v; } /* render'sız (yazarken odak kaybolmasın) */
 function uI(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; render(); }
 function uIq(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; }
-function addStop(t){ S.stops.push({id:S.nsid++,type:t,addr:'',giris:6,ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false}); toast('+ '+(t==='alim'?'Alım':t==='ugrama'?'Uğrama':'Teslim')+' noktası eklendi'); render(); }
+function addStop(t){ S.stops.push({id:S.nsid++,type:t,addr:'',rule:'r724',cGiris:6,cBig:6,cFrom:'22:00',cTo:'06:00',ac:'08:00',ka:'18:00',bekleme:15,kisi:'',tel:'',detay:false}); toast('+ '+(t==='alim'?'Alım':t==='ugrama'?'Uğrama':'Teslim')+' noktası eklendi'); render(); }
 function delStop(id){ const s=stopById(id);
   if(s.type==='alim'&&S.stops.filter(x=>x.type==='alim').length<=1){ toast('⚠️ En az 1 alım noktası gerekli.'); return; }
   if(s.type==='teslim'&&S.stops.filter(x=>x.type==='teslim').length<=1){ toast('⚠️ En az 1 teslim noktası gerekli.'); return; }
@@ -559,7 +590,9 @@ function totKg(){ return S.items.reduce((t,it)=>t+itemKg(it),0); }
 function ucreteEsas(){ return Math.max(totDesi(), totKg()); } /* eski kural: max(desi,kg) */
 function durakSayisi(){ return S.v==='yuk' ? Math.max(0,S.stops.length-2) : 0; }
 function beklemeToplam(){ return S.v==='yuk' ? S.stops.reduce((t,s)=>t+(Number(s.bekleme)||0),0) : 15; }
-function minGiris(){ return Math.min(...S.stops.map(s=>s.giris)); }
+/* en iyi durum: 24 saat içinde HERHANGİ bir saatte tüm noktalara girebilen en büyük sınıf
+   (saat uygunluğu zamanlama kartlarında ayrıca denetlenir — modeOk) */
+function minGiris(){ return rankBestFor(S.stops); }
 function eslesmeHatalari(){
   const errs=[];
   if(S.bilmiyorum||S.vehOnly) return errs;
@@ -634,7 +667,7 @@ function feas(){
   const d=S.vehOnly?0:ucreteEsas(), kg=S.vehOnly?0:totKg(), mg=minGiris();
   const fit=YUK_VEH.filter(v=>v.maxDesi>=d&&v.maxKg>=kg);
   const main=fit.find(v=>v.rank<=mg)||null;
-  const tight=S.stops.filter(s=>s.giris===mg)[0];
+  const tight=S.stops.reduce((a,b)=>stopBestRank(a)<=stopBestRank(b)?a:b, S.stops[0]);
   return {d,kg,mg,fit,main,tight, infeasible: !main && !S.bilmiyorum && !S.vehOnly && S.v==='yuk'};
 }
 function suggestVeh(){
@@ -651,9 +684,10 @@ function splitPlan(){
     const its=S.items.map((it,ix)=>({it,ix})).filter(x=>x.it.alim===s.id);
     if(!its.length) return;
     const d=its.reduce((t,x)=>t+itemDesi(x.it),0), kg=its.reduce((t,x)=>t+itemKg(x.it),0);
-    const rank=Math.min(s.giris, ...its.map(x=>{ const t=stopById(x.it.teslim); return t?t.giris:6; }));
+    const tStops=[...new Set(its.map(x=>stopById(x.it.teslim)).filter(Boolean))];
+    const rank=rankBestFor([s,...tStops]);
     const veh=YUK_VEH.find(v=>v.maxDesi>=d&&v.maxKg>=kg&&v.rank<=rank)||null;
-    groups.push({stop:s, items:its.map(x=>x.ix+1), d, kg, veh, rank});
+    groups.push({stop:s, items:its.map(x=>x.ix+1), d, kg, veh, rank, tStops});
   });
   return groups;
 }
@@ -678,7 +712,7 @@ function feasBlock(){
     <div class="navrow" style="margin-top:8px"><button class="btn sm sec" onclick="S.multiOk=false;render()">✕ Plandan vazgeç</button></div></div>`;
   return `<div class="hintbox" style="border-color:#fecaca;background:#fef2f2">
     <b>🚫 Bu güzergah TEK ARAÇLA planlanamaz.</b><br>
-    "${stopLabel(f.tight)}" noktasına en fazla <b>${(GIRIS.find(g=>g.id===f.mg)||{}).ad}</b> sınıfı girebiliyor; aynı araç tüm noktaları gezmek zorunda olduğundan araç bu sınıftan olmalı — ama toplam yük (<b>${totDesi()} desi / ${totKg()} kg</b>) bu sınıfa sığmıyor.
+    "${stopLabel(f.tight)}" noktasına <b>hiçbir saatte</b> "${rankKisa(f.mg)}" sınıfından büyüğü giremiyor; aynı araç tüm noktaları gezmek zorunda olduğundan araç bu sınıftan olmalı — ama toplam yük (<b>${totDesi()} desi / ${totKg()} kg</b>) bu sınıfa sığmıyor.
     ${ok?`<div style="margin-top:10px"><b>Önerilen çoklu araç planı (bölünmüş sipariş):</b>
     ${legs.map(l=>`<div class="price-line"><span class="muted">${stopLabel(l.stop)} → Ürün ${l.items.join(', ')} (${l.d} desi / ${l.kg} kg)</span><span>${l.veh?l.veh.ph+' '+l.veh.name:'—'}</span></div>`).join('')}</div>`
     :'<div style="margin-top:8px">Bölünmüş plan da kurulamadı (bir alım grubu kendi kısıtına da sığmıyor) — operasyon keşfi gerekli.</div>'}
@@ -707,7 +741,15 @@ function maliyet(modeIdx){ const m=MODES[modeIdx===undefined?(S.mode??0):modeIdx
   const t=TARIFF[curVehId()];
   return Math.round((t.base*0.7 + S.km*t.ckm)*m.carpan); }
 function eta(modeIdx){ const hiz=30/MODES[modeIdx].trafik; return Math.round(S.km/hiz*60)+12; }
-function onerilenMode(){ const online=14; if(online<5) return 2; if(S.km>40) return 2; return S.v==='yolcu'?0:1; }
+function onerilenMode(){
+  const online=14; let base=(online<5||S.km>40)?2:(S.v==='yolcu'?0:1);
+  if(modeOk(base)) return base;
+  const alt=[2,1,0].filter(i=>modeOk(i)); return alt.length?alt[0]:base;
+}
+function pickMode(i){
+  if(!modeOk(i)){ toast('🚫 '+MODES[i].ad+': '+curVeh().name+' bu zamanda ('+String(modeHour(i)).padStart(2,'0')+':00 civarı) güzergahtaki giriş kuralına takılıyor.\nSaatli kural örneği: kamyon yasağı 06:00–22:00 → İleri tarihli + gece saati seçin ya da slot saatini değiştirin.'); return; }
+  S.mode=i; render();
+}
 
 function pricePanel(){
   const fz=feas();
@@ -751,22 +793,23 @@ function matrixPanel(){
   const reco=onerilenMode();
   return `<div class="panel"><div class="panel-h"><b>🕐 Teslimat zamanını seçin — fiyat zamanla değişir</b></div>
   <div class="panel-b">
-    <div class="grid g3 matrix">${MODES.map((m,i)=>`
-      <div class="pick ${S.mode===i?'sel':''}" onclick="S.mode=${i};render()" style="overflow:visible">
-        ${i===reco?'<div class="reco">⭐ ÖNERİLEN</div>':''}
+    <div class="grid g3 matrix">${MODES.map((m,i)=>{ const ok=modeOk(i);
+      return `<div class="pick ${S.mode===i?'sel':''}" onclick="pickMode(${i})" style="overflow:visible;${ok?'':'opacity:.55'}">
+        ${i===reco&&ok?'<div class="reco">⭐ ÖNERİLEN</div>':''}
         <div class="emoji">${m.emoji}</div><h3 style="font-size:13.5px">${m.ad}</h3>
         <div class="price">${TARIFF[curVehId()].meter?'~':''}${money(fiyat(i))}</div>
-        <div class="eta">⏱ ETA ~${eta(i)} dk ${i===1?'· slot içinde':''} ${i===2?'· seçtiğiniz gün':''}</div>
-        <span class="pill ${m.cls}">${m.tag}</span>
-      </div>`).join('')}</div>
+        <div class="eta">⏱ ETA ~${eta(i)} dk ${i===1?'· slot içinde':''} ${i===2?'· seçtiğiniz gün/saat':''}</div>
+        ${ok?`<span class="pill ${m.cls}">${m.tag}</span>`:`<span class="pill bad">🚫 ${curVeh().name} ~${String(modeHour(i)).padStart(2,'0')}:00'te giremez</span>`}
+      </div>`; }).join('')}</div>
     ${S.mode===1?`<label class="fld" style="margin-top:14px">Saat aralığı (slot) — kesim saatine kadar verilen siparişler o slota girer</label>
       <div class="grid g3">${SLOTS.map((s,i)=>`
         <div class="pick slotcard ${S.slot===i?'sel':''}" onclick="S.slot=${i};render()">
           <div class="emoji">${s.ico}</div><h3 style="font-size:13.5px">${s.name}</h3>
           <div class="win">${s.win}</div><p>${s.taahhut}</p><div class="cut">${s.cut}</div>
         </div>`).join('')}</div>`:''}
-    ${S.mode===2?`<label class="fld" style="margin-top:14px">Tarih</label><input type="date" value="${S.tarih}" onchange="S.tarih=this.value">`:''}
-    <div class="hintbox">⭐ Önerilen kart; çevrim içi taşıyıcı arzı, mesafe ve aciliyete göre sistemce seçilir. İleri tarihli rezervasyonda <b>çevrim içi olmayan ama kayıtlı</b> araçlar da havuza girer — bu yüzden daha uygundur. Gün içi slotlar konsolide edilir (bir araç çok rota) — Express'e göre %18 uygun. ETA, Google trafik verisiyle hesaplanır (simülasyon: Express ×1.45).</div>
+    ${S.mode===2?`<div class="grid2" style="margin-top:14px"><div><label class="fld">Tarih</label><input type="date" value="${S.tarih}" onchange="S.tarih=this.value"></div>
+      <div><label class="fld">Saat (giriş kuralları bu saate göre denetlenir)</label><input type="time" value="${S.ileriSaat}" onchange="S.ileriSaat=this.value;render()"></div></div>`:''}
+    <div class="hintbox">⭐ Önerilen kart; çevrim içi taşıyıcı arzı, mesafe, aciliyet ve <b>noktaların saatli giriş kurallarına</b> göre sistemce seçilir. ⏰ Saatli kural örneği: şehir içi kamyon yasağında Kamyon/TIR yalnız 22:00–06:00 girebilir → sistem gündüz kartlarını kapatır, gece saatli ileri rezervasyonu önerir. İleri tarihte <b>çevrim içi olmayan ama kayıtlı</b> araçlar da havuza girer. Gün içi slotlar konsolide edilir — Express'e göre %18 uygun. ETA, Google trafik verisiyle (simülasyon: Express ×1.45).</div>
   </div></div>`;
 }
 
@@ -785,8 +828,14 @@ function routePanel(){
         <div><label class="fld">Kapanış</label><input type="time" value="${s.ka}" onchange="uSq(${s.id},'ka',this.value)"></div>
         <div><label class="fld">${s.type==='teslim'?'Boşaltma':'Yükleme'} bekleme (dk)</label><input type="number" value="${s.bekleme}" onchange="uS(${s.id},'bekleme',Number(this.value))"></div>
       </div>
-      <label class="fld">Bu adrese girebilen en büyük araç</label>
-      <select onchange="uS(${s.id},'giris',Number(this.value))">${GIRIS.map(g=>`<option value="${g.id}" ${s.giris===g.id?'selected':''}>${g.ad}</option>`).join('')}</select>
+      <label class="fld">Araç giriş kuralı (sınıf + saat — birden fazla durum olabilir)</label>
+      <select onchange="uS(${s.id},'rule',this.value)">${GIRIS_RULES.map(g=>`<option value="${g.id}" ${s.rule===g.id?'selected':''}>${g.ad}</option>`).join('')}</select>
+      ${s.rule==='ozel'?`<div class="grid3" style="margin-top:8px">
+        <div><label class="fld">Her zaman girebilen</label><select onchange="uS(${s.id},'cGiris',Number(this.value))">${GIRIS.map(g=>`<option value="${g.id}" ${s.cGiris===g.id?'selected':''}>${g.ad}</option>`).join('')}</select></div>
+        <div><label class="fld">Saatli istisna sınıfı</label><select onchange="uS(${s.id},'cBig',Number(this.value))">${GIRIS.map(g=>`<option value="${g.id}" ${s.cBig===g.id?'selected':''}>${g.ad}</option>`).join('')}</select></div>
+        <div><label class="fld">İstisna saatleri</label><div style="display:flex;gap:6px"><input type="time" value="${s.cFrom}" onchange="uS(${s.id},'cFrom',this.value)"><input type="time" value="${s.cTo}" onchange="uS(${s.id},'cTo',this.value)"></div></div>
+      </div>`:''}
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">⏰ Şu an (${String(NOWH()).padStart(2,'0')}:00): <b>${rankKisa(stopRankAt(s,NOWH()))}</b> · Gün içinde en geniş: <b>${rankKisa(stopBestRank(s))}</b></div>
       ${s.detay?`<div class="grid2" style="margin-top:10px">
         <div><label class="fld">İlgili kişi</label><input value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
         <div><label class="fld">Telefon (maskelenir)</label><input value="${s.tel}" onchange="uSq(${s.id},'tel',this.value)" placeholder="05__ ___ __ __"></div>
@@ -885,7 +934,8 @@ function vehPanel(){
       return `<div class="pick ${selId===v.id?'sel':''} ${giremez?'dis':''}" onclick="tryPickVeh('${v.id}')">
         <div class="emoji">${v.ph}</div><h3 style="font-size:14px">${v.name}</h3><p>${v.sub}</p>
         <div class="specs">${v.specs.map(s=>`<span class="spec">${s}</span>`).join('')}</div>
-        ${giremez?'<span class="pill bad">Giriş kısıtı — giremez</span>':kucuk?'<span class="pill warn">Kapasite yetersiz</span>':tag}
+        ${giremez?'<span class="pill bad">Giriş kuralı — hiçbir saatte giremez</span>':kucuk?'<span class="pill warn">Kapasite yetersiz</span>':tag}
+        ${!giremez&&!kucuk&&v.rank>minGirisAt(NOWH())?'<span class="pill warn">⏰ saat kısıtlı — yalnız izinli saatlerde</span>':''}
         ${v.truckSkip?'<span class="pill" style="background:#f1f5f9;color:#475569">foto + sorumluluk onayı</span>':''}
       </div>`; }).join('')}</div>
     ${sv.blocked.length&&!S.vehOnly?`<div class="hintbox" style="margin-top:12px;border-color:#fecaca;background:#fef2f2;color:#991b1b">⚠️ ${sv.blocked.map(b=>b.name).join(', ')} yüke uyar ama <b>güzergah giriş kısıtına takılır</b> — devre dışı.</div>`:''}
