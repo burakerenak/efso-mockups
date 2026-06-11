@@ -459,7 +459,8 @@ function freshS(v){ return { v:v, step:0, km:12,
   nsid:3, niid:2, bilmiyorum:false, vehOnly:false, vehOnlyOk:false, multiOk:false,
   veh:null, vehManual:false,
   kisi:1, bagaj:false, bagajNot:'', beklemeVar:false, from:'', to:'',
-  kat:'3', asansor:false, yukAsansor:false, oda:'2+1', paket:'efso', mutfak:'efso', kesif:'video',
+  fromKat:'3', fromAsansor:false, fromYukAs:false, toKat:'2', toAsansor:false, toYukAs:false,
+  oda:'2+1', paket:'efso', mutfak:'efso', kesif:'video',
   mode:null, slot:1, tarih:'' }; }
 
 /* ====================== GÖRÜNÜM ====================== */
@@ -952,10 +953,18 @@ function stepYolcu(){
 /* ====================== EV & OFİS ====================== */
 function stepEv(){
   if(S.step===0) return `<div class="formwrap"><div>${addrPanelSimple()}
-    <div class="panel"><div class="panel-h"><b>🏢 Kat / Asansör (her iki adres)</b></div><div class="panel-b">
-      <div class="grid3"><div><label class="fld">Kat</label><input value="${S.kat}" onchange="S.kat=this.value"></div>
-      <div><label class="fld">Binada asansör</label><select onchange="S.asansor=this.value==='1'"><option value="0">Yok</option><option value="1" ${S.asansor?'selected':''}>Var</option></select></div>
-      <div><label class="fld">Yük asansörü gerekli mi?</label><select onchange="S.yukAsansor=this.value==='1'"><option value="0">Hayır</option><option value="1" ${S.yukAsansor?'selected':''}>Evet (+₺ keşifte)</option></select></div></div>
+    <div class="panel"><div class="panel-h"><b>🏢 Kat / Asansör — iki adres için AYRI girilir</b><span class="badge">fiyatı ve ekip planını ikisi birden etkiler</span></div><div class="panel-b">
+      <div class="stop"><div class="head"><div class="pin a">🟢</div><b>Çıkış adresi (eşyanın alınacağı bina)</b></div>
+        <div class="grid3"><div><label class="fld">Kat</label><input value="${S.fromKat}" onchange="S.fromKat=this.value"></div>
+        <div><label class="fld">Binada asansör</label><select onchange="S.fromAsansor=this.value==='1'"><option value="0">Yok</option><option value="1" ${S.fromAsansor?'selected':''}>Var</option></select></div>
+        <div><label class="fld">Yük asansörü gerekli mi?</label><select onchange="S.fromYukAs=this.value==='1'"><option value="0">Hayır</option><option value="1" ${S.fromYukAs?'selected':''}>Evet (+₺ keşifte)</option></select></div></div>
+      </div>
+      <div class="stop"><div class="head"><div class="pin b">🔴</div><b>Varış adresi (eşyanın taşınacağı bina)</b></div>
+        <div class="grid3"><div><label class="fld">Kat</label><input value="${S.toKat}" onchange="S.toKat=this.value"></div>
+        <div><label class="fld">Binada asansör</label><select onchange="S.toAsansor=this.value==='1'"><option value="0">Yok</option><option value="1" ${S.toAsansor?'selected':''}>Var</option></select></div>
+        <div><label class="fld">Yük asansörü gerekli mi?</label><select onchange="S.toYukAs=this.value==='1'"><option value="0">Hayır</option><option value="1" ${S.toYukAs?'selected':''}>Evet (+₺ keşifte)</option></select></div></div>
+      </div>
+      <div class="hintbox">💡 Asansörsüz yüksek kat (özellikle 4+) iki tarafta da taşıma süresini ve ekip ihtiyacını artırır; yük asansörü gereken binalarda keşifte ek kalem olarak fiyatlanır ve <b>onay öncesi</b> gösterilir.</div>
     </div></div></div><div>${pricePanel()}</div></div>`;
   if(S.step===1) return `<div class="formwrap"><div>
     <div class="panel"><div class="panel-h"><b>🏠 Ev / Ofis Bilgisi</b></div><div class="panel-b">
@@ -995,7 +1004,9 @@ function confirmPanel(){
         }).join('')}
       </div>`:''}`:''}
       ${S.v==='yolcu'?`<div class="price-line"><span class="muted">Yolcu</span><span>${S.kisi} kişi${S.bagaj?' + bagaj':''}${S.beklemeVar?' + bekleme':''}</span></div>`:''}
-      ${isEv?`<div class="price-line"><span class="muted">Ev</span><span>${S.oda} · ${S.kat}. kat · asansör ${S.asansor?'var':'yok'} · keşif: ${S.kesif}</span></div>`:''}
+      ${isEv?`<div class="price-line"><span class="muted">Ev</span><span>${S.oda} · keşif: ${S.kesif}</span></div>
+      <div class="price-line"><span class="muted">Çıkış binası</span><span>${S.fromKat}. kat · asansör ${S.fromAsansor?'var':'yok'}${S.fromYukAs?' · yük asansörü gerekli':''}</span></div>
+      <div class="price-line"><span class="muted">Varış binası</span><span>${S.toKat}. kat · asansör ${S.toAsansor?'var':'yok'}${S.toYukAs?' · yük asansörü gerekli':''}</span></div>`:''}
       ${!isEv&&S.mode!==null?`<div class="price-line"><span class="muted">Zamanlama</span><span>${MODES[S.mode].ad}${S.mode===1?` · ${SLOTS[S.slot].name} ${SLOTS[S.slot].win} (${SLOTS[S.slot].cut})`:''}${S.mode===2&&S.tarih?` (${S.tarih})`:''} — ETA ~${eta(S.mode)} dk</span></div>`:''}
       <div class="law">⚖️ 6502/Mesafeli Sözleşmeler: yandaki kırılım onaydan önce gösterilen <b>nihai</b> fiyattır; listede olmayan ücret tahsil edilemez. ${isEv?'Ev&Ofis fiyatı keşif sonrası sabitlenir; keşif ücretsizdir.':''} ${t.meter?'Taksimetre tutarı UKOME tarifesine göre kesinleşir.':''}</div>
     </div></div></div>
