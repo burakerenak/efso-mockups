@@ -838,6 +838,12 @@ function routePanel(){
       <button class="btn sm ghost" onclick="delStop(${s.id})" title="Noktayı sil">🗑</button></div>
       ${acField('st'+s.id, s.addr, 'Mahalle, cadde, no… (yaz → öneri gelsin)')}
       <div class="grid3" style="margin-top:10px">
+        <div><label class="fld">Firma adı <span style="font-weight:400">(opsiyonel)</span></label><input value="${s.firma}" onchange="uSq(${s.id},'firma',this.value)" placeholder="örn. ABC Lojistik A.Ş."></div>
+        <div><label class="fld">İlgili kişi</label><input value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
+        <div><label class="fld">Telefon (maskelenir)</label><input value="${s.tel}" inputmode="tel" maxlength="14" oninput="telMask(this,${s.id})" onblur="telChk(this)" placeholder="05XX XXX XX XX"></div>
+      </div>
+      ${s.detay?`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+      <div class="grid3">
         <div><label class="fld">Açılış</label><input type="time" value="${s.ac}" onchange="uSq(${s.id},'ac',this.value)"></div>
         <div><label class="fld">Kapanış</label><input type="time" value="${s.ka}" onchange="uSq(${s.id},'ka',this.value)"></div>
         <div><label class="fld">${s.type==='teslim'?'Boşaltma':'Yükleme'} bekleme (dk)</label><input type="number" value="${s.bekleme}" onchange="uS(${s.id},'bekleme',Number(this.value))"></div>
@@ -849,12 +855,8 @@ function routePanel(){
         <div><label class="fld">Saatli istisna sınıfı</label><select onchange="uS(${s.id},'cBig',Number(this.value))">${GIRIS.map(g=>`<option value="${g.id}" ${s.cBig===g.id?'selected':''}>${g.ad}</option>`).join('')}</select></div>
         <div><label class="fld">İstisna saatleri</label><div style="display:flex;gap:6px"><input type="time" value="${s.cFrom}" onchange="uS(${s.id},'cFrom',this.value)"><input type="time" value="${s.cTo}" onchange="uS(${s.id},'cTo',this.value)"></div></div>
       </div>`:''}
-      <div style="font-size:11px;color:var(--muted);margin-top:6px">⏰ Şu an (${String(NOWH()).padStart(2,'0')}:00): <b>${rankKisa(stopRankAt(s,NOWH()))}</b> · Gün içinde en geniş: <b>${rankKisa(stopBestRank(s))}</b></div>
-      ${s.detay?`<div class="grid3" style="margin-top:10px">
-        <div><label class="fld">Firma adı <span style="font-weight:400">(opsiyonel)</span></label><input value="${s.firma}" onchange="uSq(${s.id},'firma',this.value)" placeholder="örn. ABC Lojistik A.Ş."></div>
-        <div><label class="fld">İlgili kişi</label><input value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
-        <div><label class="fld">Telefon (maskelenir)</label><input value="${s.tel}" inputmode="tel" maxlength="14" oninput="telMask(this,${s.id})" onblur="telChk(this)" placeholder="05XX XXX XX XX"></div>
-      </div>`:''}
+      </div>`:`<div style="font-size:11px;color:var(--muted);margin-top:8px">⏰ ${s.ac}–${s.ka} · bekleme ${s.bekleme} dk · giriş: <b>${rankKisa(stopRankAt(s,NOWH()))}</b>${stopBestRank(s)!==stopRankAt(s,NOWH())?' (şu an) · en geniş: <b>'+rankKisa(stopBestRank(s))+'</b>':''} — düzenlemek için <b>Detay</b></div>`}
+      ${s.detay?`<div style="font-size:11px;color:var(--muted);margin-top:6px">⏰ Şu an (${String(NOWH()).padStart(2,'0')}:00): <b>${rankKisa(stopRankAt(s,NOWH()))}</b> · Gün içinde en geniş: <b>${rankKisa(stopBestRank(s))}</b></div>`:''}
     </div>`; }).join('')}
     <div class="navrow" style="margin-top:14px">
       <button class="btn sm sec" onclick="addStop('alim')">＋ Alım noktası</button>
