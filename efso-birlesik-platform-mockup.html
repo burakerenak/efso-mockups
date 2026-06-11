@@ -567,6 +567,14 @@ function stopLabel(s){ if(!s) return '?'; const i=S.stops.filter(x=>x.type===s.t
   const t=s.type==='alim'?'Alım':s.type==='ugrama'?'Uğrama':'Teslim';
   return t+' '+i+(s.addr?' — '+s.addr.split(',')[0].slice(0,24):''); }
 function uS(id,k,v){ stopById(id)[k]=v; render(); }
+/* TR GSM maskesi: 05XX XXX XX XX (yazarken biçimlenir, 11 hane) */
+function telFmt(v){ let d=v.replace(/\D/g,''); if(d && d[0]!=='0') d='0'+d; d=d.slice(0,11);
+  return [d.slice(0,4),d.slice(4,7),d.slice(7,9),d.slice(9,11)].filter(Boolean).join(' '); }
+function telMask(el,id){ el.value=telFmt(el.value); uSq(id,'tel',el.value); }
+function telChk(el){ const d=el.value.replace(/\D/g,'');
+  if(d.length>0 && d.length<11){ el.style.borderColor='var(--red)'; toast('⚠️ Telefon eksik görünüyor — 11 hane bekleniyor: 05XX XXX XX XX'); }
+  else if(d.length===11 && !d.startsWith('05')){ el.style.borderColor='var(--red)'; toast('⚠️ Cep telefonu 05 ile başlamalı (05XX XXX XX XX).'); }
+  else el.style.borderColor=''; }
 function uSq(id,k,v){ stopById(id)[k]=v; } /* render'sız (yazarken odak kaybolmasın) */
 function uI(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; render(); }
 function uIq(id,k,v){ const it=S.items.find(i=>i.id===id); it[k]=v; }
@@ -839,7 +847,7 @@ function routePanel(){
       ${s.detay?`<div class="grid3" style="margin-top:10px">
         <div><label class="fld">Firma adı <span style="font-weight:400">(opsiyonel)</span></label><input value="${s.firma}" onchange="uSq(${s.id},'firma',this.value)" placeholder="örn. ABC Lojistik A.Ş."></div>
         <div><label class="fld">İlgili kişi</label><input value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
-        <div><label class="fld">Telefon (maskelenir)</label><input value="${s.tel}" onchange="uSq(${s.id},'tel',this.value)" placeholder="05__ ___ __ __"></div>
+        <div><label class="fld">Telefon (maskelenir)</label><input value="${s.tel}" inputmode="tel" maxlength="14" oninput="telMask(this,${s.id})" onblur="telChk(this)" placeholder="05XX XXX XX XX"></div>
       </div>`:''}
     </div>`; }).join('')}
     <div class="navrow" style="margin-top:14px">
