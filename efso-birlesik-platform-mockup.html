@@ -1116,10 +1116,77 @@ function placeOrder(){
     legs:multi?multi.map(l=>({veh:l.veh.id, vehName:l.veh.name, ph:l.veh.ph, stop:stopLabel(l.stop), items:l.items, d:l.d, kg:l.kg})):null,
     status:'KuryeAraniyor', createdAt:nowStr(), courier:null, couriers:null,
     history:[{key:'Beklemede',at:nowTime()},{key:'KuryeAraniyor',at:nowTime()}] };
+  if(S.v==='yuk'){
+    const vr=(YUK_VEH.find(x=>x.id===o.veh)||{rank:3}).rank;
+    o.req={minRank:vr, girisMax:minGiris(), desi:S.vehOnly||S.bilmiyorum?0:totDesi(), kg:S.vehOnly||S.bilmiyorum?0:totKg(),
+           adr:false, frigo:S.items.some(it=>catOf(it).soguk), rota:routeText()};
+  }
+  o.suggestion=null; o.note=null;
   ORDERS.unshift(o); updateNavListBadge();
   toast('✅ Sipariş oluşturuldu — '+o.no+' · Takip ekranı açılıyor…');
   showTrack(o.no);
-  setTimeout(()=>{ const cur=ORDERS.find(x=>x.no===o.no); if(cur&&cur.status==='KuryeAraniyor') setStatus(o.no,'KuryeAtandi'); },3500);
+  dispatchSim(o.no);
+}
+/* ---- DISPATCH SİMÜLASYONU: boşta yoksa → rota üstü öneri → o da yoksa müşteri seçenekleri ---- */
+function fitsIdle(c,req){ const v=poolVeh(c); return c.online&&!c.busy&&c.docs.k1&&v.rank>=req.minRank&&(req.girisMax==null||v.rank<=req.girisMax)&&v.maxDesi>=req.desi&&v.maxKg>=req.kg&&(!req.adr||c.docs.adr)&&(!req.frigo||c.docs.frigo); }
+function fitsEnroute(c,req){ const v=poolVeh(c); return c.online&&c.busy&&c.docs.k1&&v.rank>=req.minRank&&(req.girisMax==null||v.rank<=req.girisMax)&&(c.bosDesi||0)>=req.desi&&(c.bosKg||0)>=req.kg&&(!req.adr||c.docs.adr)&&(!req.frigo||c.docs.frigo); }
+function dispatchSim(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  if(o.cat!=='yuk'||!o.req){ setTimeout(()=>{ const x=ORDERS.find(y=>y.no===no); if(x&&x.status==='KuryeAraniyor') setStatus(no,'KuryeAtandi'); },3500); return; }
+  setTimeout(()=>{
+    const x=ORDERS.find(y=>y.no===no); if(!x||x.status!=='KuryeAraniyor') return;
+    if(POOL.some(c=>fitsIdle(c,x.req))){ setStatus(no,'KuryeAtandi'); return; }   // boşta araç var → normal atama
+    const enr=POOL.filter(c=>fitsEnroute(c,x.req)).sort((a,b)=>a.km-b.km);
+    if(enr.length){
+      const c=enr[0], v=poolVeh(c);
+      x.suggestion={type:'enroute', ad:c.ad, vehId:c.veh, vehName:v.name, ph:v.ph, plate:poolPlate(c), rota:c.rota,
+        bosDesi:c.bosDesi, bosKg:c.bosKg, eta:poolEta(c)+15, yeniFiyat:Math.round((x.price||0)*0.88), puan:c.puan};
+      toast('💡 Boşta uygun araç yok — güzergahı uyan SEFERDEKİ bir araç bulundu. Öneri takip ekranında.');
+    } else {
+      x.suggestion={type:'options'};
+      toast('⚠️ Şu an çevrim içi uygun taşıyıcı yok — size seçenekler sunuldu (takip ekranı).');
+    }
+    if(CUR_TRACK===no && !document.getElementById('vTrack').classList.contains('hide')) renderTrack();
+  },2500);
+}
+function acceptEnroute(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o||!o.suggestion) return;
+  const s=o.suggestion, v=YUK_VEH.find(x=>x.id===s.vehId);
+  o.courier={name:s.ad, veh:s.vehName+' · '+s.plate+' (rota üstü)', rate:'★ '+s.puan, eta:s.eta+' dk', phone:'+90 5•• ••• 41 07'};
+  o.veh=s.vehId; o.vehName=s.vehName; o.vehEmoji=s.ph;
+  o.price=s.yeniFiyat;
+  o.doluluk=Math.min(99,Math.round((v.maxDesi-s.bosDesi+o.req.desi)/v.maxDesi*100));
+  o.suggestion=null; o.note=null;
+  if(!o.history.find(h=>h.key==='KuryeAtandi')) o.history.push({key:'KuryeAtandi',at:nowTime()});
+  o.status='KuryeAtandi';
+  toast('✅ Rota üstü plana eklendi: '+s.ad+' ('+s.vehName+' · '+s.plate+') — %12 konsolidasyon indirimi uygulandı.');
+  renderTrack(); updateNavListBadge();
+}
+function declineEnroute(no){ const o=ORDERS.find(x=>x.no===no); if(!o) return; o.suggestion={type:'options'}; renderTrack(); }
+function optWait(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  o.suggestion=null; o.note='⏳ Kuyruktasınız — yeni bir taşıyıcı çevrim içi olduğunda otomatik atanacaksınız (tahmini 20–40 dk). İsterseniz siparişi iptal edebilir veya destek alabilirsiniz.';
+  renderTrack(); toast('⏳ Beklemeye alındı — arz çıkınca otomatik atanır.');
+  setTimeout(()=>{ const x=ORDERS.find(y=>y.no===no); if(x&&x.status==='KuryeAraniyor'){ x.note=null; setStatus(no,'KuryeAtandi'); toast('🎉 Yeni taşıyıcı çevrim içi oldu — siparişiniz atandı!'); } },8000);
+}
+function optSlot(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  o.price=Math.round((o.price||0)*0.82); o.modeLabel='Gün İçi Slot';
+  o.suggestion=null; o.note='☀️ Gün içi slota alındı (%18 indirim uygulandı) — kesim saatinde toplu eşleştirmeyle atanacaksınız.';
+  renderTrack(); toast('☀️ Slota alındı — yeni fiyat: '+money(o.price));
+  setTimeout(()=>{ const x=ORDERS.find(y=>y.no===no); if(x&&x.status==='KuryeAraniyor'){ x.note=null; setStatus(no,'KuryeAtandi'); toast('🎉 Slot eşleştirmesi tamamlandı — atandınız.'); } },6000);
+}
+function optIleri(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  o.price=Math.round((o.price||0)*0.78); o.modeLabel='İleri Tarihli'; o.status='Beklemede';
+  o.suggestion=null; o.note='📅 İleri tarihli planlamaya alındı (%22 indirim) — D-1 akşam planlamasında araç + sürücü netleşecek; kayıtlı (çevrim dışı) araçlar da havuza girer.';
+  renderTrack(); toast('📅 İleri tarihli rezervasyona çevrildi — yeni fiyat: '+money(o.price));
+}
+function optOps(no){
+  const o=ORDERS.find(x=>x.no===no); if(!o) return;
+  o.suggestion=null; o.status='Beklemede'; o.note='🧑‍💼 Operasyon planlamasına gönderildi — ekibimiz en kısa sürede arayacak.';
+  MANUAL.unshift({id:no, neden:'Arz yok — müşteri operasyon planlamasını seçti', sla:0, esk:'Operatör', req:o.req});
+  renderTrack(); toast('🧑‍💼 Operasyon kuyruğuna alındı (Operasyon › Manuel Kuyruk).');
 }
 function assignCourier(o){
   const i=orderSeq%COURIER_NAMES.length;
@@ -1183,6 +1250,35 @@ function renderList(){
   </div>`; }).join('');
 }
 function showTrack(no){ CUR_TRACK=no; showView('track'); renderTrack(); }
+/* Kurye aranıyor durumunda: spinner / rota üstü öneri kartı / seçenek kartları / bilgi notu */
+function seekPanel(o){
+  if(o.suggestion&&o.suggestion.type==='enroute'){ const s=o.suggestion;
+    return `<div class="panel"><div class="panel-h"><b>💡 Sistem Önerisi — Rota Üstü Araç</b><span class="badge">konsolidasyon / multi-load</span></div>
+    <div class="panel-b">
+      <div class="hintbox" style="border-color:#86efac;background:#f0fdf4">
+        Şu an boşta uygun araç yok; ancak <b>${s.ph} ${s.vehName} (${s.plate} · ★${s.puan})</b> seferde ve <b>güzergahınızdan geçiyor</b> (${s.rota}).<br>
+        Araçta boş kapasite: <b>${s.bosDesi} desi / ${s.bosKg} kg</b> — yükünüz sığıyor.<br>
+        Tahmini alım: <b>~${s.eta} dk</b> · Yeni fiyat: <b>${money(s.yeniFiyat)}</b> <span class="pill ok" style="margin:0">%12 konsolidasyon indirimi</span>
+      </div>
+      <div class="navrow" style="margin-top:12px">
+        <button class="btn pri" onclick="acceptEnroute('${o.no}')">✓ Kabul Et — bu araca planla</button>
+        <button class="btn sec" onclick="declineEnroute('${o.no}')">Hayır, diğer seçenekleri gör</button>
+      </div>
+    </div></div>`; }
+  if(o.suggestion&&o.suggestion.type==='options'){
+    return `<div class="panel"><div class="panel-h"><b>🤝 Şu an çevrim içi uygun taşıyıcı yok — nasıl ilerleyelim?</b></div>
+    <div class="panel-b"><div class="grid g2">
+      <div class="pick" onclick="optWait('${o.no}')"><div class="emoji">⏳</div><h3 style="font-size:14px">Beklemeye devam et</h3><p>Kuyrukta kalın; taşıyıcı çevrim içi olunca otomatik atanırsınız (tahmini 20–40 dk).</p></div>
+      <div class="pick" onclick="optSlot('${o.no}')"><div class="emoji">☀️</div><h3 style="font-size:14px">Gün içi slota al</h3><p>Kesim saatinde toplu eşleştirme — arz toplanır.</p><span class="pill ok">%18 indirim</span></div>
+      <div class="pick" onclick="optIleri('${o.no}')"><div class="emoji">📅</div><h3 style="font-size:14px">İleri tarihli planla</h3><p>D-1 planlamasında kayıtlı (çevrim dışı) araçlar da havuza girer — en geniş arz.</p><span class="pill ok">%22 indirim</span></div>
+      <div class="pick" onclick="optOps('${o.no}')"><div class="emoji">🧑‍💼</div><h3 style="font-size:14px">Operasyon planlasın</h3><p>Ekip manuel planlayıp sizi arasın.</p></div>
+    </div></div></div>`; }
+  if(o.note) return `<div class="panel"><div class="panel-b"><div class="hintbox">${o.note}</div></div></div>`;
+  if(o.status==='KuryeAraniyor') return `<div class="panel"><div class="panel-b">
+        <div class="seekbox"><div class="spin"></div><div><b>Eşleştirme motoru çalışıyor…</b><br>Online taşıyıcılar taranıyor (hard filter → soft score). Boşta araç yoksa <b>rota üstü (seferdeki) araç önerilir</b>; o da yoksa size <b>bekle / slota al / ileri tarih / operasyon</b> seçenekleri sunulur.</div></div>
+      </div></div>`;
+  return '';
+}
 const ROUTE_PTS=[[14,78],[14,56],[40,56],[40,22],[68,22],[88,22]];
 function renderTrack(){
   const o=ORDERS.find(x=>x.no===CUR_TRACK), host=document.getElementById('trackHost'); if(!o||!host) return;
@@ -1212,9 +1308,7 @@ function renderTrack(){
           <div class="hintbox">📡 Konum taşıyıcı uygulamasından <b>SignalR</b> ile saniyelik gelir; ETA <b>Google Distance Matrix</b> (trafik dahil) ile yenilenir — simülasyon. KVKK: konum yalnız sefer süresince izlenir.</div>
         </div>
       </div>
-      ${o.status==='KuryeAraniyor'?`<div class="panel"><div class="panel-b">
-        <div class="seekbox"><div class="spin"></div><div><b>Eşleştirme motoru çalışıyor…</b><br>Online taşıyıcılar taranıyor (hard filter → soft score). Uygun aday bulunamazsa sipariş <b>manuel kuyruğa</b> düşer, operasyoncu devreye girer.</div></div>
-      </div></div>`:''}
+      ${seekPanel(o)}
       ${o.couriers?`<div class="panel"><div class="panel-h"><b>🚚 Taşıyıcılarınız</b><span class="badge">${o.couriers.length} araç · ${o.couriers.length} ayrı atama</span></div>
         ${o.couriers.map((c,i)=>`<div class="panel-b courier-card" style="${i>0?'border-top:1px dashed var(--line)':''}">
           <div class="cav">${c.name.split(' ').map(x=>x[0]).join('')}</div>
@@ -1312,14 +1406,14 @@ const MANUAL=[
 ];
 /* Manuel/otomatik planlamanın çalıştığı taşıyıcı havuzu (kriter bazlı süzülür) */
 const POOL=[
-  {ad:'Mehmet K.',  veh:'transit',  km:1.8, online:true,  docs:{k1:true, adr:false,frigo:false}, puan:4.9, kabul:96},
-  {ad:'Ali V.',     veh:'kamyon_ls',km:6.2, online:true,  docs:{k1:true, adr:true, frigo:false}, puan:4.7, kabul:88},
-  {ad:'Hüseyin T.', veh:'kamyonet', km:2.1, online:true,  docs:{k1:true, adr:false,frigo:false}, puan:4.8, kabul:91},
-  {ad:'Selim D.',   veh:'kamyon_l', km:9.4, online:true,  docs:{k1:false,adr:false,frigo:true},  puan:4.5, kabul:74},
-  {ad:'Murat E.',   veh:'courier',  km:1.2, online:true,  docs:{k1:true, adr:false,frigo:false}, puan:4.6, kabul:93},
-  {ad:'Zeynep A.',  veh:'courier',  km:3.7, online:false, docs:{k1:true, adr:false,frigo:false}, puan:5.0, kabul:97},
-  {ad:'Emre Ç.',    veh:'tir_tnt',  km:14,  online:true,  docs:{k1:true, adr:true, frigo:false}, puan:4.4, kabul:81},
-  {ad:'Hasan D.',   veh:'kamyon_ls',km:11,  online:false, docs:{k1:true, adr:true, frigo:false}, puan:4.8, kabul:90},
+  {ad:'Mehmet K.',  veh:'transit',  km:1.8, online:true,  busy:true,  rota:'Levent → Ataşehir',        bosDesi:600,  bosKg:450,  docs:{k1:true, adr:false,frigo:false}, puan:4.9, kabul:96},
+  {ad:'Ali V.',     veh:'kamyon_ls',km:6.2, online:true,  busy:true,  rota:'İkitelli → Tuzla (E-5)',   bosDesi:4200, bosKg:3400, docs:{k1:true, adr:true, frigo:false}, puan:4.7, kabul:88},
+  {ad:'Hüseyin T.', veh:'kamyonet', km:2.1, online:true,  busy:false, docs:{k1:true, adr:false,frigo:false}, puan:4.8, kabul:91},
+  {ad:'Selim D.',   veh:'kamyon_l', km:9.4, online:true,  busy:false, docs:{k1:false,adr:false,frigo:true},  puan:4.5, kabul:74},
+  {ad:'Murat E.',   veh:'courier',  km:1.2, online:true,  busy:false, docs:{k1:true, adr:false,frigo:false}, puan:4.6, kabul:93},
+  {ad:'Zeynep A.',  veh:'courier',  km:3.7, online:false, busy:false, docs:{k1:true, adr:false,frigo:false}, puan:5.0, kabul:97},
+  {ad:'Emre Ç.',    veh:'tir_tnt',  km:14,  online:true,  busy:true,  rota:'Hadımköy → Gebze',         bosDesi:6000, bosKg:7000, docs:{k1:true, adr:true, frigo:false}, puan:4.4, kabul:81},
+  {ad:'Hasan D.',   veh:'kamyon_ls',km:11,  online:false, busy:false, docs:{k1:true, adr:true, frigo:false}, puan:4.8, kabul:90},
 ];
 function poolVeh(c){ return YUK_VEH.find(v=>v.id===c.veh); }
 function poolEta(c){ return Math.max(4,Math.round(c.km*3)); }
@@ -1334,6 +1428,7 @@ function hardFailFor(c,req){
   if(req.adr&&!c.docs.adr) return {t:'ADR/SRC5 yok', force:false};
   if(req.frigo&&!c.docs.frigo) return {t:'Frigorifik ekipman yok', force:false};
   if(!c.online) return {t:'Çevrim dışı', force:true};
+  if(c.busy) return {t:'Seferde ('+c.rota+') — rota üstü aday', force:true};
   return null;
 }
 function scoreFor(c,req){
