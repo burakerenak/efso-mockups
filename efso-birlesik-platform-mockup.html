@@ -288,7 +288,7 @@
         <div class="kpis">
           <div class="kpi"><b>14</b><span>Çevrim içi taşıyıcı</span></div>
           <div class="kpi"><b>3</b><span>Eşleşme bekleyen sipariş</span></div>
-          <div class="kpi"><b>2</b><span>Manuel kuyrukta</span></div>
+          <div class="kpi"><b id="kManual">2</b><span>Manuel kuyrukta</span></div>
           <div class="kpi"><b>%91</b><span>Otomatik eşleşme oranı (bugün)</span></div>
         </div>
         <div id="ot0">
@@ -309,13 +309,16 @@
           </div>
         </div>
         <div id="ot1" class="hide">
-          <div class="panel"><div class="panel-h"><b>Manuel planlama kuyruğu</b><span class="badge">SLA: 10 dk içinde insan görmeli</span></div>
-            <div class="panel-b" style="overflow-x:auto">
-              <table class="t"><thead><tr><th>Sipariş</th><th>Düşme nedeni</th><th>SLA</th><th>Eskalasyon</th><th>Aksiyon</th></tr></thead>
-              <tbody id="manBody"></tbody></table>
-              <div class="hintbox" style="margin-top:12px">Tetikleyiciler: eşleşme yok · teklif turları zaman aşımı · son dakika iptal · ADR/özel yük · keşif gerekli · fiyat itirazı. Operasyoncu <b>zorla atama</b>, <b>fiyat override</b> veya <b>"tekrar otomatiğe ver"</b> yapabilir; SLA aşımında amire eskale olur.</div>
+          <div id="manQueueView">
+            <div class="panel"><div class="panel-h"><b>Manuel planlama kuyruğu</b><span class="badge">SLA: 10 dk içinde insan görmeli</span></div>
+              <div class="panel-b" style="overflow-x:auto">
+                <table class="t"><thead><tr><th>Sipariş</th><th>Düşme nedeni</th><th>SLA</th><th>Eskalasyon</th><th>Aksiyon</th></tr></thead>
+                <tbody id="manBody"></tbody></table>
+                <div class="hintbox" style="margin-top:12px">Tetikleyiciler: eşleşme yok · teklif turları zaman aşımı · son dakika iptal · ADR/özel yük · keşif gerekli · fiyat itirazı. <b>Planla</b> = kriter bazlı aday listesi + harita + zorla atama + fiyat override. <b>Otomatiğe ver</b> = motoru bu sipariş için yeniden çalıştırır (hard filter → skor → 3 tur teklif); eşleşirse kuyruktan düşer, eşleşmezse nedeniyle kuyrukta kalır.</div>
+              </div>
             </div>
           </div>
+          <div id="manPlanView" class="hide"></div>
         </div>
         <div id="ot2" class="hide">
           <div class="formwrap">
@@ -510,7 +513,7 @@ function showOps(n){
   document.getElementById('cbTitle').textContent='Operasyon — '+['Eşleştirme','Manuel Kuyruk','Yük Optimizasyonu','Canlı Harita'][n];
   document.getElementById('opsSub').textContent=subs[n];
   for(let i=0;i<4;i++) document.getElementById('ot'+i).classList.toggle('hide',i!==n);
-  if(n===0){ renderPend(); renderCands(); } if(n===1) renderManual(); if(n===2) renderCargo(); if(n===3) renderFleet();
+  if(n===0){ renderPend(); renderCands(); } if(n===1){ backToQueue(); renderManual(); } if(n===2) renderCargo(); if(n===3) renderFleet();
 }
 
 /* ====================== WIZARD ====================== */
@@ -707,7 +710,10 @@ function sendToOps(){
     itemsN:S.items.length,price:null,meter:false,doluluk:0,status:'Beklemede',createdAt:nowStr(),courier:null,
     history:[{key:'Beklemede',at:nowTime()}]};
   ORDERS.unshift(o); updateNavListBadge();
-  MANUAL.unshift({id:o.no,neden:'Tek araçla planlanamaz — giriş kısıtı + kapasite çelişkisi (çoklu araç / keşif gerekli)',sla:0,esk:'Operatör'});
+  const capV=YUK_VEH.find(v=>v.maxDesi>=totDesi()&&v.maxKg>=totKg());
+  MANUAL.unshift({id:o.no,neden:'Tek araçla planlanamaz — giriş kısıtı + kapasite çelişkisi (çoklu araç / keşif gerekli)',sla:0,esk:'Operatör',
+    req:{minRank:capV?capV.rank:6, girisMax:minGiris(), desi:totDesi(), kg:totKg(), adr:false,
+         frigo:S.items.some(it=>catOf(it).soguk), rota:routeText()+' ('+S.km+' km)', not:'Çoklu araç planı veya keşif değerlendirilmeli'}});
   toast('🧑‍💼 Sipariş manuel planlama kuyruğuna alındı — operasyon ekibi sizi arayacak. (Operasyon › Manuel Kuyruk'+"'"+'ta görünür)');
   showTrack(o.no);
 }
@@ -1299,20 +1305,162 @@ function autoAssign(){
   toast('⚡ Otomatik atama (demo)\nEn yüksek skor: '+best.c.ad+' ('+best.s+' puan) — SignalR ile teklif gönderildi.\n35 sn içinde kabul etmezse sıradaki adaya geçilir; 3 tur sonuçsuz kalırsa sipariş MANUEL KUYRUĞA düşer.');
 }
 const MANUAL=[
-  {id:'EFSO-2026-000471', neden:'3 teklif turu zaman aşımı (gece 02:40, arz yok)', sla:6*60+22, esk:'Operatör'},
-  {id:'EFSO-2026-000468', neden:'ADR sınıf 3 — zorunlu manuel kontrol', sla:14*60+5, esk:'Amir (SLA aşıldı)'},
+  {id:'EFSO-2026-000471', neden:'3 teklif turu zaman aşımı (gece 02:40, arz yok)', sla:6*60+22, esk:'Operatör',
+   req:{minRank:2, girisMax:6, desi:60, kg:25, adr:false, frigo:false, rota:'İkitelli OSB → İST Havalimanı Kargo (24 km)', not:'Evrak/numune — Courier ve üstü yeterli'}},
+  {id:'EFSO-2026-000468', neden:'ADR sınıf 3 — zorunlu manuel kontrol', sla:14*60+5, esk:'Amir (SLA aşıldı)',
+   req:{minRank:5, girisMax:6, desi:5200, kg:4800, adr:true, frigo:false, rota:'Tuzla Kimya OSB → Dilovası (37 km)', not:'ADR sınıf 3 (yanıcı sıvı) — sürücüde SRC5 + araçta ADR uygunluk ŞART'}},
 ];
+/* Manuel/otomatik planlamanın çalıştığı taşıyıcı havuzu (kriter bazlı süzülür) */
+const POOL=[
+  {ad:'Mehmet K.',  veh:'transit',  km:1.8, online:true,  docs:{k1:true, adr:false,frigo:false}, puan:4.9, kabul:96},
+  {ad:'Ali V.',     veh:'kamyon_ls',km:6.2, online:true,  docs:{k1:true, adr:true, frigo:false}, puan:4.7, kabul:88},
+  {ad:'Hüseyin T.', veh:'kamyonet', km:2.1, online:true,  docs:{k1:true, adr:false,frigo:false}, puan:4.8, kabul:91},
+  {ad:'Selim D.',   veh:'kamyon_l', km:9.4, online:true,  docs:{k1:false,adr:false,frigo:true},  puan:4.5, kabul:74},
+  {ad:'Murat E.',   veh:'courier',  km:1.2, online:true,  docs:{k1:true, adr:false,frigo:false}, puan:4.6, kabul:93},
+  {ad:'Zeynep A.',  veh:'courier',  km:3.7, online:false, docs:{k1:true, adr:false,frigo:false}, puan:5.0, kabul:97},
+  {ad:'Emre Ç.',    veh:'tir_tnt',  km:14,  online:true,  docs:{k1:true, adr:true, frigo:false}, puan:4.4, kabul:81},
+  {ad:'Hasan D.',   veh:'kamyon_ls',km:11,  online:false, docs:{k1:true, adr:true, frigo:false}, puan:4.8, kabul:90},
+];
+function poolVeh(c){ return YUK_VEH.find(v=>v.id===c.veh); }
+function poolEta(c){ return Math.max(4,Math.round(c.km*3)); }
+function poolPlate(c){ let h=0; for(const ch of c.ad) h+=ch.charCodeAt(0); return (PLATE_PREFIX[c.veh]||'34 EFS')+' '+String(100+(h%900)); }
+/* siparişin kriterlerine göre eleyici — null=geçti, metin=elenme nedeni; force=zorla atanabilir mi */
+function hardFailFor(c,req){
+  const v=poolVeh(c);
+  if(v.rank<req.minRank) return {t:'Araç sınıfı yetersiz ('+v.name+')', force:false};
+  if(req.girisMax!=null && v.rank>req.girisMax) return {t:'Giriş kısıtı: '+v.name+' güzergaha giremez', force:false};
+  if(v.maxDesi<req.desi||v.maxKg<req.kg) return {t:'Kapasite yetersiz ('+req.desi+' desi / '+req.kg+' kg)', force:false};
+  if(!c.docs.k1) return {t:'K1 belgesi geçersiz', force:false};
+  if(req.adr&&!c.docs.adr) return {t:'ADR/SRC5 yok', force:false};
+  if(req.frigo&&!c.docs.frigo) return {t:'Frigorifik ekipman yok', force:false};
+  if(!c.online) return {t:'Çevrim dışı', force:true};
+  return null;
+}
+function scoreFor(c,req){
+  const v=poolVeh(c);
+  const etaS=Math.max(0,1-poolEta(c)/45), costS=Math.max(0,1-(v.rank-req.minRank)*0.15), p=c.puan/5, k=c.kabul/100;
+  return Math.round((0.40*etaS+0.25*costS+0.20*p+0.15*k)*100);
+}
+function ensureOrder(qid){
+  let o=ORDERS.find(x=>x.no===qid);
+  if(!o){ const m=MANUAL.find(x=>x.id===qid); const v=YUK_VEH.find(x=>x.rank>=m.req.minRank)||YUK_VEH[2];
+    o={no:qid,cat:'yuk',catLabel:'Yük Taşımacılığı',veh:v.id,vehName:v.name,vehEmoji:v.ph,modeLabel:'Manuel planlama',
+       rtText:m.req.rota,km:parseInt((m.req.rota.match(/\((\d+) km\)/)||[])[1])||15,itemsN:1,price:null,meter:false,doluluk:0,
+       status:'Beklemede',createdAt:nowStr(),courier:null,couriers:null,history:[{key:'Beklemede',at:nowTime()}]};
+    ORDERS.push(o); updateNavListBadge(); }
+  return o;
+}
+function manAssignCore(qid, c, forced, kaynak){
+  const o=ensureOrder(qid); const v=poolVeh(c);
+  o.courier={name:c.ad, veh:v.name+' · '+poolPlate(c), rate:'★ '+c.puan, eta:poolEta(c)+' dk',
+    phone:'+90 5•• ••• '+String(10+(c.ad.length*7)%89).padStart(2,'0')+' '+String((c.km*10)%90|0).padStart(2,'0')};
+  o.vehName=v.name; o.vehEmoji=v.ph; o.veh=c.veh;
+  if(!o.history.find(h=>h.key==='KuryeAraniyor')) o.history.push({key:'KuryeAraniyor',at:nowTime()});
+  o.status='KuryeAtandi'; o.history.push({key:'KuryeAtandi',at:nowTime()});
+  const ix=MANUAL.findIndex(m=>m.id===qid); if(ix>-1) MANUAL.splice(ix,1);
+  toast('✅ '+qid+' → '+c.ad+' ('+v.name+' · '+poolPlate(c)+') '+(forced?'ZORLA':'')+' atandı ('+kaynak+'). Kuyruktan çıkarıldı.');
+  backToQueue(); renderManual(); updateNavListBadge();
+}
+/* ---- OTOMATİĞE VER: gerçek motor simülasyonu (hard filter → skor → turlu teklif) ---- */
+function runAuto(qid){
+  const m=MANUAL.find(x=>x.id===qid); if(!m||m.running) return;
+  const rows=POOL.map(c=>({c,fail:hardFailFor(c,m.req),s:scoreFor(c,m.req)}))
+    .filter(r=>!r.fail).sort((a,b)=>b.s-a.s);
+  if(!rows.length){
+    const nedenler=[...new Set(POOL.map(c=>(hardFailFor(c,m.req)||{}).t).filter(Boolean))].slice(0,3);
+    m.neden='Otomatik denendi ('+nowTime()+'): uygun çevrim içi aday YOK — '+nedenler.join(' · ');
+    toast('🚫 Otomatik motor: hard filter\'dan geçen aday yok.\n• '+nedenler.join('\n• ')+'\nSipariş kuyrukta kaldı — manuel planlama gerekli.');
+    renderManual(); return;
+  }
+  m.running=true; renderManual();
+  const tur=(i)=>{
+    if(i>=Math.min(3,rows.length)){
+      m.running=false; m.neden='Otomatik denendi ('+nowTime()+'): '+Math.min(3,rows.length)+' tur sonuçsuz (kabul yok) — kuyrukta';
+      toast('⏱ 3 tur sonuçsuz — sipariş manuel kuyrukta kaldı.'); renderManual(); return;
+    }
+    const r=rows[i];
+    toast('⚡ Tur '+(i+1)+'/3: '+r.c.ad+' ('+poolVeh(r.c).name+', skor '+r.s+') — SignalR ile teklif gönderildi…');
+    setTimeout(()=>{
+      if(r.c.kabul>=85){ m.running=false; manAssignCore(qid, r.c, false, 'otomatik motor, tur '+(i+1)); }
+      else { toast('✋ '+r.c.ad+' kabul etmedi (kabul oranı %'+r.c.kabul+') — sıradaki adaya geçiliyor'); tur(i+1); }
+    },1500);
+  };
+  tur(0);
+}
+/* ---- PLANLA: manuel planlama ekranı ---- */
+let MAN_SEL=null;
+function backToQueue(){ MAN_SEL=null; const q=document.getElementById('manQueueView'), p=document.getElementById('manPlanView');
+  if(q) q.classList.remove('hide'); if(p){ p.classList.add('hide'); p.innerHTML=''; } }
+function renderManPlan(qid){
+  MAN_SEL=qid; const m=MANUAL.find(x=>x.id===qid); if(!m) return;
+  document.getElementById('manQueueView').classList.add('hide');
+  const rows=POOL.map(c=>({c,fail:hardFailFor(c,m.req),s:scoreFor(c,m.req)}))
+    .sort((a,b)=>((a.fail&&!a.fail.force)?2:a.fail?1:0)-((b.fail&&!b.fail.force)?2:b.fail?1:0) || b.s-a.s);
+  const bestIx=rows.findIndex(r=>!r.fail);
+  const o=ORDERS.find(x=>x.no===qid);
+  const host=document.getElementById('manPlanView'); host.classList.remove('hide');
+  host.innerHTML=`
+  <div class="panel"><div class="panel-h"><b>🧑‍💼 Manuel Planlama — ${qid}</b><span class="badge">${m.esk}</span>
+    <button class="btn sm sec" onclick="backToQueue()">← Kuyruğa dön</button></div>
+    <div class="panel-b">
+      <div class="price-line"><span class="muted">Güzergah</span><span>${m.req.rota}</span></div>
+      <div class="price-line"><span class="muted">Yük</span><span>${m.req.desi} desi / ${m.req.kg} kg → en az <b>${(YUK_VEH.find(v=>v.rank>=m.req.minRank)||{}).name||'?'}</b> sınıfı</span></div>
+      <div class="price-line"><span class="muted">Kısıtlar</span><span>${m.req.adr?'<span class="pill bad" style="margin:0">ADR</span> ':''}${m.req.frigo?'<span class="pill info" style="margin:0">❄️ Frigo</span> ':''}${m.req.girisMax!=null&&m.req.girisMax<6?`<span class="pill warn" style="margin:0">Giriş: ${rankKisa(m.req.girisMax)}</span>`:'<span class="muted">giriş kısıtı yok</span>'}</span></div>
+      <div class="price-line"><span class="muted">Not</span><span>${m.req.not}</span></div>
+      <div class="price-line"><span class="muted">Kuyruğa düşme nedeni</span><span>${m.neden}</span></div>
+    </div>
+  </div>
+  <div class="panel"><div class="panel-h"><b>🗺️ Aday haritası</b><span class="badge">alım noktasına uzaklık</span></div>
+    <div class="panel-b"><div class="map" style="height:170px;position:relative">
+      <svg viewBox="0 0 600 170" preserveAspectRatio="none"><rect width="600" height="170" fill="#e8f0e8"/>
+      <path d="M0,60 H600 M0,120 H600 M120,0 V170 M300,0 V170 M470,0 V170" stroke="#fff" stroke-width="8"/>
+      <circle cx="300" cy="85" r="10" fill="#16a34a"/><text x="314" y="90" font-size="12" fill="#14532d">Alım</text></svg>
+      ${rows.map((r,i)=>{ const ang=(i/rows.length)*6.28, rad=28+r.c.km*4;
+        const x=50+Math.cos(ang)*rad/3, y=50+Math.sin(ang)*rad/4;
+        return `<div class="veh-dot" style="left:${Math.min(92,Math.max(4,x))}%;top:${Math.min(80,Math.max(8,y))}%;${r.fail?'filter:grayscale(1);opacity:.5':''}" title="${r.c.ad} — ${r.c.km} km${r.fail?' · '+r.fail.t:''}">${poolVeh(r.c).ph}</div>`; }).join('')}
+    </div></div>
+  </div>
+  <div class="panel"><div class="panel-h"><b>Adaylar — kriterlere göre süzüldü</b><span class="badge">hard filter → soft score</span></div>
+    <div class="panel-b" style="overflow-x:auto">
+      <table class="t"><thead><tr><th>Taşıyıcı</th><th>Araç</th><th>Uzaklık/ETA</th><th>Belgeler</th><th>Durum</th><th>Skor</th><th>Aksiyon</th></tr></thead><tbody>
+      ${rows.map((r,i)=>{ const c=r.c, v=poolVeh(c);
+        return `<tr class="${r.fail&&!r.fail.force?'fail':i===bestIx?'best':''}">
+        <td><b>${c.ad}</b> ★${c.puan}</td><td>${v.ph} ${v.name}</td><td>${c.km} km / ${poolEta(c)} dk</td>
+        <td>${c.docs.k1?'<span class="ok">K1✓</span>':'<span class="no">K1✗</span>'} ${c.docs.adr?'<span class="ok">ADR✓</span>':''} ${c.docs.frigo?'<span class="ok">FRİGO✓</span>':''}</td>
+        <td>${c.online?'<span class="ok">çevrim içi</span>':'<span class="no">çevrim dışı</span>'}</td>
+        <td>${r.fail&&!r.fail.force?`<span class="pill bad" style="margin:0">${r.fail.t}</span>`:`<span class="score">${r.s}</span>${r.fail?' <span class="pill warn" style="margin:0">'+r.fail.t+'</span>':''}`}</td>
+        <td>${r.fail&&!r.fail.force?'<span style="font-size:10.5px;color:var(--muted)">atanamaz</span>'
+          :r.fail?`<button class="btn sm sec" onclick="manAssignCore('${qid}',POOL[${POOL.indexOf(c)}],true,'operasyoncu — telefonla çağrıldı')">📞 Çağır + Zorla Ata</button>`
+          :`<button class="btn sm pri" onclick="manAssignCore('${qid}',POOL[${POOL.indexOf(c)}],false,'operasyoncu')">Ata</button>`}</td></tr>`; }).join('')}
+      </tbody></table>
+      ${bestIx<0?`<div class="hintbox" style="border-color:#fecaca;background:#fef2f2;margin-top:10px"><b>Hiçbir aday hard filter'dan geçemiyor.</b> Çözüm: siparişi böl (çoklu araç), müşteriyle kısıtı/saat penceresini netleştir (keşif) ya da havuz dışı tedarik et.</div>`:''}
+      <div class="grid2" style="margin-top:14px">
+        <div><label class="fld">💰 Fiyat override (₺)</label><input type="number" id="manPrice" value="${o&&o.price!=null?o.price:''}" placeholder="örn. 4500"></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn sec" onclick="manPriceApply('${qid}')">Fiyatı Uygula</button></div>
+      </div>
+      <div class="hintbox">Zorla atamada yasal eleyiciler (belge/kapasite/giriş) <b>aşılamaz</b>; yalnız çevrim dışı taşıyıcı telefonla teyit edilip atanabilir. Tüm override'lar audit log'a yazılır (gerçek sistem).</div>
+    </div>
+  </div>`;
+}
+function manPriceApply(qid){
+  const v=Number(document.getElementById('manPrice').value);
+  if(!v||v<=0){ toast('⚠️ Geçerli bir tutar girin.'); return; }
+  const o=ensureOrder(qid); o.price=v;
+  toast('💰 '+qid+' fiyatı operasyoncu tarafından ₺'+v.toLocaleString('tr-TR')+' olarak güncellendi (override — audit log).');
+}
 let manTimerOn=false;
 function renderManual(){
-  document.getElementById('manBody').innerHTML=MANUAL.map(m=>{
+  const kpi=document.getElementById('kManual'); if(kpi) kpi.textContent=MANUAL.length;
+  document.getElementById('manBody').innerHTML=MANUAL.length?MANUAL.map(m=>{
     const mm=Math.floor(m.sla/60),ss=m.sla%60; const cls=m.sla>600?'crit':m.sla>420?'warn':'';
     return `<tr><td><b>${m.id}</b></td><td>${m.neden}</td><td><span class="sla ${cls}">${mm}:${String(ss).padStart(2,'0')}</span></td><td>${m.esk}</td>
-    <td><button class="btn sm pri" onclick="toast('🧑‍💼 Manuel planlama ekranı (demo): aday liste + harita + zorla atama + fiyat override.')">Planla</button>
-    <button class="btn sm sec" onclick="toast('↻ Sipariş tekrar otomatik motora verildi (demo).')">Otomatiğe ver</button></td></tr>`; }).join('');
+    <td><button class="btn sm pri" ${m.running?'disabled':''} onclick="renderManPlan('${m.id}')">Planla</button>
+    <button class="btn sm sec" ${m.running?'disabled':''} onclick="runAuto('${m.id}')">${m.running?'⏳ motor çalışıyor…':'↻ Otomatiğe ver'}</button></td></tr>`; }).join('')
+    :'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:18px">🎉 Manuel kuyruk boş — tüm siparişler atandı.</td></tr>';
   if(!manTimerOn){ manTimerOn=true;
     setInterval(()=>{ MANUAL.forEach(m=>m.sla+=1);
       const b=document.getElementById('manBody');
-      if(b&&!document.getElementById('ot1').classList.contains('hide')){
+      if(b&&!document.getElementById('ot1').classList.contains('hide')&&!MAN_SEL){
         MANUAL.forEach((m,i)=>{ const el=b.rows[i]&&b.rows[i].querySelector('.sla');
           if(el){ const mm=Math.floor(m.sla/60),ss=m.sla%60; el.textContent=mm+':'+String(ss).padStart(2,'0');
             el.className='sla '+(m.sla>600?'crit':m.sla>420?'warn':''); }});
