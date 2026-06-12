@@ -141,7 +141,7 @@
         <div class="panel-b">
           <b>1.</b> Telefon doğrulanmadan kayıt tamamlanamaz — OTP 6 hane, 3 dk geçerli, 60 sn yeniden gönderim, 5 yanlışta kilit.<br>
           <b>2.</b> <b>Kurumsal = vergi mükellefi:</b> VKN + vergi dairesi zorunlu. <b>Bireysel taşıyıcıda da VKN zorunlu</b> (şahıs şirketi — KESİN kural; Gider Pusulası kullanılamaz).<br>
-          <b>3.</b> Müşteriler kayıt sonrası <b>anında aktif</b>; taşıyıcılar <b>"Onay Bekliyor"</b> durumunda başlar — belgeler admin onayından geçmeden teklif alamaz.<br>
+          <b>3.</b> <b>TÜM hesap tipleri "Onay Bekliyor" durumunda başlar</b> — her tipte onaylanması gereken bilgi + belge vardır (bireysel müşteride kimlik, kurumsallarda vergi levhası/imza sirküleri, taşıyıcılarda + ehliyet/SRC/ruhsat/K belgesi). Onaylanmadan müşteri <b>sipariş veremez</b>, taşıyıcı <b>teklif alamaz</b>.<br>
           <b>4.</b> Kurumsal taşıyıcının sürücüleri bu ekrandan DEĞİL, <b>firma daveti + sürücünün kendi OTP onayı</b> ile katılır (çift onay).<br>
           <b>5.</b> KVKK aydınlatma + üyelik sözleşmesi onayı zaman damgasıyla saklanır; ticari ileti onayı ayrı ve opsiyonel.
         </div>
@@ -170,13 +170,13 @@
         <div class="panel-b">
           <b>Adım 1:</b> Telefon (kullanıcı adı) + şifre doğrulanır.<br>
           <b>Adım 2:</b> Kayıtlı telefona OTP gönderilir (2FA) — doğrulanınca token verilir.<br>
-          <b>Onaysız taşıyıcı:</b> şifre doğru olsa bile uygulamaya <b>sınırlı modda</b> girer: yalnız "belge durumu" ekranını görür, teklif alamaz (aşağıdaki anahtar ile deneyin).<br>
+          <b>Onaysız kullanıcı (müşteri veya taşıyıcı):</b> şifre doğru olsa bile uygulamaya <b>sınırlı modda</b> girer: yalnız "belge durumu" ekranını görür; müşteri sipariş veremez, taşıyıcı teklif alamaz (aşağıdaki anahtar ile deneyin).<br>
           <b>Admin kullanıcıları</b> bu uygulamadan giremez — backoffice ayrı kimlik yüzeyidir.
         </div>
       </div>
       <div class="panel"><div class="panel-h"><b>🧪 Demo senaryosu</b></div>
         <div class="panel-b">
-          <label class="chk"><input type="checkbox" id="pendingSim" onchange="renderLogin()"> Bu kullanıcı <b>onay bekleyen taşıyıcı</b> olsun (sınırlı mod denemesi)</label>
+          <label class="chk"><input type="checkbox" id="pendingSim" onchange="renderLogin()"> Bu kullanıcı <b>onay bekleyen</b> olsun — müşteri/taşıyıcı fark etmez (sınırlı mod denemesi)</label>
           Telefon/şifre: herhangi bir değer · OTP: <b>123456</b>
         </div>
       </div>
@@ -226,11 +226,17 @@ function digits(s){ return (s||'').replace(/\D/g,''); }
    adımlar: 0 tip · 1 telefon+onaylar · 2 OTP · 3 bilgiler · 4 sonuç
 ============================================================ */
 const TIPLER=[
-  {id:'bmus', ad:'Bireysel Müşteri', ic:'🙋', desc:'Kendi adınıza taşıma siparişi verirsiniz.', pill:'Anında aktif', cls:'ok'},
-  {id:'kmus', ad:'Kurumsal Müşteri', ic:'🏢', desc:'Firmanız adına sipariş + cari/fatura. Vergi mükellefi.', pill:'VKN gerekli', cls:'info'},
+  {id:'bmus', ad:'Bireysel Müşteri', ic:'🙋', desc:'Kendi adınıza taşıma siparişi verirsiniz.', pill:'Kimlik onayı gerekli', cls:'warn'},
+  {id:'kmus', ad:'Kurumsal Müşteri', ic:'🏢', desc:'Firmanız adına sipariş + cari/fatura. Vergi mükellefi.', pill:'VKN + belge onayı', cls:'warn'},
   {id:'btas', ad:'Bireysel Taşıyıcı', ic:'🚚', desc:'Kendi aracınızla taşıma yaparsınız. Şahıs şirketi şart.', pill:'VKN + belge onayı', cls:'warn'},
   {id:'ktas', ad:'Kurumsal Taşıyıcı', ic:'🏭', desc:'Filo firması: araç havuzu + sürücü daveti (çift onay).', pill:'VKN + K belgesi', cls:'warn'},
 ];
+const BELGELER={
+  bmus:['Kimlik kartı (ön yüz)'],
+  kmus:['Vergi levhası','İmza sirküleri'],
+  btas:['Vergi levhası','Ehliyet','SRC','Araç ruhsatı','K belgesi'],
+  ktas:['Vergi levhası','İmza sirküleri','K belgesi'],
+};
 let R={step:0, tip:null, tel:'', kvkk:false, sozlesme:false, ticari:false, otp:['','','','','',''], otpLeft:60, f:{}};
 let otpTimer=null;
 
@@ -280,13 +286,12 @@ function rd(){ /* render register */
     const tasiyici=(R.tip==='btas'||R.tip==='ktas');
     ttl.textContent='Kayıt Alındı'; sub.textContent='';
     body.innerHTML=`<div class="result">
-      <div class="big">${tasiyici?'🕓':'🎉'}</div>
-      <h2>${tasiyici?'Hesabınız oluşturuldu — Onay Bekliyor':'Hesabınız aktif!'}</h2>
-      <p>${tasiyici
-        ?'Telefonunuz doğrulandı. Belgeleriniz (vergi levhası, ehliyet, SRC, ruhsat, K belgesi) operasyon ekibince incelenecek; <b>onaylanana kadar teklif alamazsınız</b>. Eksik belgeleri uygulamadan yükleyebilirsiniz.'
-        :'Telefonunuz doğrulandı. Hemen sipariş oluşturmaya başlayabilirsiniz.'}</p>
-      ${R.tip==='ktas'?'<div class="hintbox" style="text-align:left;margin-top:14px">👥 <b>Sürücülerinizi davet edin:</b> Filo ekranından sürücü telefonu girin; sürücü kendi OTP\'siyle onaylayınca aktifleşir (çift onay) ve araç havuzunuza check-in yapabilir.</div>':''}
-      ${tasiyici?'<div class="hintbox" style="text-align:left;margin-top:10px">📎 Belge durumu: <span class="pill warn" style="margin:0">Vergi levhası bekleniyor</span> <span class="pill warn" style="margin:0">Ehliyet bekleniyor</span></div>':''}
+      <div class="big">🕓</div>
+      <h2>Hesabınız oluşturuldu — Onay Bekliyor</h2>
+      <p>Telefonunuz doğrulandı. Bilgi ve belgeleriniz operasyon ekibince incelenecek; <b>onaylanana kadar ${tasiyici?'teklif alamazsınız':'sipariş veremezsiniz'}</b>. Belgelerinizi şimdi yükleyerek onayı hızlandırabilirsiniz.</p>
+      <div class="hintbox" style="text-align:left;margin-top:14px">📎 <b>Yüklenecek belgeler:</b><br>${BELGELER[R.tip].map(b=>`<span class="pill warn" style="margin:4px 4px 0 0">${b}: bekleniyor</span>`).join('')}
+        <div style="margin-top:10px"><button class="btn pri" style="padding:9px" onclick="toast('📎 Belge yükleme ekranı (demo) — her belge tipi için foto/PDF; durum: bekleniyor → incelemede → onaylı/reddedildi.')">📤 Belgeleri Şimdi Yükle</button></div></div>
+      ${R.tip==='ktas'?'<div class="hintbox" style="text-align:left;margin-top:10px">👥 <b>Sürücülerinizi davet edin:</b> Filo ekranından sürücü telefonu girin; sürücü kendi OTP\'siyle onaylayınca aktifleşir (çift onay) ve araç havuzunuza check-in yapabilir.</div>':''}
     </div>`;
     foot.innerHTML=`<button class="btn pri" onclick="R={step:0,tip:null,tel:'',kvkk:false,sozlesme:false,ticari:false,otp:['','','','','',''],otpLeft:60,f:{}};rd()">Yeni kayıt dene</button>`;
   }
@@ -342,7 +347,7 @@ function formFor(tip){
   const iban=`${fI('iban','IBAN * (hakediş ödemeleri)','TR__ ____ ____ ____ ____ ____ __')}`;
   const belgeNotu=t=>`<div class="hintbox">📎 Kayıttan sonra yüklenecek belgeler: ${t} — onaylanmadan teklif alınamaz.</div>`;
 
-  if(tip==='bmus') return kisi+sifre+eposta(false);
+  if(tip==='bmus') return kisi+`<div class="grid2">${fI('tckn','TCKN *','11 hane','inputmode="numeric" maxlength="11"')}${fI('dogum','Doğum tarihi *','','type="date"')}</div>`+eposta(false)+sifre+belgeNotu('kimlik kartı (ön yüz) — kimlik onaylanmadan sipariş verilemez');
   if(tip==='kmus') return `<div class="hintbox">Bu hesap <b>firma yetkilisi</b> hesabıdır; ek yetkili kullanıcıları sonra ekleyebilirsiniz.</div>`+kisi+eposta(true)+sifre+firma(false)+belgeNotu('vergi levhası, imza sirküleri');
   if(tip==='btas') return kisi+`<div class="grid2">${fI('tckn','TCKN *','11 hane','inputmode="numeric" maxlength="11"')}${fI('dogum','Doğum tarihi *','','type="date"')}</div>`+eposta(true)+sifre+
     `<div class="secline">Şahıs şirketi (zorunlu)</div>
@@ -356,14 +361,14 @@ function formFor(tip){
 }
 function submitReg(){
   /* tip bazlı zorunlu alan kontrolü (demo) */
-  const need={bmus:['ad','soyad','sifre'],
+  const need={bmus:['ad','soyad','tckn','dogum','sifre'],
     kmus:['ad','soyad','eposta','sifre','vkn','vd','unvan','adres'],
     btas:['ad','soyad','tckn','eposta','sifre','vkn','vd','kTip','kNo','ehliyetSinif','ehliyetNo','ehliyetTarih','src','srcTarih','plaka','aracTip','iban'],
     ktas:['ad','soyad','eposta','sifre','vkn','vd','unvan','adres','kTip','kNo','iban']}[R.tip];
   const eksik=need.filter(id=>{ const e=document.getElementById(id); return !e||!e.value.trim(); });
   if(eksik.length){ toast('⚠️ Zorunlu alanlar eksik: '+eksik.slice(0,5).join(', ')+(eksik.length>5?'…':'')); return; }
   if(['kmus','btas','ktas'].includes(R.tip)&&digits(val('vkn')).length!==10){ toast('⚠️ VKN 10 hane olmalı.'); return; }
-  if(R.tip==='btas'&&digits(val('tckn')).length!==11){ toast('⚠️ TCKN 11 hane olmalı.'); return; }
+  if(['btas','bmus'].includes(R.tip)&&digits(val('tckn')).length!==11){ toast('⚠️ TCKN 11 hane olmalı.'); return; }
   if(val('sifre').length<8||!/\d/.test(val('sifre'))||!/[A-ZĞÜŞİÖÇ]/.test(val('sifre'))){ toast('⚠️ Şifre min 8 karakter, rakam ve büyük harf içermeli.'); return; }
   const ep={bmus:'mobile/users',kmus:'mobile/corporate-customers',btas:'mobile/carriers/individual',ktas:'mobile/carriers/corporate'}[R.tip];
   toast('✅ (demo) POST api/v1/identity/'+ep+' → 201 · otpTicket + consents ile kayıt tamamlandı');
@@ -398,7 +403,7 @@ function renderLogin(){
       <div class="big">${pending?'🕓':'✅'}</div>
       <h2>${pending?'Hesabınız Onay Bekliyor':'Giriş başarılı!'}</h2>
       <p>${pending
-        ?'Belgeleriniz inceleniyor. <b>Sınırlı mod:</b> yalnız belge durumunuzu görebilir ve eksik belge yükleyebilirsiniz; onaylanınca teklif almaya başlarsınız.'
+        ?'Bilgi ve belgeleriniz inceleniyor. <b>Sınırlı mod:</b> yalnız belge durumunuzu görebilir ve eksik belge yükleyebilirsiniz; onaylanınca müşteriyseniz sipariş, taşıyıcıysanız teklif almaya başlarsınız.'
         :'Token alındı (access + refresh). Uygulamaya yönlendiriliyorsunuz…'}</p>
       ${pending?'<div class="hintbox" style="text-align:left;margin-top:12px">📎 <span class="pill warn" style="margin:0">Vergi levhası: inceleniyor</span> <span class="pill bad" style="margin:0">SRC: eksik</span> <span class="pill ok" style="margin:0">Ehliyet: onaylı</span></div>':''}
     </div>`;
@@ -420,7 +425,8 @@ function loginStep2(){
    ADMIN GÖRÜNÜMÜ — iki ayrı ekran
 ============================================================ */
 const MOBUSERS=[
-  {ad:'Ayşe Yılmaz', tip:'Bireysel Müşteri', gsm:'05•• ••• 12 34', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'—'},
+  {ad:'Ayşe Yılmaz', tip:'Bireysel Müşteri', gsm:'05•• ••• 12 34', durum:'Onay Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'👤 Müşteri kartı →'},
+  {ad:'Deniz Kaya', tip:'Bireysel Müşteri', gsm:'05•• ••• 55 90', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'👤 Müşteri kartı →'},
   {ad:'ABC Lojistik A.Ş. (M.Kaya)', tip:'Kurumsal Müşteri', gsm:'05•• ••• 88 21', durum:'KYC Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🏢 Firma kartı →'},
   {ad:'Mehmet Yıldız', tip:'Bireysel Taşıyıcı', gsm:'05•• ••• 42 18', durum:'Onay Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🚚 Sürücü kartı →'},
   {ad:'Hızlı Filo Ltd. (E.Demir)', tip:'Kurumsal Taşıyıcı', gsm:'05•• ••• 67 09', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'🏢 Firma kartı →'},
