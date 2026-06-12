@@ -106,6 +106,25 @@
   .btn.sm{width:auto;padding:7px 13px;font-size:11.5px;border-radius:9px}
   .btn.sec{background:#fff;border:1px solid var(--line);color:var(--ink)}
 
+  /* sözleşme onay satırı + modal (kaydırma zorunlu) */
+  .consent{display:flex;align-items:center;gap:9px;font-size:12px;margin-top:9px;color:#334155;line-height:1.45;
+    background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 12px;cursor:pointer}
+  .consent:hover{border-color:var(--efso)}
+  .consent.okc{border-color:#86efac;background:#f0fdf4}
+  .consent .cic{font-size:16px}
+  .consent small{display:block;color:var(--muted);font-size:10.5px}
+  .ovl{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:90;padding:18px}
+  .ovl.show{display:flex}
+  .modalbox{background:#fff;border-radius:18px;max-width:560px;width:100%;padding:20px;box-shadow:0 30px 80px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:84vh}
+  .modalbox h3{margin:0 0 10px;font-size:16px}
+  .legalbody{overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--soft);
+    font-size:12.5px;line-height:1.7;color:#334155;min-height:200px;max-height:320px}
+  .legalbody h4{margin:14px 0 4px;font-size:12.5px;color:var(--ink)}
+  .legalbody p{margin:0 0 10px}
+  .scrollnote{text-align:center;font-size:11.5px;color:var(--amber);font-weight:700;padding:8px 0 0}
+  .modalrow{display:flex;gap:10px;margin-top:12px;align-items:center}
+  .modalrow .sp{flex:1}
+
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
     padding:13px 20px;border-radius:13px;font-size:13px;max-width:540px;line-height:1.5;box-shadow:0 12px 32px rgba(0,0,0,.3);
     opacity:0;pointer-events:none;transition:.25s;z-index:99;white-space:pre-line}
@@ -141,7 +160,8 @@
         <div class="panel-b">
           <b>1.</b> Telefon doğrulanmadan kayıt tamamlanamaz — OTP 6 hane, 3 dk geçerli, 60 sn yeniden gönderim, 5 yanlışta kilit.<br>
           <b>2.</b> <b>Kurumsal = vergi mükellefi:</b> VKN + vergi dairesi zorunlu. <b>Bireysel taşıyıcıda da VKN zorunlu</b> (şahıs şirketi — KESİN kural; Gider Pusulası kullanılamaz).<br>
-          <b>3.</b> <b>TÜM hesap tipleri "Onay Bekliyor" durumunda başlar</b> — her tipte onaylanması gereken bilgi + belge vardır (bireysel müşteride kimlik, kurumsallarda vergi levhası/imza sirküleri, taşıyıcılarda + ehliyet/SRC/ruhsat/K belgesi). Onaylanmadan müşteri <b>sipariş veremez</b>, taşıyıcı <b>teklif alamaz</b>.<br>
+          <b>3.</b> <b>Bireysel müşteri anında aktiftir</b> (onay gerekmez). <b>Kurumsal müşteri ve tüm taşıyıcılar "Onay Bekliyor"</b> başlar (vergi levhası/imza sirküleri; taşıyıcılarda + ehliyet/SRC/ruhsat/K belgesi) — onaylanmadan kurumsal müşteri sipariş veremez, taşıyıcı teklif alamaz.<br>
+          <b>3b.</b> <b>KVKK ve Üyelik Sözleşmesi onayları metin açılıp EN ALTA kaydırılmadan verilemez</b> — onay, metnin versiyonu + zaman damgasıyla saklanır.<br>
           <b>4.</b> Kurumsal taşıyıcının sürücüleri bu ekrandan DEĞİL, <b>firma daveti + sürücünün kendi OTP onayı</b> ile katılır (çift onay).<br>
           <b>5.</b> KVKK aydınlatma + üyelik sözleşmesi onayı zaman damgasıyla saklanır; ticari ileti onayı ayrı ve opsiyonel.
         </div>
@@ -207,7 +227,69 @@
   </div>
 </div>
 
+<!-- SÖZLEŞME MODAL'I — en alta kaydırılmadan onaylanamaz -->
+<div class="ovl" id="legalOvl">
+  <div class="modalbox">
+    <h3 id="legalTitle"></h3>
+    <div class="legalbody" id="legalBody" onscroll="legalScroll(this)"></div>
+    <div class="scrollnote" id="legalNote">⬇️ Onay butonu, metnin SONUNA kadar kaydırınca aktifleşir</div>
+    <div class="modalrow">
+      <button class="btn ghost" style="width:auto" onclick="closeLegal()">Vazgeç</button>
+      <div class="sp"></div>
+      <button class="btn pri" style="width:auto" id="legalAccept" disabled onclick="acceptLegal()">Okudum, Kabul Ediyorum</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
+<script>
+/* ====== Sözleşme metinleri (v1.0 — demo içerik) ====== */
+const LEGAL={
+  kvkk:{t:'KVKK Aydınlatma Metni (v1.0)', body:`
+    <h4>1. Veri Sorumlusu</h4><p>İşbu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca, veri sorumlusu sıfatıyla EFSO Lojistik Teknolojileri A.Ş. ("EFSO") tarafından hazırlanmıştır.</p>
+    <h4>2. İşlenen Kişisel Veriler</h4><p>Kimlik bilgileri (ad, soyad, T.C. kimlik numarası), iletişim bilgileri (telefon, e-posta, adres), müşteri işlem bilgileri (sipariş, fatura, ödeme kayıtları), taşıyıcılar için mesleki belge bilgileri (ehliyet, SRC, K belgesi) ve hizmetin ifası süresince konum verileri işlenmektedir.</p>
+    <h4>3. İşleme Amaçları</h4><p>Kişisel verileriniz; üyelik kaydının oluşturulması, kimlik doğrulama (SMS/OTP), taşıma hizmetinin planlanması ve ifası, fatura düzenlenmesi, ödeme işlemlerinin yürütülmesi, hukuki yükümlülüklerin yerine getirilmesi ve hizmet kalitesinin artırılması amaçlarıyla işlenir.</p>
+    <h4>4. Konum Verisi</h4><p>Taşıyıcı kullanıcıların konum verisi yalnızca sefer süresince, hizmetin ifası amacıyla işlenir; sefer dışında konum izleme yapılmaz. Müşteriler, sipariş takibi kapsamında taşıyıcının anlık konumunu görüntüleyebilir.</p>
+    <h4>5. Aktarım</h4><p>Verileriniz; ödeme kuruluşları, SMS/bildirim hizmet sağlayıcıları, harita ve rota hizmeti sağlayıcıları (yurt dışı aktarım dahil — açık rızanıza istinaden) ve yasal merciler ile mevzuata uygun olarak paylaşılabilir.</p>
+    <h4>6. Saklama Süresi</h4><p>Veriler, ilgili mevzuatta öngörülen süreler (ör. 6563 sayılı Kanun, VUK, TTK) boyunca saklanır; sürenin sonunda silinir, yok edilir veya anonim hale getirilir.</p>
+    <h4>7. Haklarınız (KVKK m.11)</h4><p>Kişisel verilerinizin işlenip işlenmediğini öğrenme, işlenmişse bilgi talep etme, düzeltilmesini veya silinmesini isteme, aktarıldığı üçüncü kişileri bilme, otomatik sistemlerce analiz sonucu aleyhe çıkan sonuca itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz.</p>
+    <h4>8. Başvuru</h4><p>Taleplerinizi kvkk@efso.app adresine veya uygulama içi "KVKK Başvurusu" formu üzerinden iletebilirsiniz. Başvurular en geç 30 gün içinde sonuçlandırılır.</p>
+    <p><b>Bu metni sonuna kadar okuduğunuzu onaylıyorsunuz.</b></p>`},
+  sozlesme:{t:'Üyelik Sözleşmesi (v1.0)', body:`
+    <h4>1. Taraflar ve Konu</h4><p>İşbu sözleşme, EFSO Lojistik Teknolojileri A.Ş. ile platforma üye olan kullanıcı arasında, EFSO uygulaması üzerinden sunulan taşıma organizasyonu hizmetlerinin koşullarını düzenler.</p>
+    <h4>2. Hizmetin Niteliği</h4><p>EFSO, taşıma işleri organizatörü sıfatıyla müşteriler ile bağımsız taşıyıcıları buluşturan bir platformdur; taşıma hizmeti, yetki belgesine sahip taşıyıcılar tarafından ifa edilir.</p>
+    <h4>3. Üyelik ve Doğrulama</h4><p>Üyelik, telefon numarasının SMS ile doğrulanmasıyla kurulur. Kullanıcı, verdiği bilgilerin doğru olduğunu taahhüt eder. Kurumsal üyeler ve taşıyıcılar için belge onayı tamamlanmadan ilgili hizmetler kullanılamaz.</p>
+    <h4>4. Fiyat ve Ödeme</h4><p>Taşıma ücreti, sipariş onayından önce tüm kalemleriyle gösterilir; gösterilmeyen hiçbir ücret talep edilemez. Bekleme ücreti, ek durak ve zamanlama farkları sipariş ekranında açıkça belirtilir.</p>
+    <h4>5. Tarafların Yükümlülükleri</h4><p>Müşteri, yük beyanının doğruluğundan; taşıyıcı, mevzuata uygun belge ve araçla hizmet vermekten sorumludur. Platform üzerinden kurulan iletişimde telefon numaraları maskelenir; platform dışına yönlendirme (disintermediation) sözleşmeye aykırıdır.</p>
+    <h4>6. Sorumluluk</h4><p>Taşıma sırasında oluşan hasarlarda taşıyıcı sorumluluğu ve sigorta hükümleri uygulanır. EFSO, organizatör sıfatının gerektirdiği özen yükümlülüğünü taşır.</p>
+    <h4>7. Fesih</h4><p>Kullanıcı dilediğinde üyeliğini sonlandırabilir. Sözleşmeye aykırılık halinde EFSO üyeliği askıya alabilir veya feshedebilir.</p>
+    <h4>8. Uyuşmazlık</h4><p>İşbu sözleşmeden doğan uyuşmazlıklarda İstanbul (Çağlayan) Mahkemeleri ve İcra Daireleri yetkilidir; tüketici işlemlerinde tüketici hakem heyetleri ve tüketici mahkemeleri saklıdır.</p>
+    <p><b>Bu sözleşmeyi sonuna kadar okuduğunuzu ve kabul ettiğinizi beyan ediyorsunuz.</b></p>`}
+};
+let legalCur=null;
+function openLegal(k){
+  legalCur=k;
+  document.getElementById('legalTitle').textContent=LEGAL[k].t;
+  const b=document.getElementById('legalBody'); b.innerHTML=LEGAL[k].body; b.scrollTop=0;
+  document.getElementById('legalAccept').disabled=true;
+  document.getElementById('legalNote').style.display='block';
+  document.getElementById('legalOvl').classList.add('show');
+  setTimeout(()=>legalScroll(b),60); /* metin kısaysa (büyük ekran) buton hemen açılır */
+}
+function legalScroll(el){
+  if(el.scrollTop+el.clientHeight>=el.scrollHeight-8){
+    document.getElementById('legalAccept').disabled=false;
+    document.getElementById('legalNote').style.display='none';
+  }
+}
+function closeLegal(){ document.getElementById('legalOvl').classList.remove('show'); }
+function acceptLegal(){
+  if(legalCur==='kvkk') R.kvkk=true; else R.sozlesme=true;
+  closeLegal();
+  toast('✅ '+LEGAL[legalCur].t+' onaylandı — versiyon + zaman damgasıyla kaydedilir (identity.user_consents).');
+  rd();
+}
+</script>
 <script>
 let toastT=null;
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
@@ -226,13 +308,12 @@ function digits(s){ return (s||'').replace(/\D/g,''); }
    adımlar: 0 tip · 1 telefon+onaylar · 2 OTP · 3 bilgiler · 4 sonuç
 ============================================================ */
 const TIPLER=[
-  {id:'bmus', ad:'Bireysel Müşteri', ic:'🙋', desc:'Kendi adınıza taşıma siparişi verirsiniz.', pill:'Kimlik onayı gerekli', cls:'warn'},
+  {id:'bmus', ad:'Bireysel Müşteri', ic:'🙋', desc:'Kendi adınıza taşıma siparişi verirsiniz.', pill:'Anında aktif — onay gerekmez', cls:'ok'},
   {id:'kmus', ad:'Kurumsal Müşteri', ic:'🏢', desc:'Firmanız adına sipariş + cari/fatura. Vergi mükellefi.', pill:'VKN + belge onayı', cls:'warn'},
   {id:'btas', ad:'Bireysel Taşıyıcı', ic:'🚚', desc:'Kendi aracınızla taşıma yaparsınız. Şahıs şirketi şart.', pill:'VKN + belge onayı', cls:'warn'},
   {id:'ktas', ad:'Kurumsal Taşıyıcı', ic:'🏭', desc:'Filo firması: araç havuzu + sürücü daveti (çift onay).', pill:'VKN + K belgesi', cls:'warn'},
 ];
 const BELGELER={
-  bmus:['Kimlik kartı (ön yüz)'],
   kmus:['Vergi levhası','İmza sirküleri'],
   btas:['Vergi levhası','Ehliyet','SRC','Araç ruhsatı','K belgesi'],
   ktas:['Vergi levhası','İmza sirküleri','K belgesi'],
@@ -259,8 +340,10 @@ function rd(){ /* render register */
       <input id="rTel" inputmode="tel" maxlength="14" placeholder="05XX XXX XX XX" value="${R.tel}"
         oninput="this.value=telFmt(this.value);R.tel=this.value;rd2()">
       <div class="hintbox">📲 Bu numaraya 6 haneli doğrulama kodu (SMS) göndereceğiz. Numara sistemde <b>benzersizdir</b>.</div>
-      <label class="chk"><input type="checkbox" ${R.kvkk?'checked':''} onchange="R.kvkk=this.checked;rd2()"> <span><b>KVKK Aydınlatma Metni</b>'ni okudum. <u>(metin)</u></span></label>
-      <label class="chk"><input type="checkbox" ${R.sozlesme?'checked':''} onchange="R.sozlesme=this.checked;rd2()"> <span><b>Üyelik Sözleşmesi</b>'ni kabul ediyorum. <u>(metin)</u></span></label>
+      <div class="consent ${R.kvkk?'okc':''}" onclick="openLegal('kvkk')"><span class="cic">${R.kvkk?'✅':'⬜'}</span>
+        <span><b>KVKK Aydınlatma Metni</b><small>${R.kvkk?'Onaylandı (v1.0, az önce)':'Metni açıp sonuna kadar okuyarak onaylayın'}</small></span></div>
+      <div class="consent ${R.sozlesme?'okc':''}" onclick="openLegal('sozlesme')"><span class="cic">${R.sozlesme?'✅':'⬜'}</span>
+        <span><b>Üyelik Sözleşmesi</b><small>${R.sozlesme?'Onaylandı (v1.0, az önce)':'Metni açıp sonuna kadar okuyarak onaylayın'}</small></span></div>
       <label class="chk"><input type="checkbox" ${R.ticari?'checked':''} onchange="R.ticari=this.checked"> <span>Kampanya/ticari ileti almak istiyorum <i>(opsiyonel)</i></span></label>`;
     foot.innerHTML=`<div class="backrow"><button class="btn ghost" onclick="R.step=0;rd()">← Geri</button></div>
       <button class="btn pri" id="rNext1" ${digits(R.tel).length===11&&R.kvkk&&R.sozlesme?'':'disabled'} onclick="sendOtp()">📨 Doğrulama Kodu Gönder</button>`;
@@ -284,13 +367,16 @@ function rd(){ /* render register */
   }
   else{
     const tasiyici=(R.tip==='btas'||R.tip==='ktas');
+    const onayli=R.tip!=='bmus';
     ttl.textContent='Kayıt Alındı'; sub.textContent='';
     body.innerHTML=`<div class="result">
-      <div class="big">🕓</div>
-      <h2>Hesabınız oluşturuldu — Onay Bekliyor</h2>
-      <p>Telefonunuz doğrulandı. Bilgi ve belgeleriniz operasyon ekibince incelenecek; <b>onaylanana kadar ${tasiyici?'teklif alamazsınız':'sipariş veremezsiniz'}</b>. Belgelerinizi şimdi yükleyerek onayı hızlandırabilirsiniz.</p>
-      <div class="hintbox" style="text-align:left;margin-top:14px">📎 <b>Yüklenecek belgeler:</b><br>${BELGELER[R.tip].map(b=>`<span class="pill warn" style="margin:4px 4px 0 0">${b}: bekleniyor</span>`).join('')}
-        <div style="margin-top:10px"><button class="btn pri" style="padding:9px" onclick="toast('📎 Belge yükleme ekranı (demo) — her belge tipi için foto/PDF; durum: bekleniyor → incelemede → onaylı/reddedildi.')">📤 Belgeleri Şimdi Yükle</button></div></div>
+      <div class="big">${onayli?'🕓':'🎉'}</div>
+      <h2>${onayli?'Hesabınız oluşturuldu — Onay Bekliyor':'Hesabınız aktif!'}</h2>
+      <p>${onayli
+        ?`Telefonunuz doğrulandı. Bilgi ve belgeleriniz operasyon ekibince incelenecek; <b>onaylanana kadar ${tasiyici?'teklif alamazsınız':'sipariş veremezsiniz'}</b>. Belgelerinizi şimdi yükleyerek onayı hızlandırabilirsiniz.`
+        :'Telefonunuz doğrulandı. Hemen sipariş oluşturmaya başlayabilirsiniz.'}</p>
+      ${onayli?`<div class="hintbox" style="text-align:left;margin-top:14px">📎 <b>Yüklenecek belgeler:</b><br>${BELGELER[R.tip].map(b=>`<span class="pill warn" style="margin:4px 4px 0 0">${b}: bekleniyor</span>`).join('')}
+        <div style="margin-top:10px"><button class="btn pri" style="padding:9px" onclick="toast('📎 Belge yükleme ekranı (demo) — her belge tipi için foto/PDF; durum: bekleniyor → incelemede → onaylı/reddedildi.')">📤 Belgeleri Şimdi Yükle</button></div></div>`:''}
       ${R.tip==='ktas'?'<div class="hintbox" style="text-align:left;margin-top:10px">👥 <b>Sürücülerinizi davet edin:</b> Filo ekranından sürücü telefonu girin; sürücü kendi OTP\'siyle onaylayınca aktifleşir (çift onay) ve araç havuzunuza check-in yapabilir.</div>':''}
     </div>`;
     foot.innerHTML=`<button class="btn pri" onclick="R={step:0,tip:null,tel:'',kvkk:false,sozlesme:false,ticari:false,otp:['','','','','',''],otpLeft:60,f:{}};rd()">Yeni kayıt dene</button>`;
@@ -347,7 +433,7 @@ function formFor(tip){
   const iban=`${fI('iban','IBAN * (hakediş ödemeleri)','TR__ ____ ____ ____ ____ ____ __')}`;
   const belgeNotu=t=>`<div class="hintbox">📎 Kayıttan sonra yüklenecek belgeler: ${t} — onaylanmadan teklif alınamaz.</div>`;
 
-  if(tip==='bmus') return kisi+`<div class="grid2">${fI('tckn','TCKN *','11 hane','inputmode="numeric" maxlength="11"')}${fI('dogum','Doğum tarihi *','','type="date"')}</div>`+eposta(false)+sifre+belgeNotu('kimlik kartı (ön yüz) — kimlik onaylanmadan sipariş verilemez');
+  if(tip==='bmus') return kisi+eposta(false)+sifre+`<div class="hintbox">✅ Bireysel müşteri hesabı <b>onay gerektirmez</b> — kayıt biter bitmez sipariş verebilirsiniz.</div>`;
   if(tip==='kmus') return `<div class="hintbox">Bu hesap <b>firma yetkilisi</b> hesabıdır; ek yetkili kullanıcıları sonra ekleyebilirsiniz.</div>`+kisi+eposta(true)+sifre+firma(false)+belgeNotu('vergi levhası, imza sirküleri');
   if(tip==='btas') return kisi+`<div class="grid2">${fI('tckn','TCKN *','11 hane','inputmode="numeric" maxlength="11"')}${fI('dogum','Doğum tarihi *','','type="date"')}</div>`+eposta(true)+sifre+
     `<div class="secline">Şahıs şirketi (zorunlu)</div>
@@ -361,14 +447,14 @@ function formFor(tip){
 }
 function submitReg(){
   /* tip bazlı zorunlu alan kontrolü (demo) */
-  const need={bmus:['ad','soyad','tckn','dogum','sifre'],
+  const need={bmus:['ad','soyad','sifre'],
     kmus:['ad','soyad','eposta','sifre','vkn','vd','unvan','adres'],
     btas:['ad','soyad','tckn','eposta','sifre','vkn','vd','kTip','kNo','ehliyetSinif','ehliyetNo','ehliyetTarih','src','srcTarih','plaka','aracTip','iban'],
     ktas:['ad','soyad','eposta','sifre','vkn','vd','unvan','adres','kTip','kNo','iban']}[R.tip];
   const eksik=need.filter(id=>{ const e=document.getElementById(id); return !e||!e.value.trim(); });
   if(eksik.length){ toast('⚠️ Zorunlu alanlar eksik: '+eksik.slice(0,5).join(', ')+(eksik.length>5?'…':'')); return; }
   if(['kmus','btas','ktas'].includes(R.tip)&&digits(val('vkn')).length!==10){ toast('⚠️ VKN 10 hane olmalı.'); return; }
-  if(['btas','bmus'].includes(R.tip)&&digits(val('tckn')).length!==11){ toast('⚠️ TCKN 11 hane olmalı.'); return; }
+  if(R.tip==='btas'&&digits(val('tckn')).length!==11){ toast('⚠️ TCKN 11 hane olmalı.'); return; }
   if(val('sifre').length<8||!/\d/.test(val('sifre'))||!/[A-ZĞÜŞİÖÇ]/.test(val('sifre'))){ toast('⚠️ Şifre min 8 karakter, rakam ve büyük harf içermeli.'); return; }
   const ep={bmus:'mobile/users',kmus:'mobile/corporate-customers',btas:'mobile/carriers/individual',ktas:'mobile/carriers/corporate'}[R.tip];
   toast('✅ (demo) POST api/v1/identity/'+ep+' → 201 · otpTicket + consents ile kayıt tamamlandı');
@@ -425,8 +511,7 @@ function loginStep2(){
    ADMIN GÖRÜNÜMÜ — iki ayrı ekran
 ============================================================ */
 const MOBUSERS=[
-  {ad:'Ayşe Yılmaz', tip:'Bireysel Müşteri', gsm:'05•• ••• 12 34', durum:'Onay Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'👤 Müşteri kartı →'},
-  {ad:'Deniz Kaya', tip:'Bireysel Müşteri', gsm:'05•• ••• 55 90', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'👤 Müşteri kartı →'},
+  {ad:'Ayşe Yılmaz', tip:'Bireysel Müşteri', gsm:'05•• ••• 12 34', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'— (onay gerekmez)'},
   {ad:'ABC Lojistik A.Ş. (M.Kaya)', tip:'Kurumsal Müşteri', gsm:'05•• ••• 88 21', durum:'KYC Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🏢 Firma kartı →'},
   {ad:'Mehmet Yıldız', tip:'Bireysel Taşıyıcı', gsm:'05•• ••• 42 18', durum:'Onay Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🚚 Sürücü kartı →'},
   {ad:'Hızlı Filo Ltd. (E.Demir)', tip:'Kurumsal Taşıyıcı', gsm:'05•• ••• 67 09', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'🏢 Firma kartı →'},
@@ -451,7 +536,7 @@ function adminView(v){
     <table class="t"><thead><tr><th>Kullanıcı</th><th>Tip</th><th>GSM (maskeli)</th><th>Tel. doğrul.</th><th>Durum</th><th>Bağlı profil</th><th>Hesap işlemleri</th></tr></thead><tbody>
     ${MOBUSERS.map(u=>`<tr><td><b>${u.ad}</b></td><td>${u.tip}</td><td>${u.gsm}</td><td class="${u.tel2fa==='✓'?'ok':'no'}">${u.tel2fa}</td>
       <td><span class="sbadge ${u.cls}">${u.durum}</span></td>
-      <td>${u.profil==='—'?'—':`<a href="#" onclick="toast('→ ${u.profil.replace(/ →/,'')} açılır (KYC onayı ORADA yapılır; hesap işlemleri burada kalır).');return false">${u.profil}</a>`}</td>
+      <td>${u.profil.startsWith('—')?u.profil:`<a href="#" onclick="toast('→ ${u.profil.replace(/ →/,'')} açılır (KYC onayı ORADA yapılır; hesap işlemleri burada kalır).');return false">${u.profil}</a>`}</td>
       <td><button class="btn sm sec" onclick="toast('2FA sıfırlandı — audit loglandı (POST users/{id}/reset-2fa).')">2FA sıfırla</button>
       <button class="btn sm sec" onclick="toast('${u.durum==='Bloklu'?'Blok kaldırıldı':'Hesap bloklandı'} — audit loglandı.')">${u.durum==='Bloklu'?'Aktifleştir':'Blokla'}</button></td></tr>`).join('')}
     </tbody></table>
