@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<!--
+  EFSO — MOBİL KAYIT (2FA/OTP) + GİRİŞ + ADMIN KULLANICI YÖNETİMİ AYRIMI — Çalışır Mockup (2026-06-12)
+  Kaynak: docs/issues/efso-kullanici-kayit-2fa-backend-talebi.md (alan matrisi + OTP tasarımı + endpoint seti)
+  Demo OTP kodu: 123456 · SMS/backend simüledir. Tek dosya, bağımsız.
+-->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EFSO — Kayıt & 2FA (Mockup)</title>
+<style>
+  :root{
+    --efso:#0ea5b7;--efso-dark:#0b7e8c;--ink:#0f172a;--muted:#64748b;--line:#e2e8f0;
+    --bg:#f1f5f9;--card:#fff;--soft:#f8fafc;--green:#16a34a;--amber:#d97706;--red:#dc2626;--blue:#2563eb;
+    --shadow:0 1px 2px rgba(15,23,42,.06),0 8px 24px rgba(15,23,42,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:#dde3ea;color:var(--ink)}
+  .wrap{max-width:1200px;margin:0 auto;padding:18px 18px 80px}
+  .topbar{display:flex;align-items:center;gap:14px;padding:6px 0 16px;flex-wrap:wrap}
+  .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--efso),var(--efso-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+  .brand b{display:block;font-size:16px}.brand span{font-size:11px;color:var(--muted)}
+  .sp{flex:1}
+  .demo-note{font-size:11px;color:#7c5e10;background:#fffbeb;border:1px solid #fde68a;border-radius:9px;padding:5px 10px}
+  .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .tabs button{border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 18px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
+  .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* telefon çerçevesi */
+  .stage{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .phone{width:392px;flex:0 0 auto;background:#0b1220;border-radius:38px;padding:12px;box-shadow:0 24px 60px rgba(15,23,42,.35)}
+  .scr{background:var(--bg);border-radius:28px;overflow:hidden;min-height:680px;display:flex;flex-direction:column}
+  .phead{background:linear-gradient(135deg,var(--efso),var(--efso-dark));color:#fff;padding:40px 18px 16px;border-radius:0 0 0 0}
+  .phead b{font-size:17px;display:block}.phead span{font-size:11.5px;opacity:.85}
+  .pbody{padding:16px;flex:1}
+  .pfoot{padding:12px 16px 20px}
+
+  .pick{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;transition:.15s;position:relative;box-shadow:var(--shadow);margin-bottom:10px}
+  .pick:hover{border-color:var(--efso)}
+  .pick.sel{border-color:var(--efso);background:#f0fdff}
+  .pick h3{margin:0 0 3px;font-size:14px}
+  .pick p{margin:0;color:var(--muted);font-size:11.5px;line-height:1.45}
+  .pill{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;padding:2px 9px;border-radius:999px;background:#e0f7fa;color:var(--efso-dark)}
+  .pill.warn{background:#fef3c7;color:#b45309}.pill.ok{background:#dcfce7;color:#15803d}.pill.bad{background:#fee2e2;color:#b91c1c}.pill.info{background:#e0e7ff;color:#4338ca}
+
+  label.fld{display:block;font-size:11px;color:var(--muted);font-weight:700;margin:11px 2px 4px}
+  label.fld:first-child{margin-top:0}
+  input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;background:#fff;color:var(--ink);font-family:inherit}
+  input:focus,select:focus{outline:none;border-color:var(--efso)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+  .chk{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;margin-top:9px;color:#334155;line-height:1.45}
+  .chk input{width:auto;margin-top:2px}
+  .hintbox{font-size:11px;color:var(--muted);line-height:1.5;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:8px}
+  .secline{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;font-weight:800;margin:16px 0 4px;display:flex;align-items:center;gap:8px}
+  .secline:after{content:"";flex:1;height:1px;background:var(--line)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;border-radius:12px;padding:13px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;width:100%}
+  .btn.pri{background:var(--efso);color:#fff}.btn.pri:hover{background:var(--efso-dark)}
+  .btn.pri:disabled{background:#cbd5e1;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:var(--muted);width:auto;padding:8px 10px}
+  .backrow{display:flex;align-items:center;margin-bottom:8px}
+
+  /* OTP kutuları */
+  .otp{display:flex;gap:8px;justify-content:center;margin:18px 0 8px}
+  .otp input{width:46px;height:54px;text-align:center;font-size:22px;font-weight:800;padding:0}
+  .otp input.err{border-color:var(--red);background:#fef2f2}
+  .countdown{text-align:center;font-size:12px;color:var(--muted)}
+  .countdown b{color:var(--efso-dark)}
+
+  /* adım göstergesi */
+  .dots{display:flex;gap:6px;justify-content:center;margin:10px 0 2px}
+  .dots i{width:8px;height:8px;border-radius:50%;background:#cbd5e1}
+  .dots i.on{background:var(--efso);width:22px;border-radius:999px}
+
+  .result{text-align:center;padding:30px 10px}
+  .result .big{font-size:52px}
+  .result h2{margin:10px 0 6px;font-size:18px}
+  .result p{font-size:12.5px;color:var(--muted);line-height:1.6;margin:0}
+
+  /* yan açıklama paneli */
+  .side-info{flex:1;min-width:300px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:16px}
+  .panel-h{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .panel-h b{font-size:14px;flex:1}
+  .panel-h .badge{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:#eef2ff;color:#4338ca}
+  .panel-b{padding:14px 16px;font-size:12.5px;line-height:1.6;color:#334155}
+  table.t{width:100%;border-collapse:collapse;font-size:12px}
+  .t th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:left;padding:7px 9px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .t td{padding:8px 9px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+  .ok{color:var(--green);font-weight:700}.no{color:var(--red);font-weight:700}
+
+  /* admin görünümü */
+  .adminwrap{display:flex;gap:0;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);min-height:560px}
+  .aside{width:250px;flex:0 0 auto;background:#0b1220;color:#cbd5e1;padding:16px 10px}
+  .aside .navsec{font-size:10px;text-transform:uppercase;letter-spacing:.7px;color:#475569;margin:14px 12px 6px;font-weight:700}
+  .aside .ni{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:9px;font-size:12.5px;cursor:pointer;font-weight:500}
+  .aside .ni:hover{background:#162033;color:#fff}
+  .aside .ni.active{background:linear-gradient(135deg,rgba(14,165,183,.22),rgba(14,165,183,.05));color:#fff;font-weight:600}
+  .aside .lock{margin-left:auto;font-size:10px}
+  .amain{flex:1;min-width:0;padding:20px}
+  .amain h2{font-size:17px;margin:0 0 4px}
+  .amain .sub{font-size:12px;color:var(--muted);margin:0 0 16px}
+  .sbadge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .st-ok{background:#dcfce7;color:#15803d}.st-wait{background:#fef3c7;color:#b45309}.st-no{background:#fee2e2;color:#b91c1c}.st-info{background:#e0e7ff;color:#4338ca}
+  .btn.sm{width:auto;padding:7px 13px;font-size:11.5px;border-radius:9px}
+  .btn.sec{background:#fff;border:1px solid var(--line);color:var(--ink)}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;
+    padding:13px 20px;border-radius:13px;font-size:13px;max-width:540px;line-height:1.5;box-shadow:0 12px 32px rgba(0,0,0,.3);
+    opacity:0;pointer-events:none;transition:.25s;z-index:99;white-space:pre-line}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo">EF</div>
+    <div class="brand"><b>EFSO</b><span>Mobil Kayıt (2FA) + Giriş + Admin Kullanıcı Yönetimi — Mockup</span></div>
+    <div class="sp"></div>
+    <div class="demo-note">🧪 Demo OTP kodu: <b>123456</b> · SMS/backend simüledir</div>
+  </div>
+
+  <div class="tabs">
+    <button id="t0" class="on" onclick="tab(0)">📱 Mobil Kayıt (Register + OTP)</button>
+    <button id="t1" onclick="tab(1)">🔑 Mobil Giriş (Şifre + 2FA)</button>
+    <button id="t2" onclick="tab(2)">🛠️ Admin — Kullanıcı Yönetimi (ayrım önerisi)</button>
+  </div>
+
+  <!-- ================= TAB 0: KAYIT ================= -->
+  <div id="v0" class="stage">
+    <div class="phone"><div class="scr">
+      <div class="phead"><b id="rTitle">EFSO'ya Kayıt</b><span id="rSub">Hesap tipinizi seçin</span>
+        <div class="dots" id="rDots"></div></div>
+      <div class="pbody" id="rBody"></div>
+      <div class="pfoot" id="rFoot"></div>
+    </div></div>
+    <div class="side-info">
+      <div class="panel"><div class="panel-h"><b>📋 Bu akışın kuralları</b><span class="badge">backend talebiyle birebir</span></div>
+        <div class="panel-b">
+          <b>1.</b> Telefon doğrulanmadan kayıt tamamlanamaz — OTP 6 hane, 3 dk geçerli, 60 sn yeniden gönderim, 5 yanlışta kilit.<br>
+          <b>2.</b> <b>Kurumsal = vergi mükellefi:</b> VKN + vergi dairesi zorunlu. <b>Bireysel taşıyıcıda da VKN zorunlu</b> (şahıs şirketi — KESİN kural; Gider Pusulası kullanılamaz).<br>
+          <b>3.</b> Müşteriler kayıt sonrası <b>anında aktif</b>; taşıyıcılar <b>"Onay Bekliyor"</b> durumunda başlar — belgeler admin onayından geçmeden teklif alamaz.<br>
+          <b>4.</b> Kurumsal taşıyıcının sürücüleri bu ekrandan DEĞİL, <b>firma daveti + sürücünün kendi OTP onayı</b> ile katılır (çift onay).<br>
+          <b>5.</b> KVKK aydınlatma + üyelik sözleşmesi onayı zaman damgasıyla saklanır; ticari ileti onayı ayrı ve opsiyonel.
+        </div>
+      </div>
+      <div class="panel"><div class="panel-h"><b>🔌 Çağrılan uçlar (sırasıyla)</b></div>
+        <div class="panel-b" style="font-family:Consolas,monospace;font-size:11.5px">
+          POST api/v1/identity/auth/otp/send<br>
+          POST api/v1/identity/auth/otp/verify → otpTicket<br>
+          POST api/v1/identity/mobile/users <i>(bireysel müşteri)</i><br>
+          POST .../mobile/corporate-customers<br>
+          POST .../mobile/carriers/individual | corporate
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 1: GİRİŞ ================= -->
+  <div id="v1" class="stage hide">
+    <div class="phone"><div class="scr">
+      <div class="phead"><b>EFSO'ya Giriş</b><span id="lSub">Telefon + şifre, ardından SMS doğrulama</span></div>
+      <div class="pbody" id="lBody"></div>
+      <div class="pfoot" id="lFoot"></div>
+    </div></div>
+    <div class="side-info">
+      <div class="panel"><div class="panel-h"><b>🔐 Giriş kuralları</b></div>
+        <div class="panel-b">
+          <b>Adım 1:</b> Telefon (kullanıcı adı) + şifre doğrulanır.<br>
+          <b>Adım 2:</b> Kayıtlı telefona OTP gönderilir (2FA) — doğrulanınca token verilir.<br>
+          <b>Onaysız taşıyıcı:</b> şifre doğru olsa bile uygulamaya <b>sınırlı modda</b> girer: yalnız "belge durumu" ekranını görür, teklif alamaz (aşağıdaki anahtar ile deneyin).<br>
+          <b>Admin kullanıcıları</b> bu uygulamadan giremez — backoffice ayrı kimlik yüzeyidir.
+        </div>
+      </div>
+      <div class="panel"><div class="panel-h"><b>🧪 Demo senaryosu</b></div>
+        <div class="panel-b">
+          <label class="chk"><input type="checkbox" id="pendingSim" onchange="renderLogin()"> Bu kullanıcı <b>onay bekleyen taşıyıcı</b> olsun (sınırlı mod denemesi)</label>
+          Telefon/şifre: herhangi bir değer · OTP: <b>123456</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: ADMIN ================= -->
+  <div id="v2" class="hide">
+    <div class="panel" style="margin-bottom:16px"><div class="panel-h"><b>🧭 Yönlendirme: Admin kullanıcıları ve Mobil kullanıcılar AYRI ekranlarda yönetilmeli</b><span class="badge">öneri + gerekçe</span></div>
+      <div class="panel-b">
+        <b>Öneri:</b> Evet — iki ayrı yüzey: <b>"Sistem → Admin Kullanıcıları"</b> (yalnız SuperAdmin görür; davetle oluşturma, rol/permission, 2FA zorunlu) ve <b>"Kullanıcılar → Mobil Kullanıcılar"</b> (operasyon görür; müşteri/taşıyıcı hesapları, onay/blokaj). <b>Gerekçe:</b> tehdit modeli farklı (admin hesabı ele geçirilirse tüm sistem düşer), yaşam döngüsü farklı (davet vs self-register+KYC), yetki ayrımı (separation of duties) denetimde aranır. Backend de zaten ayrı (BackOffice/Mobile controller'ları).<br><br>
+        <b>Firma tanımlama ekranı çakışması — TEK KAYNAK kuralı:</b> Firma/KYC ekranından kullanıcı kayıtlarına <b>erişim ve firma bağlamındaki onay</b> (KYC onayı, yetkili doğrulama) yapılır; ama <b>hesap işlemleri</b> (şifre/2FA sıfırlama, rol, aktif-pasif) yalnız Mobil Kullanıcılar ekranındadır — firma ekranı oraya <b>link verir</b>, kopya buton koymaz. Böylece aynı işlemin iki yerden yapılıp yetki/audit kaçağı oluşması engellenir.
+      </div>
+    </div>
+    <div class="adminwrap">
+      <div class="aside">
+        <div class="navsec">Kullanıcılar (Operasyon)</div>
+        <div class="ni" data-a="mob" onclick="adminView('mob')">📱 Mobil Kullanıcılar<span class="lock">👁 operasyon</span></div>
+        <div class="ni" onclick="toast('Firma/KYC ekranı (mevcut mockup) — kullanıcıya buradan yalnız LİNK verilir.')">🏢 Firmalar & KYC</div>
+        <div class="ni" onclick="toast('Sürücü onay ekranı — belge inceleme + Approve/Reject (Driver KYC durum makinesi).')">🚚 Taşıyıcı Onayları</div>
+        <div class="navsec">Sistem (SuperAdmin)</div>
+        <div class="ni" data-a="adm" onclick="adminView('adm')">🛡️ Admin Kullanıcıları<span class="lock">🔒 superadmin</span></div>
+        <div class="ni" onclick="toast('Rol & Permission matrisi — identity.* permission claim deseni.')">🗝️ Roller & Yetkiler</div>
+        <div class="ni" onclick="toast('Audit Log — 2FA sıfırlama, rol değişikliği, KYC onayları zaman damgalı.')">📜 Audit Log</div>
+      </div>
+      <div class="amain" id="aMain"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script>
+let toastT=null;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),4200); }
+function tab(n){ for(let i=0;i<3;i++){ document.getElementById('t'+i).classList.toggle('on',i===n);
+  document.getElementById('v'+i).classList.toggle('hide',i!==n);} if(n===2) adminView('mob'); if(n===1) renderLogin(); }
+
+/* ====== ortak yardımcılar ====== */
+function telFmt(v){ let d=v.replace(/\D/g,''); if(d&&d[0]!=='0') d='0'+d; d=d.slice(0,11);
+  return [d.slice(0,4),d.slice(4,7),d.slice(7,9),d.slice(9,11)].filter(Boolean).join(' '); }
+function val(id){ const e=document.getElementById(id); return e?e.value.trim():''; }
+function digits(s){ return (s||'').replace(/\D/g,''); }
+
+/* ============================================================
+   KAYIT AKIŞI
+   adımlar: 0 tip · 1 telefon+onaylar · 2 OTP · 3 bilgiler · 4 sonuç
+============================================================ */
+const TIPLER=[
+  {id:'bmus', ad:'Bireysel Müşteri', ic:'🙋', desc:'Kendi adınıza taşıma siparişi verirsiniz.', pill:'Anında aktif', cls:'ok'},
+  {id:'kmus', ad:'Kurumsal Müşteri', ic:'🏢', desc:'Firmanız adına sipariş + cari/fatura. Vergi mükellefi.', pill:'VKN gerekli', cls:'info'},
+  {id:'btas', ad:'Bireysel Taşıyıcı', ic:'🚚', desc:'Kendi aracınızla taşıma yaparsınız. Şahıs şirketi şart.', pill:'VKN + belge onayı', cls:'warn'},
+  {id:'ktas', ad:'Kurumsal Taşıyıcı', ic:'🏭', desc:'Filo firması: araç havuzu + sürücü daveti (çift onay).', pill:'VKN + K belgesi', cls:'warn'},
+];
+let R={step:0, tip:null, tel:'', kvkk:false, sozlesme:false, ticari:false, otp:['','','','','',''], otpLeft:60, f:{}};
+let otpTimer=null;
+
+function rd(){ /* render register */
+  document.getElementById('rDots').innerHTML=[0,1,2,3,4].map(i=>`<i class="${i===R.step?'on':''}"></i>`).join('');
+  const T=R.tip?TIPLER.find(t=>t.id===R.tip):null;
+  const ttl=document.getElementById('rTitle'), sub=document.getElementById('rSub'),
+        body=document.getElementById('rBody'), foot=document.getElementById('rFoot');
+  if(R.step===0){
+    ttl.textContent='EFSO\'ya Kayıt'; sub.textContent='Hesap tipinizi seçin';
+    body.innerHTML=TIPLER.map(t=>`<div class="pick ${R.tip===t.id?'sel':''}" onclick="R.tip='${t.id}';rd()">
+      <h3>${t.ic} ${t.ad}</h3><p>${t.desc}</p><span class="pill ${t.cls}">${t.pill}</span></div>`).join('')+
+      `<div class="hintbox">Kurumsal hesaplar ve <b>tüm taşıyıcılar</b> vergi mükellefidir (VKN istenir). Kurumsal taşıyıcının sürücüleri firma davetiyle katılır.</div>`;
+    foot.innerHTML=`<button class="btn pri" ${R.tip?'':'disabled'} onclick="R.step=1;rd()">Devam →</button>`;
+  }
+  else if(R.step===1){
+    ttl.textContent=T.ic+' '+T.ad; sub.textContent='Telefonunuzu doğrulayalım';
+    body.innerHTML=`
+      <label class="fld">Cep telefonu (giriş için kullanıcı adınız olacak)</label>
+      <input id="rTel" inputmode="tel" maxlength="14" placeholder="05XX XXX XX XX" value="${R.tel}"
+        oninput="this.value=telFmt(this.value);R.tel=this.value;rd2()">
+      <div class="hintbox">📲 Bu numaraya 6 haneli doğrulama kodu (SMS) göndereceğiz. Numara sistemde <b>benzersizdir</b>.</div>
+      <label class="chk"><input type="checkbox" ${R.kvkk?'checked':''} onchange="R.kvkk=this.checked;rd2()"> <span><b>KVKK Aydınlatma Metni</b>'ni okudum. <u>(metin)</u></span></label>
+      <label class="chk"><input type="checkbox" ${R.sozlesme?'checked':''} onchange="R.sozlesme=this.checked;rd2()"> <span><b>Üyelik Sözleşmesi</b>'ni kabul ediyorum. <u>(metin)</u></span></label>
+      <label class="chk"><input type="checkbox" ${R.ticari?'checked':''} onchange="R.ticari=this.checked"> <span>Kampanya/ticari ileti almak istiyorum <i>(opsiyonel)</i></span></label>`;
+    foot.innerHTML=`<div class="backrow"><button class="btn ghost" onclick="R.step=0;rd()">← Geri</button></div>
+      <button class="btn pri" id="rNext1" ${digits(R.tel).length===11&&R.kvkk&&R.sozlesme?'':'disabled'} onclick="sendOtp()">📨 Doğrulama Kodu Gönder</button>`;
+  }
+  else if(R.step===2){
+    ttl.textContent='SMS Doğrulama'; sub.textContent=R.tel+' numarasına kod gönderildi';
+    body.innerHTML=`
+      <div class="otp">${R.otp.map((d,i)=>`<input id="o${i}" maxlength="1" inputmode="numeric" value="${d}"
+        oninput="otpIn(${i},this)" onkeydown="otpKey(${i},event)">`).join('')}</div>
+      <div class="countdown" id="cd">${R.otpLeft>0?`Yeniden gönderim: <b>${R.otpLeft} sn</b>`:`<a href="#" onclick="resendOtp();return false">Kodu yeniden gönder</a>`}</div>
+      <div class="hintbox">Kod <b>3 dakika</b> geçerlidir; 5 yanlış denemede 15 dk kilitlenir. Demo kod: <b>123456</b></div>`;
+    foot.innerHTML=`<div class="backrow"><button class="btn ghost" onclick="clearInterval(otpTimer);R.step=1;rd()">← Numarayı değiştir</button></div>
+      <button class="btn pri" onclick="verifyOtp()">Doğrula →</button>`;
+    setTimeout(()=>{const e=document.getElementById('o0'); if(e&&!R.otp.join('')) e.focus();},50);
+  }
+  else if(R.step===3){
+    ttl.textContent=T.ic+' '+T.ad; sub.textContent='Bilgilerinizi tamamlayın';
+    body.innerHTML=formFor(R.tip);
+    foot.innerHTML=`<div class="backrow"><button class="btn ghost" onclick="R.step=2;rd()">← Geri</button></div>
+      <button class="btn pri" onclick="submitReg()">✓ Kaydı Tamamla</button>`;
+  }
+  else{
+    const tasiyici=(R.tip==='btas'||R.tip==='ktas');
+    ttl.textContent='Kayıt Alındı'; sub.textContent='';
+    body.innerHTML=`<div class="result">
+      <div class="big">${tasiyici?'🕓':'🎉'}</div>
+      <h2>${tasiyici?'Hesabınız oluşturuldu — Onay Bekliyor':'Hesabınız aktif!'}</h2>
+      <p>${tasiyici
+        ?'Telefonunuz doğrulandı. Belgeleriniz (vergi levhası, ehliyet, SRC, ruhsat, K belgesi) operasyon ekibince incelenecek; <b>onaylanana kadar teklif alamazsınız</b>. Eksik belgeleri uygulamadan yükleyebilirsiniz.'
+        :'Telefonunuz doğrulandı. Hemen sipariş oluşturmaya başlayabilirsiniz.'}</p>
+      ${R.tip==='ktas'?'<div class="hintbox" style="text-align:left;margin-top:14px">👥 <b>Sürücülerinizi davet edin:</b> Filo ekranından sürücü telefonu girin; sürücü kendi OTP\'siyle onaylayınca aktifleşir (çift onay) ve araç havuzunuza check-in yapabilir.</div>':''}
+      ${tasiyici?'<div class="hintbox" style="text-align:left;margin-top:10px">📎 Belge durumu: <span class="pill warn" style="margin:0">Vergi levhası bekleniyor</span> <span class="pill warn" style="margin:0">Ehliyet bekleniyor</span></div>':''}
+    </div>`;
+    foot.innerHTML=`<button class="btn pri" onclick="R={step:0,tip:null,tel:'',kvkk:false,sozlesme:false,ticari:false,otp:['','','','','',''],otpLeft:60,f:{}};rd()">Yeni kayıt dene</button>`;
+  }
+}
+function rd2(){ /* yalnız buton durumunu tazele (odak kaybı olmasın) */
+  const b=document.getElementById('rNext1'); if(b) b.disabled=!(digits(R.tel).length===11&&R.kvkk&&R.sozlesme);
+}
+function sendOtp(){ R.step=2; R.otp=['','','','','','']; R.otpLeft=60; rd();
+  toast('📨 (demo) POST auth/otp/send → 202 · Kod SMS ile gönderildi: 123456');
+  clearInterval(otpTimer);
+  otpTimer=setInterval(()=>{ R.otpLeft--; const cd=document.getElementById('cd');
+    if(cd) cd.innerHTML=R.otpLeft>0?`Yeniden gönderim: <b>${R.otpLeft} sn</b>`:`<a href="#" onclick="resendOtp();return false">Kodu yeniden gönder</a>`;
+    if(R.otpLeft<=0) clearInterval(otpTimer); },1000);
+}
+function resendOtp(){ sendOtp(); toast('📨 Kod yeniden gönderildi (saatte 5 / günde 10 limit).'); }
+function otpIn(i,el){ el.value=el.value.replace(/\D/g,''); R.otp[i]=el.value;
+  if(el.value&&i<5) document.getElementById('o'+(i+1)).focus(); }
+function otpKey(i,e){ if(e.key==='Backspace'&&!e.target.value&&i>0) document.getElementById('o'+(i-1)).focus(); }
+let otpFail=0;
+function verifyOtp(){
+  const code=R.otp.join('');
+  if(code.length<6){ toast('⚠️ 6 haneli kodu girin.'); return; }
+  if(code!=='123456'){ otpFail++;
+    document.querySelectorAll('.otp input').forEach(x=>x.classList.add('err'));
+    if(otpFail>=5){ toast('🔒 5 yanlış deneme — 15 dk kilitlendi (demo).'); }
+    else toast('❌ Kod hatalı ('+otpFail+'/5). Demo kod: 123456');
+    return; }
+  otpFail=0; clearInterval(otpTimer);
+  toast('✅ POST auth/otp/verify → otpTicket alındı · telefon doğrulandı');
+  R.step=3; rd();
+}
+
+/* ---- tip bazlı formlar (talep dokümanındaki alan matrisi) ---- */
+function fI(id,lbl,ph,extra){ return `<label class="fld">${lbl}</label><input id="${id}" placeholder="${ph||''}" ${extra||''} onchange="R.f.${id}=this.value">`; }
+function formFor(tip){
+  const kisi=`<div class="secline">Kişisel bilgiler</div>
+    <div class="grid2">${fI('ad','Ad *','')}${fI('soyad','Soyad *','')}</div>`;
+  const sifre=`${fI('sifre','Şifre * (min 8; rakam + büyük harf)','••••••••','type="password"')}`;
+  const eposta=z=>fI('eposta','E-posta '+(z?'*':'(opsiyonel)'),'ornek@firma.com');
+  const firma=(kbelge)=>`<div class="secline">Firma bilgileri (vergi mükellefi)</div>
+    <div class="grid2">${fI('vkn','VKN *','10 hane','inputmode="numeric" maxlength="10"')}
+    <div><label class="fld">Vergi dairesi *</label><select id="vd" onchange="R.f.vd=this.value"><option value="">Seçin…</option><option>İkitelli VD</option><option>Marmara Kurumlar VD</option><option>Kadıköy VD</option></select></div></div>
+    ${fI('unvan','Firma ünvanı (resmî) *','ABC Lojistik A.Ş.')}
+    <div class="grid2">${fI('ticariUnvan','Ticari ünvan (ops.)','')}${fI('mersis','MERSİS no (ops.)','16 hane','inputmode="numeric" maxlength="16"')}</div>
+    ${fI('adres','Firma adresi *','İl / ilçe / mahalle / açık adres')}
+    ${kbelge?`<div class="grid2"><div><label class="fld">K yetki belgesi tipi *</label><select id="kTip" onchange="R.f.kTip=this.value"><option value="">Seçin…</option><option>K1 (yurtiçi ticari)</option><option>K2 (kendi yükü)</option><option>K3 (evden eve)</option></select></div>${fI('kNo','K belge no *','')}</div>`:''}`;
+  const surucu=`<div class="secline">Sürücü yeterlilikleri</div>
+    <div class="grid3"><div><label class="fld">Ehliyet sınıfı *</label><select id="ehliyetSinif" onchange="R.f.ehliyetSinif=this.value"><option value="">Seçin…</option><option>B</option><option>C1</option><option>C</option><option>CE</option><option>D</option></select></div>
+    ${fI('ehliyetNo','Ehliyet no *','')}${fI('ehliyetTarih','Geçerlilik *','','type="date"')}</div>
+    <div class="grid2"><div><label class="fld">SRC belgesi *</label><select id="src" onchange="R.f.src=this.value"><option value="">Seçin…</option><option>SRC4 (yurtiçi eşya)</option><option>SRC2 (yurtiçi yolcu)</option><option>SRC4 + SRC5 (ADR)</option></select></div>${fI('srcTarih','SRC geçerlilik *','','type="date"')}</div>`;
+  const arac=`<div class="secline">Araç</div>
+    <div class="grid2">${fI('plaka','Plaka *','34 ABC 123')}<div><label class="fld">Araç tipi *</label><select id="aracTip" onchange="R.f.aracTip=this.value"><option value="">Seçin…</option><option>Moto</option><option>Van Courier</option><option>Transit</option><option>Kamyonet</option><option>Kamyon</option><option>TIR</option></select></div></div>`;
+  const iban=`${fI('iban','IBAN * (hakediş ödemeleri)','TR__ ____ ____ ____ ____ ____ __')}`;
+  const belgeNotu=t=>`<div class="hintbox">📎 Kayıttan sonra yüklenecek belgeler: ${t} — onaylanmadan teklif alınamaz.</div>`;
+
+  if(tip==='bmus') return kisi+sifre+eposta(false);
+  if(tip==='kmus') return `<div class="hintbox">Bu hesap <b>firma yetkilisi</b> hesabıdır; ek yetkili kullanıcıları sonra ekleyebilirsiniz.</div>`+kisi+eposta(true)+sifre+firma(false)+belgeNotu('vergi levhası, imza sirküleri');
+  if(tip==='btas') return kisi+`<div class="grid2">${fI('tckn','TCKN *','11 hane','inputmode="numeric" maxlength="11"')}${fI('dogum','Doğum tarihi *','','type="date"')}</div>`+eposta(true)+sifre+
+    `<div class="secline">Şahıs şirketi (zorunlu)</div>
+     <div class="hintbox" style="border-color:#fde68a;background:#fffbeb">⚖️ Taşıyıcı olabilmek için <b>vergi mükellefi</b> olmanız gerekir (şahıs şirketi yeterli). VKN'niz yoksa "Kurye Başlangıç Paketi"miz şirket kuruluşunda destek olur.</div>
+     <div class="grid2">${fI('vkn','VKN *','10 hane','inputmode="numeric" maxlength="10"')}<div><label class="fld">Vergi dairesi *</label><select id="vd" onchange="R.f.vd=this.value"><option value="">Seçin…</option><option>İkitelli VD</option><option>Kadıköy VD</option></select></div></div>
+     <div class="grid2"><div><label class="fld">K yetki belgesi *</label><select id="kTip" onchange="R.f.kTip=this.value"><option value="">Seçin…</option><option>K1</option><option>K2</option></select></div>${fI('kNo','K belge no *','')}</div>`
+    +surucu+arac+iban+belgeNotu('vergi levhası, ehliyet, SRC, ruhsat, K belgesi');
+  /* ktas */
+  return `<div class="hintbox">Bu hesap <b>filo yetkilisi</b> hesabıdır. Sürücüler kayıt sonrası <b>davet + kendi OTP onayı</b> ile eklenir (çift onay); araçlar filo ekranından havuza tanımlanır.</div>`
+    +kisi+eposta(true)+sifre+firma(true)+iban+belgeNotu('vergi levhası, imza sirküleri, K belgesi');
+}
+function submitReg(){
+  /* tip bazlı zorunlu alan kontrolü (demo) */
+  const need={bmus:['ad','soyad','sifre'],
+    kmus:['ad','soyad','eposta','sifre','vkn','vd','unvan','adres'],
+    btas:['ad','soyad','tckn','eposta','sifre','vkn','vd','kTip','kNo','ehliyetSinif','ehliyetNo','ehliyetTarih','src','srcTarih','plaka','aracTip','iban'],
+    ktas:['ad','soyad','eposta','sifre','vkn','vd','unvan','adres','kTip','kNo','iban']}[R.tip];
+  const eksik=need.filter(id=>{ const e=document.getElementById(id); return !e||!e.value.trim(); });
+  if(eksik.length){ toast('⚠️ Zorunlu alanlar eksik: '+eksik.slice(0,5).join(', ')+(eksik.length>5?'…':'')); return; }
+  if(['kmus','btas','ktas'].includes(R.tip)&&digits(val('vkn')).length!==10){ toast('⚠️ VKN 10 hane olmalı.'); return; }
+  if(R.tip==='btas'&&digits(val('tckn')).length!==11){ toast('⚠️ TCKN 11 hane olmalı.'); return; }
+  if(val('sifre').length<8||!/\d/.test(val('sifre'))||!/[A-ZĞÜŞİÖÇ]/.test(val('sifre'))){ toast('⚠️ Şifre min 8 karakter, rakam ve büyük harf içermeli.'); return; }
+  const ep={bmus:'mobile/users',kmus:'mobile/corporate-customers',btas:'mobile/carriers/individual',ktas:'mobile/carriers/corporate'}[R.tip];
+  toast('✅ (demo) POST api/v1/identity/'+ep+' → 201 · otpTicket + consents ile kayıt tamamlandı');
+  R.step=4; rd();
+}
+
+/* ============================================================
+   GİRİŞ AKIŞI (telefon + şifre → OTP 2FA)
+============================================================ */
+let L={step:0, tel:'', otp:['','','','','','']};
+function renderLogin(){
+  const body=document.getElementById('lBody'), foot=document.getElementById('lFoot');
+  if(L.step===0){
+    body.innerHTML=`
+      <label class="fld">Cep telefonu</label>
+      <input id="lTel" inputmode="tel" maxlength="14" placeholder="05XX XXX XX XX" value="${L.tel}" oninput="this.value=telFmt(this.value);L.tel=this.value">
+      <label class="fld">Şifre</label>
+      <input id="lPass" type="password" placeholder="••••••••">
+      <div style="text-align:right;margin-top:8px"><a href="#" style="font-size:12px" onclick="toast('🔑 Şifre sıfırlama: telefona OTP → yeni şifre (PasswordReset purpose).');return false">Şifremi unuttum</a></div>`;
+    foot.innerHTML=`<button class="btn pri" onclick="loginStep1()">Giriş Yap →</button>`;
+  } else if(L.step===1){
+    body.innerHTML=`
+      <div class="hintbox">🔐 <b>2. adım doğrulaması:</b> ${L.tel||'05•• ••• •• ••'} numarasına SMS kodu gönderildi (demo: 123456).</div>
+      <div class="otp">${L.otp.map((d,i)=>`<input id="lo${i}" maxlength="1" inputmode="numeric" value="${d}"
+        oninput="this.value=this.value.replace(/\\D/g,'');L.otp[${i}]=this.value;if(this.value&&${i}<5)document.getElementById('lo'+(${i}+1)).focus()"
+        onkeydown="if(event.key==='Backspace'&&!this.value&&${i}>0)document.getElementById('lo'+(${i}-1)).focus()">`).join('')}</div>`;
+    foot.innerHTML=`<div class="backrow"><button class="btn ghost" onclick="L.step=0;renderLogin()">← Geri</button></div>
+      <button class="btn pri" onclick="loginStep2()">Doğrula ve Gir →</button>`;
+  } else {
+    const pending=document.getElementById('pendingSim').checked;
+    body.innerHTML=`<div class="result">
+      <div class="big">${pending?'🕓':'✅'}</div>
+      <h2>${pending?'Hesabınız Onay Bekliyor':'Giriş başarılı!'}</h2>
+      <p>${pending
+        ?'Belgeleriniz inceleniyor. <b>Sınırlı mod:</b> yalnız belge durumunuzu görebilir ve eksik belge yükleyebilirsiniz; onaylanınca teklif almaya başlarsınız.'
+        :'Token alındı (access + refresh). Uygulamaya yönlendiriliyorsunuz…'}</p>
+      ${pending?'<div class="hintbox" style="text-align:left;margin-top:12px">📎 <span class="pill warn" style="margin:0">Vergi levhası: inceleniyor</span> <span class="pill bad" style="margin:0">SRC: eksik</span> <span class="pill ok" style="margin:0">Ehliyet: onaylı</span></div>':''}
+    </div>`;
+    foot.innerHTML=`<button class="btn pri" onclick="L={step:0,tel:'',otp:['','','','','','']};renderLogin()">Yeniden dene</button>`;
+  }
+}
+function loginStep1(){
+  if(digits(L.tel).length!==11||!val('lPass')){ toast('⚠️ Telefon ve şifre girin.'); return; }
+  toast('✅ Şifre doğrulandı → 2FA kodu gönderildi (POST auth/otp/send · purpose=Login2FA)');
+  L.step=1; L.otp=['','','','','','']; renderLogin();
+}
+function loginStep2(){
+  if(L.otp.join('')!=='123456'){ toast('❌ Kod hatalı. Demo: 123456'); return; }
+  toast('✅ POST auth/otp/verify → giriş tamam');
+  L.step=2; renderLogin();
+}
+
+/* ============================================================
+   ADMIN GÖRÜNÜMÜ — iki ayrı ekran
+============================================================ */
+const MOBUSERS=[
+  {ad:'Ayşe Yılmaz', tip:'Bireysel Müşteri', gsm:'05•• ••• 12 34', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'—'},
+  {ad:'ABC Lojistik A.Ş. (M.Kaya)', tip:'Kurumsal Müşteri', gsm:'05•• ••• 88 21', durum:'KYC Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🏢 Firma kartı →'},
+  {ad:'Mehmet Yıldız', tip:'Bireysel Taşıyıcı', gsm:'05•• ••• 42 18', durum:'Onay Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🚚 Sürücü kartı →'},
+  {ad:'Hızlı Filo Ltd. (E.Demir)', tip:'Kurumsal Taşıyıcı', gsm:'05•• ••• 67 09', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'🏢 Firma kartı →'},
+  {ad:'Can Öz', tip:'Bireysel Taşıyıcı', gsm:'05•• ••• 33 71', durum:'Bloklu', cls:'st-no', tel2fa:'✗', profil:'🚚 Sürücü kartı →'},
+];
+const ADMUSERS=[
+  {ad:'Burak Eren', rol:'SuperAdmin', eposta:'admin@efso.app', g2fa:'Zorunlu ✓', son:'bugün 09:12'},
+  {ad:'Selin Ak', rol:'Operasyon', eposta:'selin@efso.app', g2fa:'Zorunlu ✓', son:'bugün 08:40'},
+  {ad:'Kerem Tan', rol:'Finans', eposta:'kerem@efso.app', g2fa:'Zorunlu ✓', son:'dün 17:05'},
+];
+function adminView(v){
+  document.querySelectorAll('.aside .ni').forEach(n=>n.classList.toggle('active', n.dataset.a===v));
+  const m=document.getElementById('aMain');
+  if(v==='mob'){
+    m.innerHTML=`<h2>📱 Mobil Kullanıcılar <span class="pill info" style="vertical-align:3px">müşteri + taşıyıcı</span></h2>
+    <p class="sub">Self-register hesaplar. Hesap işlemleri (2FA sıfırla, blokla) YALNIZ buradadır; KYC/belge onayı Firma & Sürücü kartlarından yapılır — buradan link verilir.</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input placeholder="🔎 Ad / GSM / e-posta ara…" style="max-width:240px">
+      <select style="max-width:170px"><option>Tip: Tümü</option><option>Bireysel Müşteri</option><option>Kurumsal Müşteri</option><option>Bireysel Taşıyıcı</option><option>Kurumsal Taşıyıcı</option></select>
+      <select style="max-width:150px"><option>Durum: Tümü</option><option>Aktif</option><option>Onay Bekliyor</option><option>Bloklu</option></select>
+    </div>
+    <table class="t"><thead><tr><th>Kullanıcı</th><th>Tip</th><th>GSM (maskeli)</th><th>Tel. doğrul.</th><th>Durum</th><th>Bağlı profil</th><th>Hesap işlemleri</th></tr></thead><tbody>
+    ${MOBUSERS.map(u=>`<tr><td><b>${u.ad}</b></td><td>${u.tip}</td><td>${u.gsm}</td><td class="${u.tel2fa==='✓'?'ok':'no'}">${u.tel2fa}</td>
+      <td><span class="sbadge ${u.cls}">${u.durum}</span></td>
+      <td>${u.profil==='—'?'—':`<a href="#" onclick="toast('→ ${u.profil.replace(/ →/,'')} açılır (KYC onayı ORADA yapılır; hesap işlemleri burada kalır).');return false">${u.profil}</a>`}</td>
+      <td><button class="btn sm sec" onclick="toast('2FA sıfırlandı — audit loglandı (POST users/{id}/reset-2fa).')">2FA sıfırla</button>
+      <button class="btn sm sec" onclick="toast('${u.durum==='Bloklu'?'Blok kaldırıldı':'Hesap bloklandı'} — audit loglandı.')">${u.durum==='Bloklu'?'Aktifleştir':'Blokla'}</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="hintbox" style="margin-top:12px">🔗 <b>Tek kaynak kuralı:</b> Firma tanımlama ekranındaki "kullanıcılar" sekmesi bu listenin <b>filtrelenmiş görünümüne link</b> verir; orada hesap butonu YOKTUR. KYC onay/ret yetkisi (operasyon) ile hesap yönetimi yetkisi (sistem) ayrı permission'lardır.</div>`;
+  } else {
+    m.innerHTML=`<h2>🛡️ Admin Kullanıcıları <span class="pill bad" style="vertical-align:3px">yalnız SuperAdmin görür</span></h2>
+    <p class="sub">Backoffice personeli. Self-register YOK — davet maili ile oluşturulur; girişte 2FA <b>zorunlu</b>; tüm işlemler audit loglanır.</p>
+    <div style="margin-bottom:12px"><button class="btn sm pri" onclick="toast('Davet akışı: ad+e-posta+GSM+rol → kurulum maili → kullanıcı şifresini belirler → ilk girişte OTP (POST backoffice/users).')">+ Admin Kullanıcı Davet Et</button></div>
+    <table class="t"><thead><tr><th>Kullanıcı</th><th>Rol</th><th>E-posta</th><th>Giriş 2FA</th><th>Son giriş</th><th>İşlem</th></tr></thead><tbody>
+    ${ADMUSERS.map(u=>`<tr><td><b>${u.ad}</b></td><td><span class="sbadge st-info">${u.rol}</span></td><td>${u.eposta}</td><td class="ok">${u.g2fa}</td><td>${u.son}</td>
+      <td><button class="btn sm sec" onclick="toast('Rol/permission düzenleme (identity.backoffice_users.manage_roles).')">Roller</button>
+      <button class="btn sm sec" onclick="toast('Hesap deaktive edildi — oturumları düşürüldü, audit loglandı.')">Deaktive</button></td></tr>`).join('')}
+    </tbody></table>
+    <div class="hintbox" style="margin-top:12px">🔒 <b>Neden ayrı ekran?</b> (1) Tehdit modeli: admin hesabı = tüm sistem; mobil hesap = tek müşteri. (2) Yaşam döngüsü: davet/rol vs self-register/KYC. (3) Yetki ayrımı (separation of duties) ve temiz audit. (4) Backend zaten ayrı (BackOffice / Mobile controller). Mobil kullanıcı listesine operasyon erişir; bu ekrana yalnız SuperAdmin.</div>`;
+  }
+}
+
+rd(); renderLogin();
+</script>
+</body>
+</html>
