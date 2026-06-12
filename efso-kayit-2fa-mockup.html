@@ -510,17 +510,21 @@ function loginStep2(){
 /* ============================================================
    ADMIN GÖRÜNÜMÜ — iki ayrı ekran
 ============================================================ */
+/* KULLANICI TANIMLAMA ALANLARI (Burak'ın net listesi):
+   Ad Soyad · E-posta · Telefon · Rol · Departman · Durum · E-posta doğrulama · Telefon doğrulama ·
+   Son OTP tarihi · Son giriş tarihi · Oluşturma tarihi.
+   VKN/K belgesi/ehliyet/IBAN gibi alanlar KULLANICIDA TUTULMAZ — Firma/Sürücü kaydındadır, "Bağlı profil" ile İLİŞKİLENDİRİLİR. */
 const MOBUSERS=[
-  {ad:'Ayşe Yılmaz', tip:'Bireysel Müşteri', gsm:'05•• ••• 12 34', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'— (onay gerekmez)'},
-  {ad:'ABC Lojistik A.Ş. (M.Kaya)', tip:'Kurumsal Müşteri', gsm:'05•• ••• 88 21', durum:'KYC Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🏢 Firma kartı →'},
-  {ad:'Mehmet Yıldız', tip:'Bireysel Taşıyıcı', gsm:'05•• ••• 42 18', durum:'Onay Bekliyor', cls:'st-wait', tel2fa:'✓', profil:'🚚 Sürücü kartı →'},
-  {ad:'Hızlı Filo Ltd. (E.Demir)', tip:'Kurumsal Taşıyıcı', gsm:'05•• ••• 67 09', durum:'Aktif', cls:'st-ok', tel2fa:'✓', profil:'🏢 Firma kartı →'},
-  {ad:'Can Öz', tip:'Bireysel Taşıyıcı', gsm:'05•• ••• 33 71', durum:'Bloklu', cls:'st-no', tel2fa:'✗', profil:'🚚 Sürücü kartı →'},
+  {ad:'Ayşe Yılmaz', eposta:'ayse@mail.com', tel:'05•• ••• 12 34', rol:'Customer', durum:'Aktif', cls:'st-ok', edog:'✓', tdog:'✓', sonOtp:'12.06 09:41', sonGiris:'12.06 09:41', olusturma:'10.06.2026', profil:'— (bireysel, onay gerekmez)'},
+  {ad:'Mehmet Kaya', eposta:'m.kaya@abclojistik.com', tel:'05•• ••• 88 21', rol:'CorporateCustomer', durum:'KYC Bekliyor', cls:'st-wait', edog:'✓', tdog:'✓', sonOtp:'11.06 16:02', sonGiris:'11.06 16:03', olusturma:'11.06.2026', profil:'🏢 ABC Lojistik A.Ş. →'},
+  {ad:'Mehmet Yıldız', eposta:'myildiz@mail.com', tel:'05•• ••• 42 18', rol:'Courier', durum:'Onay Bekliyor', cls:'st-wait', edog:'✗', tdog:'✓', sonOtp:'12.06 08:15', sonGiris:'—', olusturma:'12.06.2026', profil:'🚚 Sürücü kartı →'},
+  {ad:'Emre Demir', eposta:'emre@hizlifilo.com', tel:'05•• ••• 67 09', rol:'FleetManager', durum:'Aktif', cls:'st-ok', edog:'✓', tdog:'✓', sonOtp:'12.06 07:55', sonGiris:'12.06 07:56', olusturma:'02.06.2026', profil:'🏢 Hızlı Filo Ltd. →'},
+  {ad:'Can Öz', eposta:'canoz@mail.com', tel:'05•• ••• 33 71', rol:'Courier', durum:'Bloklu', cls:'st-no', edog:'✓', tdog:'✗', sonOtp:'08.06 22:10', sonGiris:'08.06 22:11', olusturma:'01.06.2026', profil:'🚚 Sürücü kartı →'},
 ];
 const ADMUSERS=[
-  {ad:'Burak Eren', rol:'SuperAdmin', eposta:'admin@efso.app', g2fa:'Zorunlu ✓', son:'bugün 09:12'},
-  {ad:'Selin Ak', rol:'Operasyon', eposta:'selin@efso.app', g2fa:'Zorunlu ✓', son:'bugün 08:40'},
-  {ad:'Kerem Tan', rol:'Finans', eposta:'kerem@efso.app', g2fa:'Zorunlu ✓', son:'dün 17:05'},
+  {ad:'Burak Eren', eposta:'admin@efso.app', tel:'05•• ••• 01 01', rol:'SuperAdmin', dep:'Yönetim', durum:'Aktif', cls:'st-ok', edog:'✓', tdog:'✓', sonOtp:'12.06 09:12', sonGiris:'12.06 09:12', olusturma:'01.05.2026'},
+  {ad:'Selin Ak', eposta:'selin@efso.app', tel:'05•• ••• 02 02', rol:'Operasyon', dep:'Operasyon', durum:'Aktif', cls:'st-ok', edog:'✓', tdog:'✓', sonOtp:'12.06 08:40', sonGiris:'12.06 08:40', olusturma:'05.05.2026'},
+  {ad:'Kerem Tan', eposta:'kerem@efso.app', tel:'05•• ••• 03 03', rol:'Finans', dep:'Finans', durum:'Pasif', cls:'st-no', edog:'✓', tdog:'✓', sonOtp:'11.06 17:05', sonGiris:'11.06 17:05', olusturma:'05.05.2026'},
 ];
 function adminView(v){
   document.querySelectorAll('.aside .ni').forEach(n=>n.classList.toggle('active', n.dataset.a===v));
@@ -533,22 +537,30 @@ function adminView(v){
       <select style="max-width:170px"><option>Tip: Tümü</option><option>Bireysel Müşteri</option><option>Kurumsal Müşteri</option><option>Bireysel Taşıyıcı</option><option>Kurumsal Taşıyıcı</option></select>
       <select style="max-width:150px"><option>Durum: Tümü</option><option>Aktif</option><option>Onay Bekliyor</option><option>Bloklu</option></select>
     </div>
-    <table class="t"><thead><tr><th>Kullanıcı</th><th>Tip</th><th>GSM (maskeli)</th><th>Tel. doğrul.</th><th>Durum</th><th>Bağlı profil</th><th>Hesap işlemleri</th></tr></thead><tbody>
-    ${MOBUSERS.map(u=>`<tr><td><b>${u.ad}</b></td><td>${u.tip}</td><td>${u.gsm}</td><td class="${u.tel2fa==='✓'?'ok':'no'}">${u.tel2fa}</td>
+    <table class="t"><thead><tr><th>Ad Soyad / E-posta</th><th>Telefon</th><th>Rol</th><th>Durum</th><th>✉️ doğr.</th><th>📱 doğr.</th><th>Son OTP</th><th>Son giriş</th><th>Oluşturma</th><th>Bağlı profil (firma/sürücü)</th><th>İşlem</th></tr></thead><tbody>
+    ${MOBUSERS.map(u=>`<tr><td><b>${u.ad}</b><br><span style="color:var(--muted);font-size:11px">${u.eposta}</span></td>
+      <td>${u.tel}</td><td><span class="sbadge st-info">${u.rol}</span></td>
       <td><span class="sbadge ${u.cls}">${u.durum}</span></td>
-      <td>${u.profil.startsWith('—')?u.profil:`<a href="#" onclick="toast('→ ${u.profil.replace(/ →/,'')} açılır (KYC onayı ORADA yapılır; hesap işlemleri burada kalır).');return false">${u.profil}</a>`}</td>
-      <td><button class="btn sm sec" onclick="toast('2FA sıfırlandı — audit loglandı (POST users/{id}/reset-2fa).')">2FA sıfırla</button>
-      <button class="btn sm sec" onclick="toast('${u.durum==='Bloklu'?'Blok kaldırıldı':'Hesap bloklandı'} — audit loglandı.')">${u.durum==='Bloklu'?'Aktifleştir':'Blokla'}</button></td></tr>`).join('')}
+      <td class="${u.edog==='✓'?'ok':'no'}">${u.edog}</td><td class="${u.tdog==='✓'?'ok':'no'}">${u.tdog}</td>
+      <td>${u.sonOtp}</td><td>${u.sonGiris}</td><td>${u.olusturma}</td>
+      <td>${u.profil.startsWith('—')?u.profil:`<a href="#" onclick="toast('→ ${u.profil.replace(/ →/,'')} açılır (VKN/K belgesi/ehliyet/IBAN gibi alanlar ORADA; KYC onayı orada yapılır, hesap işlemleri burada).');return false">${u.profil}</a>`}</td>
+      <td><button class="btn sm sec" onclick="toast('2FA sıfırlandı — audit loglandı (POST users/{id}/reset-2fa).')">2FA</button>
+      <button class="btn sm sec" onclick="toast('${u.durum==='Bloklu'?'Blok kaldırıldı':'Hesap bloklandı'} — audit loglandı (PUT deactivate/reactivate).')">${u.durum==='Bloklu'?'Aktifleştir':'Blokla'}</button>
+      <button class="btn sm sec" onclick="toast('Soft-delete (DELETE users/{id}) — KVKK saklama süreleri gözetilir, anonimleştirme job\\'ına düşer.')">Sil</button></td></tr>`).join('')}
     </tbody></table>
     <div class="hintbox" style="margin-top:12px">🔗 <b>Tek kaynak kuralı:</b> Firma tanımlama ekranındaki "kullanıcılar" sekmesi bu listenin <b>filtrelenmiş görünümüne link</b> verir; orada hesap butonu YOKTUR. KYC onay/ret yetkisi (operasyon) ile hesap yönetimi yetkisi (sistem) ayrı permission'lardır.</div>`;
   } else {
     m.innerHTML=`<h2>🛡️ Admin Kullanıcıları <span class="pill bad" style="vertical-align:3px">yalnız SuperAdmin görür</span></h2>
     <p class="sub">Backoffice personeli. Self-register YOK — davet maili ile oluşturulur; girişte 2FA <b>zorunlu</b>; tüm işlemler audit loglanır.</p>
     <div style="margin-bottom:12px"><button class="btn sm pri" onclick="toast('Davet akışı: ad+e-posta+GSM+rol → kurulum maili → kullanıcı şifresini belirler → ilk girişte OTP (POST backoffice/users).')">+ Admin Kullanıcı Davet Et</button></div>
-    <table class="t"><thead><tr><th>Kullanıcı</th><th>Rol</th><th>E-posta</th><th>Giriş 2FA</th><th>Son giriş</th><th>İşlem</th></tr></thead><tbody>
-    ${ADMUSERS.map(u=>`<tr><td><b>${u.ad}</b></td><td><span class="sbadge st-info">${u.rol}</span></td><td>${u.eposta}</td><td class="ok">${u.g2fa}</td><td>${u.son}</td>
+    <table class="t"><thead><tr><th>Ad Soyad / E-posta</th><th>Telefon</th><th>Rol</th><th>Departman</th><th>Durum</th><th>✉️ doğr.</th><th>📱 doğr.</th><th>Son OTP</th><th>Son giriş</th><th>Oluşturma</th><th>İşlem</th></tr></thead><tbody>
+    ${ADMUSERS.map(u=>`<tr><td><b>${u.ad}</b><br><span style="color:var(--muted);font-size:11px">${u.eposta}</span></td>
+      <td>${u.tel}</td><td><span class="sbadge st-info">${u.rol}</span></td><td>${u.dep}</td>
+      <td><span class="sbadge ${u.cls}">${u.durum}</span></td>
+      <td class="${u.edog==='✓'?'ok':'no'}">${u.edog}</td><td class="${u.tdog==='✓'?'ok':'no'}">${u.tdog}</td>
+      <td>${u.sonOtp}</td><td>${u.sonGiris}</td><td>${u.olusturma}</td>
       <td><button class="btn sm sec" onclick="toast('Rol/permission düzenleme (identity.backoffice_users.manage_roles).')">Roller</button>
-      <button class="btn sm sec" onclick="toast('Hesap deaktive edildi — oturumları düşürüldü, audit loglandı.')">Deaktive</button></td></tr>`).join('')}
+      <button class="btn sm sec" onclick="toast('${u.durum==='Pasif'?'Hesap aktifleştirildi':'Hesap deaktive edildi — oturumları düşürüldü'} — audit loglandı.')">${u.durum==='Pasif'?'Aktifleştir':'Deaktive'}</button></td></tr>`).join('')}
     </tbody></table>
     <div class="hintbox" style="margin-top:12px">🔒 <b>Neden ayrı ekran?</b> (1) Tehdit modeli: admin hesabı = tüm sistem; mobil hesap = tek müşteri. (2) Yaşam döngüsü: davet/rol vs self-register/KYC. (3) Yetki ayrımı (separation of duties) ve temiz audit. (4) Backend zaten ayrı (BackOffice / Mobile controller). Mobil kullanıcı listesine operasyon erişir; bu ekrana yalnız SuperAdmin.</div>`;
   }
