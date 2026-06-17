@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EFSO — Tam Araç vs Planlı Gönderim (harman)</title>
+<style>
+  :root{
+    --brand:#1457e6;--brand-d:#0d3fb0;--ink:#1a2233;--muted:#6b7689;--line:#e2e7f0;
+    --soft:#f5f7fb;--green:#16a34a;--amber:#f59e0b;--red:#e23b3b;--teal:#0fb6a8;--bg:#eef2f8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);padding:22px;font-size:14px}
+  .wrap{max-width:1120px;margin:0 auto}
+  header h1{font-size:21px;font-weight:700}
+  header p{color:var(--muted);font-size:13px;margin-top:4px}
+  .crumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin:14px 0}
+  .crumb a{color:var(--brand);cursor:pointer;font-weight:600}
+  .hide{display:none}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(16,24,40,.04)}
+  .card+.card{margin-top:14px}
+  .sec-t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:11px;display:flex;align-items:center;gap:7px}
+  .sec-t .n{width:18px;height:18px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+  label{display:block;font-size:12px;font-weight:600;color:#34405a;margin:0 0 5px}
+  .field{margin-bottom:12px}
+  select,input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;background:#fff}
+  select:focus,input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(20,87,230,.12)}
+  .row{display:grid;gap:10px}.row.c2{grid-template-columns:1fr 1fr}.row.c3{grid-template-columns:1fr 1fr 1fr}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{border:1px solid var(--line);border-radius:10px;padding:9px 14px;font-size:13px;cursor:pointer;background:#fff;user-select:none;transition:.12s;font-weight:600}
+  .chip:hover{border-color:var(--brand)}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .chip small{display:block;font-weight:400;font-size:10.5px;opacity:.8}
+
+  /* ENTRY */
+  .entry{text-align:center;padding:14px 0 0}
+  .entry h2{font-size:24px;font-weight:800}
+  .entry .lead{color:var(--muted);font-size:14px;margin:8px auto 26px;max-width:620px}
+  .doors{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .door{border:2px solid var(--line);border-radius:18px;padding:24px;text-align:left;cursor:pointer;background:#fff;transition:.15s;position:relative;overflow:hidden}
+  .door:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(16,24,40,.12);border-color:var(--brand)}
+  .door .big{font-size:40px}
+  .door h3{font-size:19px;margin:10px 0 4px}
+  .door .tag{position:absolute;top:16px;right:16px;font-size:10px;font-weight:700;padding:4px 9px;border-radius:20px}
+  .door.a .tag{background:#fff1d9;color:#b8730a}
+  .door.b .tag{background:#e6f6f4;color:#0b8c81}
+  .door p{color:var(--muted);font-size:13px;line-height:1.55;margin-bottom:12px}
+  .door ul{list-style:none;font-size:12.5px;color:#3a465e}
+  .door li{padding:3px 0;display:flex;gap:7px}
+  .door .go{display:inline-block;margin-top:14px;color:var(--brand);font-weight:700;font-size:14px}
+  .door.a{border-top:4px solid var(--amber)}
+  .door.b{border-top:4px solid var(--teal)}
+  .helper{font-size:12px;color:var(--muted);margin-top:18px;background:#fff;border:1px dashed var(--line);border-radius:12px;padding:12px 14px;line-height:1.6}
+
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;align-items:start}
+  .panel{position:sticky;top:16px}
+  .toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer;background:#fff}
+  .toggle.on{border-color:var(--brand);background:#f3f7ff}
+  .toggle .t{font-size:12.5px;font-weight:600}.toggle .d{font-size:11px;color:var(--muted)}
+  .sw{width:36px;height:21px;border-radius:20px;background:#cdd5e3;position:relative;flex:0 0 auto;transition:.15s}
+  .sw::after{content:"";position:absolute;width:17px;height:17px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .toggle.on .sw{background:var(--brand)}.toggle.on .sw::after{left:17px}
+  .expander{margin-top:6px;border:1px dashed #c9d4e6;border-radius:11px;overflow:hidden}
+  .expander .head{padding:11px 13px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--brand);display:flex;justify-content:space-between;background:var(--soft)}
+  .expander .body{padding:13px;border-top:1px dashed #c9d4e6}
+  .vehcards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .veh-c{border:1px solid var(--line);border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer;transition:.12s;background:#fff}
+  .veh-c:hover{border-color:var(--brand)}
+  .veh-c.on{border-color:var(--brand);background:#eef4ff;box-shadow:0 0 0 2px rgba(20,87,230,.16)}
+  .veh-c .e{font-size:22px}.veh-c .l{font-size:11px;font-weight:600;margin-top:2px}.veh-c .c{font-size:10px;color:var(--muted)}
+  .kapgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+  .kap{border:1px solid var(--line);border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;background:#fff;transition:.12s}
+  .kap:hover{border-color:var(--brand)}.kap.on{border-color:var(--brand);background:#eef4ff}
+  .kap .e{font-size:19px}.kap .l{font-size:10px;font-weight:600;margin-top:2px}
+
+  .sum .li{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .sum .li .k{color:var(--muted)}.sum .li .v{font-weight:600;text-align:right}
+  .price{background:linear-gradient(90deg,#1457e6,#0d3fb0);color:#fff;border-radius:12px;padding:13px;text-align:center;margin:12px 0}
+  .price .x{font-size:24px;font-weight:800}.price .l{font-size:11px;opacity:.9}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px}
+  .tag2{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .tag2.doc{background:#eef4ff;color:var(--brand)}.tag2.chk{background:#fff1d9;color:#b8730a}
+  .bridge{border-radius:12px;padding:13px;margin-top:12px;font-size:12.5px;line-height:1.5;display:none}
+  .bridge.show{display:block}
+  .bridge.up{background:#fff7e6;border:1px solid #f3d68a;color:#92600a}
+  .bridge.down{background:#e6f6f4;border:1px solid #9fe0d8;color:#0b6b62}
+  .bridge b{display:block;margin-bottom:3px}
+  .bridge button{margin-top:8px;background:var(--brand);color:#fff;border:none;border-radius:9px;padding:8px 14px;font-weight:700;font-size:12.5px;cursor:pointer}
+  .btn{display:block;width:100%;text-align:center;padding:13px;border-radius:11px;font-size:14px;font-weight:700;color:#fff;background:var(--green);border:none;cursor:pointer;box-shadow:0 6px 16px rgba(22,163,74,.26);margin-top:8px}
+  .priceopts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:6px}
+  .po{border:1px solid var(--line);border-radius:10px;padding:9px;text-align:center;cursor:pointer}
+  .po.on{border-color:var(--brand);background:#eef4ff}
+  .po .t{font-size:11px;color:var(--muted)}.po .p{font-size:15px;font-weight:800;color:var(--brand)}.po .e{font-size:10px;color:var(--muted)}
+  .stopline{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+  .stopline .dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .addstop{font-size:12px;color:var(--brand);font-weight:600;cursor:pointer;margin-top:2px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}.panel{position:static}.doors{grid-template-columns:1fr}.vehcards{grid-template-columns:repeat(2,1fr)}.kapgrid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🚀 EFSO — Tam Araç vs Planlı Gönderim</h1>
+    <p>Kimliğe göre değil <b>işin şekline göre</b> ayrım: aynı motor, iki arayüz. Tam Araç = az soru · Planlı = motorun planlaması için detay. (Tasarım simülasyonu.)</p>
+  </header>
+
+  <div class="crumb" id="crumb"></div>
+
+  <!-- ================= ENTRY ================= -->
+  <div id="vEntry">
+    <div class="entry">
+      <h2>Ne taşıyalım?</h2>
+      <div class="lead">İki yol da aynı sistemde ilerler; fiyat seçtiğiniz teslimat zamanına göre değişir, onaydan önce tüm kalemleri görürsünüz.</div>
+      <div class="doors">
+        <div class="door a" onclick="go('hizli')">
+          <span class="tag">HIZLI</span>
+          <div class="big">🚚</div>
+          <h3>Tam Araç</h3>
+          <p>Bir aracı/kuryeyi <b>komple</b> tutun. Az adım, hızlı sonuç. Anahtar, tablet, tek araçlık iş için ideal.</p>
+          <ul>
+            <li>⏱️ Önce zamanlama → araç tipi → adres &amp; kap</li>
+            <li>🧾 Minimum bilgi — motor karar vermez, araç sizin</li>
+            <li>➕ İsteyen "Detay ekle" ile derinleşebilir</li>
+          </ul>
+          <span class="go">Başla →</span>
+        </div>
+        <div class="door b" onclick="go('planli')">
+          <span class="tag">PLANLI</span>
+          <div class="big">🧩</div>
+          <h3>Planlı Gönderim</h3>
+          <p>Yükünüzü verin, <b>sistem en uygun aracı ve rotayı planlasın</b>. Çok durak, özel koşul, optimizasyon ve maliyet kontrolü.</p>
+          <ul>
+            <li>📦 Yük kalemleri (kap · kategori · özel koşul)</li>
+            <li>📍 Çok alım/teslim noktası + eşleştirme</li>
+            <li>⚙️ Araç önerisi · belge · kontrol · fiyat-zaman</li>
+          </ul>
+          <span class="go">Başla →</span>
+        </div>
+      </div>
+      <div class="helper">💡 <b>Hangisi?</b> "Bir aracı baştan sona ben kullanacağım" diyorsanız <b>Tam Araç</b>. "Yükü siz taşıyın, en iyi şekilde ayarlayın" diyorsanız <b>Planlı</b>. Emin değilseniz Tam Araç ile başlayın — sistem gerekirse Planlı'ya davet eder.</div>
+    </div>
+  </div>
+
+  <!-- ================= HIZLI / TAM ARAÇ ================= -->
+  <div id="vHizli" class="hide">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div class="sec-t"><span class="n">1</span> Zamanlama</div>
+          <div class="chips" id="hZaman">
+            <div class="chip on" data-z="express">Express<small>en kısa sürede</small></div>
+            <div class="chip" data-z="gun">Gün içi<small>bugün, esnek saat</small></div>
+            <div class="chip" data-z="ileri">İleri tarih<small>gün + saat seç</small></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sec-t"><span class="n">2</span> Araç Tipi <span style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0">— komple tutulur</span></div>
+          <div class="vehcards" id="hVeh"></div>
+        </div>
+        <div class="card">
+          <div class="sec-t"><span class="n">3</span> Adres &amp; Kap</div>
+          <div class="row c2">
+            <div class="field"><label>Alım adresi</label><input id="hPickup" placeholder="Nereden"></div>
+            <div class="field"><label>Teslim adresi</label><input id="hDrop" placeholder="Nereye"></div>
+          </div>
+          <div class="row c2">
+            <div class="field"><label>Parça sayısı</label><input type="number" id="hAdet" min="1" value="1"></div>
+            <div class="field"><label>Yaklaşık toplam ağırlık (kg, ops.)</label><input type="number" id="hKg" min="0" placeholder="bilmiyorsanız boş"></div>
+          </div>
+
+          <div class="expander">
+            <div class="head" onclick="toggleExp()">➕ Detay ekle — motorun daha iyi planlaması için (opsiyonel)<span id="expArrow">▾</span></div>
+            <div class="body hide" id="hDetay">
+              <label>Kap cinsi</label>
+              <div class="kapgrid" id="hKap" style="margin-bottom:11px">
+                <div class="kap" data-k="dosya"><div class="e">📄</div><div class="l">Dosya</div></div>
+                <div class="kap" data-k="koli"><div class="e">📦</div><div class="l">Koli</div></div>
+                <div class="kap" data-k="palet"><div class="e">🟫</div><div class="l">Palet</div></div>
+                <div class="kap" data-k="sandik"><div class="e">🧰</div><div class="l">Sandık</div></div>
+                <div class="kap" data-k="bigbag"><div class="e">🛍️</div><div class="l">Big Bag</div></div>
+              </div>
+              <div class="toggle" data-hf="cok"><div><div class="t">Birden fazla durak var</div><div class="d">Farklı adreslere uğrama/teslim</div></div><div class="sw"></div></div>
+              <div class="toggle" data-hf="ozel"><div><div class="t">Özel koşul (ADR / soğuk zincir / kırılgan)</div><div class="d">Belge ve uygun araç gerektirir</div></div><div class="sw"></div></div>
+              <div class="hint" style="font-size:11px;color:var(--muted);margin-top:4px">Bu alanlar zorunlu değil; verirseniz fiyat ve araç önerisi daha isabetli olur.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card panel">
+          <div class="sec-t">🧾 Özet — Tam Araç</div>
+          <div class="sum" id="hSum"></div>
+          <div class="price"><div class="x" id="hPrice">—</div><div class="l" id="hPriceL">tahmini · komple araç</div></div>
+          <div class="bridge up" id="hBridge"></div>
+          <button class="btn" id="hBtn">Onayla ve İlerle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PLANLI ================= -->
+  <div id="vPlanli" class="hide">
+    <div class="grid">
+      <div>
+        <div class="card">
+          <div class="sec-t"><span class="n">1</span> Yük Kalemi</div>
+          <label>Kap cinsi</label>
+          <div class="kapgrid" id="pKap" style="margin-bottom:12px">
+            <div class="kap" data-k="dosya"><div class="e">📄</div><div class="l">Dosya</div></div>
+            <div class="kap" data-k="koli"><div class="e">📦</div><div class="l">Koli</div></div>
+            <div class="kap" data-k="palet"><div class="e">🟫</div><div class="l">Palet</div></div>
+            <div class="kap" data-k="sandik"><div class="e">🧰</div><div class="l">Sandık</div></div>
+            <div class="kap" data-k="bigbag"><div class="e">🛍️</div><div class="l">Big Bag</div></div>
+          </div>
+          <div class="row c3">
+            <div class="field"><label>Kategori</label>
+              <select id="pKat"><option value="">—</option><option value="genel">Genel kargo</option><option value="gida">Gıda</option><option value="tehlikeli">Tehlikeli madde</option><option value="elektronik">Elektronik</option><option value="makine">Makine</option></select>
+            </div>
+            <div class="field"><label>Adet</label><input type="number" id="pAdet" min="1" value="1"></div>
+            <div class="field"><label>Ağırlık/parça (kg)</label><input type="number" id="pKg" min="0" placeholder="0"></div>
+          </div>
+          <div class="toggle" data-pf="adr"><div><div class="t">☣️ Tehlikeli (ADR)</div><div class="d">UN no/sınıf/MSDS</div></div><div class="sw"></div></div>
+          <div class="toggle" data-pf="cold"><div><div class="t">❄️ Soğuk zincir</div><div class="d">Frigo + datalogger</div></div><div class="sw"></div></div>
+        </div>
+        <div class="card">
+          <div class="sec-t"><span class="n">2</span> Duraklar</div>
+          <div id="pStops"></div>
+          <div class="addstop" onclick="addStop()">+ Teslim noktası ekle</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card panel">
+          <div class="sec-t">⚙️ Sistem Önerisi — Planlı</div>
+          <div class="sum" id="pSum"></div>
+          <div style="margin:10px 0 4px"><div class="sec-t" style="margin-bottom:6px">📑 Belgeler</div><div class="tagrow" id="pDocs"><span class="hint" style="color:var(--muted);font-size:11px">—</span></div></div>
+          <div style="margin:10px 0 4px"><div class="sec-t" style="margin-bottom:6px">✅ Kontroller</div><div class="tagrow" id="pChecks"></div></div>
+          <div class="sec-t" style="margin:12px 0 6px">💰 Fiyat-Zaman</div>
+          <div class="priceopts" id="pPrice"></div>
+          <div class="bridge down" id="pBridge"></div>
+          <button class="btn" id="pBtn">Onayla ve İlerle</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const VEH=[
+  {id:'moto',e:'🛵',name:'Moto Kurye',kg:5,base:90},
+  {id:'vanc',e:'🚐',name:'Van Courier',kg:600,base:260},
+  {id:'vant',e:'🚐',name:'Van Transit',kg:1200,base:380},
+  {id:'kmnt',e:'🚚',name:'Kamyonet',kg:1400,base:520,pallet:true},
+  {id:'klsz',e:'🚛',name:'Kamyon Liftsiz',kg:7000,base:980,pallet:true},
+  {id:'klfl',e:'🚛',name:'Kamyon Liftli',kg:7000,base:1120,pallet:true,lift:true},
+  {id:'tirt',e:'🚛',name:'TIR Tenteli',kg:25500,base:2400,pallet:true},
+  {id:'tsal',e:'🏗️',name:'TIR Sal Dorse',kg:25500,base:2700,heavy:true},
+  {id:'tlow',e:'🏗️',name:'TIR Lowbed',kg:60000,base:4200,heavy:true},
+];
+
+// ---------- view nav ----------
+function go(v){
+  ['Entry','Hizli','Planli'].forEach(x=>$('v'+x).classList.add('hide'));
+  $('v'+v.charAt(0).toUpperCase()+v.slice(1)).classList.remove('hide');
+  const names={entry:'Ne taşıyalım?',hizli:'Tam Araç (Hızlı)',planli:'Planlı Gönderim'};
+  $('crumb').innerHTML = v==='entry'?'' : `<a onclick="go('entry')">← Ne taşıyalım?</a> <span>/</span> <b>${names[v]}</b>`;
+  window.scrollTo(0,0);
+  if(v==='hizli') renderH(); if(v==='planli') renderP();
+}
+
+// ================= HIZLI =================
+const H={zaman:'express',veh:'',kap:'',flags:{cok:false,ozel:false}};
+function buildHVeh(){
+  $('hVeh').innerHTML=VEH.map(v=>`<div class="veh-c" data-v="${v.id}"><div class="e">${v.e}</div><div class="l">${v.name}</div><div class="c">${v.kg>=1000?(v.kg/1000)+'t':v.kg+'kg'}</div></div>`).join('');
+  document.querySelectorAll('#hVeh .veh-c').forEach(c=>c.onclick=()=>{document.querySelectorAll('#hVeh .veh-c').forEach(x=>x.classList.remove('on'));c.classList.add('on');H.veh=c.dataset.v;renderH();});
+}
+$('hZaman').querySelectorAll('.chip').forEach(c=>c.onclick=()=>{$('hZaman').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');H.zaman=c.dataset.z;renderH();});
+document.querySelectorAll('#hKap .kap').forEach(k=>k.onclick=()=>{document.querySelectorAll('#hKap .kap').forEach(x=>x.classList.remove('on'));k.classList.add('on');H.kap=k.dataset.k;renderH();});
+document.querySelectorAll('[data-hf]').forEach(t=>t.onclick=()=>{const f=t.dataset.hf;H.flags[f]=!H.flags[f];t.classList.toggle('on',H.flags[f]);renderH();});
+['hPickup','hDrop','hAdet','hKg'].forEach(id=>$(id).addEventListener('input',renderH));
+function toggleExp(){const b=$('hDetay');b.classList.toggle('hide');$('expArrow').textContent=b.classList.contains('hide')?'▾':'▴';}
+const zMul={express:1.25,gun:1.0,ileri:0.9};
+function renderH(){
+  const v=VEH.find(x=>x.id===H.veh);
+  const adet=parseInt($('hAdet').value)||1, kg=parseFloat($('hKg').value)||0;
+  // summary
+  $('hSum').innerHTML=`
+    <div class="li"><span class="k">Mod</span><span class="v">Tam Araç (komple)</span></div>
+    <div class="li"><span class="k">Zamanlama</span><span class="v">${({express:'Express',gun:'Gün içi',ileri:'İleri tarih'})[H.zaman]}</span></div>
+    <div class="li"><span class="k">Araç</span><span class="v">${v?v.e+' '+v.name:'— seçin —'}</span></div>
+    <div class="li"><span class="k">Güzergah</span><span class="v">${($('hPickup').value||'—')} → ${($('hDrop').value||'—')}</span></div>
+    <div class="li"><span class="k">Parça</span><span class="v">${adet}${kg?(' · ~'+kg+'kg'):''}</span></div>`;
+  // price
+  if(v){ const p=Math.round(v.base*zMul[H.zaman]); $('hPrice').textContent='₺'+p.toLocaleString('tr'); }
+  else $('hPrice').textContent='—';
+  // SMART BRIDGE -> Planlı
+  const reasons=[];
+  if(H.flags.cok) reasons.push('birden fazla durak');
+  if(H.flags.ozel) reasons.push('özel koşul (belge/araç)');
+  if(v && kg>v.kg) reasons.push(`yük (${kg}kg) seçili araca (${v.kg}kg) sığmıyor`);
+  if(H.kap==='palet' && v && !v.pallet) reasons.push('palet için uygun araç gerek');
+  const b=$('hBridge');
+  if(reasons.length){
+    b.classList.add('show');
+    b.innerHTML=`<b>🔀 Bu iş Planlı Gönderim'e daha uygun</b>${reasons.join(', ')} var. Planlı'da sistem aracı/rotayı sizin için optimize eder ve belgeleri yönetir.<button onclick="go('planli')">Planlı'ya geç →</button>`;
+  } else b.classList.remove('show');
+}
+
+// ================= PLANLI =================
+const P={kap:'',flags:{adr:false,cold:false},stops:[{type:'pickup'},{type:'drop'}],priceSel:1};
+function renderStops(){
+  $('pStops').innerHTML=P.stops.map((s,i)=>{
+    const isP=s.type==='pickup';
+    return `<div class="stopline"><span class="dot" style="background:${isP?'var(--brand)':'var(--green)'}"></span>
+      <input placeholder="${isP?'Alım adresi':'Teslim adresi '+ (i)}" data-si="${i}" value="${s.addr||''}">
+      ${(!isP && P.stops.filter(x=>x.type==='drop').length>1)?`<span style="cursor:pointer;color:var(--red)" onclick="delStop(${i})">✕</span>`:''}</div>`;
+  }).join('');
+  $('pStops').querySelectorAll('input').forEach(inp=>inp.addEventListener('input',e=>{P.stops[+e.target.dataset.si].addr=e.target.value;renderP();}));
+}
+function addStop(){P.stops.push({type:'drop'});renderStops();renderP();}
+function delStop(i){P.stops.splice(i,1);renderStops();renderP();}
+document.querySelectorAll('#pKap .kap').forEach(k=>k.onclick=()=>{document.querySelectorAll('#pKap .kap').forEach(x=>x.classList.remove('on'));k.classList.add('on');P.kap=k.dataset.k;renderP();});
+document.querySelectorAll('[data-pf]').forEach(t=>t.onclick=()=>{const f=t.dataset.pf;P.flags[f]=!P.flags[f];t.classList.toggle('on',P.flags[f]);renderP();});
+$('pKat').addEventListener('change',()=>{const c=$('pKat').value; if(c==='tehlikeli'){P.flags.adr=true;} if(c==='gida'){P.flags.cold=true;} document.querySelector('[data-pf=adr]').classList.toggle('on',P.flags.adr); document.querySelector('[data-pf=cold]').classList.toggle('on',P.flags.cold); renderP();});
+['pAdet','pKg'].forEach(id=>$(id).addEventListener('input',renderP));
+function recommendP(totKg){
+  let pool=VEH.filter(v=>v.kg>=totKg);
+  if(P.kap==='palet'||P.kap==='bigbag') pool=pool.filter(v=>v.pallet||v.heavy);
+  if(P.flags.adr){} // would require ADR vehicle
+  return pool[0]||VEH[VEH.length-1];
+}
+function renderP(){
+  const adet=parseInt($('pAdet').value)||1, kg=(parseFloat($('pKg').value)||0)*adet;
+  const drops=P.stops.filter(s=>s.type==='drop').length;
+  const v=recommendP(kg||0.1);
+  $('pSum').innerHTML=`
+    <div class="li"><span class="k">Mod</span><span class="v">Planlı / Optimize</span></div>
+    <div class="li"><span class="k">Yük</span><span class="v">${P.kap?P.kap:'—'} · ${adet} adet · ${kg||0}kg</span></div>
+    <div class="li"><span class="k">Önerilen araç</span><span class="v">${v.e} ${v.name}${P.flags.cold?' · frigo':''}${P.flags.adr?' · ADR':''}</span></div>
+    <div class="li"><span class="k">Durak</span><span class="v">1 alım + ${drops} teslim</span></div>`;
+  // docs
+  const docs=['İrsaliye'];
+  if(P.flags.adr){docs.push('ADR Evrakı');docs.push('MSDS');}
+  if(P.flags.cold){docs.push('Soğuk Zincir Kaydı');}
+  $('pDocs').innerHTML=docs.map(d=>`<span class="tag2 doc">${d}</span>`).join('');
+  // checks
+  const chk=['Araç ↔ ekipman uyumu'];
+  if(P.flags.adr)chk.push('ADR + SRC5 sürücü');
+  if(P.flags.cold)chk.push('Frigo + datalogger');
+  if(drops>1)chk.push('Çok durak rota optimizasyonu');
+  $('pChecks').innerHTML=chk.map(c=>`<span class="tag2 chk">${c}</span>`).join('');
+  // price-time matrix
+  const base=v.base + drops*60 + (P.flags.cold?180:0)+(P.flags.adr?250:0);
+  const opts=[{t:'Express',m:1.25},{t:'Gün içi',m:1.0},{t:'İleri',m:0.85}];
+  $('pPrice').innerHTML=opts.map((o,i)=>`<div class="po ${i===P.priceSel?'on':''}" onclick="P.priceSel=${i};renderP()"><div class="t">${o.t}</div><div class="p">₺${Math.round(base*o.m).toLocaleString('tr')}</div><div class="e">${i===2?'en uygun':''}</div></div>`).join('');
+  // SMART BRIDGE -> Tam Araç (down-shift)
+  const simple = drops===1 && !P.flags.adr && !P.flags.cold && (P.kap==='koli'||P.kap==='dosya'||!P.kap) && kg<=1200;
+  const b=$('pBridge');
+  if(simple && (P.kap||kg)){
+    b.classList.add('show');
+    b.innerHTML=`<b>⚡ Bu iş Tam Araç ile daha hızlı</b>Tek durak, özel koşul yok, küçük yük. İsterseniz sade akışla saniyeler içinde tamamlayın.<button onclick="go('hizli')">Tam Araç'a geç →</button>`;
+  } else b.classList.remove('show');
+}
+
+// init
+buildHVeh(); renderStops(); go('entry');
+$('hBtn').onclick=()=>alert('Demo: Tam Araç siparişi onaya gönderildi.');
+$('pBtn').onclick=()=>alert('Demo: Planlı sipariş onaya gönderildi.');
+</script>
+</body>
+</html>
