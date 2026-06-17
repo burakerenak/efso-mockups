@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EFSO — Sipariş Giriş Kriterleri Simülasyonu</title>
+<style>
+  :root{
+    --brand:#1457e6; --brand-d:#0d3fb0; --ink:#1a2233; --muted:#6b7689;
+    --line:#e2e7f0; --soft:#f5f7fb; --green:#16a34a; --amber:#f59e0b; --red:#e23b3b;
+    --teal:#0fb6a8; --bg:#eef2f8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);padding:22px;font-size:14px}
+  .wrap{max-width:1180px;margin:0 auto}
+  header{margin-bottom:18px}
+  header h1{font-size:22px;font-weight:700}
+  header p{color:var(--muted);font-size:13px;margin-top:4px}
+  .grid{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(16,24,40,.04)}
+  .card+.card{margin-top:14px}
+  .sec-t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+  .sec-t .n{width:18px;height:18px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+  label{display:block;font-size:12px;font-weight:600;color:#34405a;margin:0 0 5px}
+  .field{margin-bottom:13px}
+  select,input[type=text],input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;background:#fff}
+  select:focus,input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(20,87,230,.12)}
+  .row{display:grid;gap:10px}
+  .row.c3{grid-template-columns:1fr 1fr 1fr}
+  .row.c2{grid-template-columns:1fr 1fr}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{border:1px solid var(--line);border-radius:20px;padding:6px 12px;font-size:12px;cursor:pointer;background:#fff;user-select:none;transition:.12s}
+  .chip:hover{border-color:var(--brand)}
+  .chip.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .kapgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .kap{border:1px solid var(--line);border-radius:11px;padding:10px 6px;text-align:center;cursor:pointer;transition:.12s;background:#fff}
+  .kap:hover{border-color:var(--brand)}
+  .kap.on{border-color:var(--brand);background:#eef4ff;box-shadow:0 0 0 2px rgba(20,87,230,.18)}
+  .kap .e{font-size:22px}
+  .kap .l{font-size:11px;font-weight:600;margin-top:3px}
+  .sub{background:var(--soft);border:1px dashed #c9d4e6;border-radius:11px;padding:13px;margin-top:6px}
+  .sub.adr{border-color:#f0c14b;background:#fffaf0}
+  .sub.cold{border-color:#7cc6ff;background:#f0f8ff}
+  .hide{display:none}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+  .toggle{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer;background:#fff}
+  .toggle.on{border-color:var(--brand);background:#f3f7ff}
+  .toggle .t{font-size:12.5px;font-weight:600}
+  .toggle .d{font-size:11px;color:var(--muted)}
+  .sw{width:38px;height:22px;border-radius:20px;background:#cdd5e3;position:relative;flex:0 0 auto;transition:.15s}
+  .sw::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .toggle.on .sw{background:var(--brand)}
+  .toggle.on .sw::after{left:18px}
+  .toggle.locked{opacity:.85}
+  .toggle.locked .d{color:var(--amber);font-weight:600}
+
+  /* right panel */
+  .panel{position:sticky;top:18px}
+  .metric{display:flex;gap:10px;margin-bottom:12px}
+  .metric .m{flex:1;background:var(--soft);border-radius:10px;padding:10px;text-align:center}
+  .metric .m .v{font-size:18px;font-weight:800;color:var(--brand)}
+  .metric .m .k{font-size:10px;color:var(--muted);margin-top:1px}
+  .veh{display:flex;align-items:center;gap:11px;background:linear-gradient(90deg,#1457e6,#0d3fb0);color:#fff;border-radius:12px;padding:13px;margin-bottom:12px}
+  .veh.none{background:#9aa6bd}
+  .veh .e{font-size:30px}
+  .veh .name{font-size:16px;font-weight:700}
+  .veh .why{font-size:11px;opacity:.92;margin-top:2px;line-height:1.4}
+  .plist{list-style:none}
+  .plist li{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .plist li:last-child{border-bottom:none}
+  .plist li .i{flex:0 0 auto;margin-top:1px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px}
+  .tag.doc{background:#eef4ff;color:var(--brand)}
+  .tag.chk{background:#fff1d9;color:#b8730a}
+  .ins{border-radius:10px;padding:11px;font-size:12.5px;margin-top:4px}
+  .ins.off{background:var(--soft);color:var(--muted)}
+  .ins.sug{background:#fff7e6;color:#92600a;border:1px solid #f3d68a}
+  .ins.req{background:#fdeaea;color:#a32020;border:1px solid #f0b4b4}
+  .valid{border-radius:11px;padding:12px;margin-top:14px;font-size:13px;font-weight:600}
+  .valid.ok{background:#e7f6ec;color:#15803d;border:1px solid #a7e0bb}
+  .valid.bad{background:#fdeaea;color:#a32020;border:1px solid #f0b4b4}
+  .valid ul{margin:7px 0 0 18px;font-weight:500;font-size:12px}
+  .addbtn{width:100%;margin-top:12px;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:700;color:#fff;background:var(--green);cursor:pointer;box-shadow:0 6px 16px rgba(22,163,74,.28)}
+  .addbtn:disabled{background:#c2c9d6;box-shadow:none;cursor:not-allowed}
+  .legend{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.7}
+  @media(max-width:920px){.grid{grid-template-columns:1fr}.panel{position:static}.kapgrid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📦 EFSO — Sipariş Giriş Kriterleri Simülasyonu</h1>
+    <p>Kap cinsi · ürün kategorisi · yük niteliği seçtikçe sistem; istenen alanları, belgeleri, zorunlu kontrolleri ve önerilen aracı <b>canlı</b> günceller. (Tasarım simülasyonu — gerçek fiyat/araç verisi değildir.)</p>
+  </header>
+
+  <div class="grid">
+    <!-- ===== SOL: FORM ===== -->
+    <div>
+      <div class="card">
+        <div class="sec-t"><span class="n">1</span> Kap Cinsi</div>
+        <div class="kapgrid" id="kapgrid">
+          <div class="kap" data-kap="dosya"><div class="e">📄</div><div class="l">Dosya / Evrak</div></div>
+          <div class="kap" data-kap="koli"><div class="e">📦</div><div class="l">Koli</div></div>
+          <div class="kap" data-kap="palet"><div class="e">🟫</div><div class="l">Palet</div></div>
+          <div class="kap" data-kap="sandik"><div class="e">🧰</div><div class="l">Sandık / Kasa</div></div>
+          <div class="kap" data-kap="bigbag"><div class="e">🛍️</div><div class="l">Big Bag</div></div>
+        </div>
+        <div class="hint" id="kapHint">Bir kap cinsi seçin.</div>
+      </div>
+
+      <div class="card">
+        <div class="sec-t"><span class="n">2</span> Yük Kimliği</div>
+        <div class="row c2">
+          <div class="field">
+            <label>Ürün Kategorisi (zorunlu)</label>
+            <select id="kategori">
+              <option value="">— seçin —</option>
+              <option value="genel">Genel kargo</option>
+              <option value="gida">Gıda</option>
+              <option value="ilac">İlaç</option>
+              <option value="elektronik">Elektronik</option>
+              <option value="cam">Cam / Seramik</option>
+              <option value="tehlikeli">Tehlikeli madde (kimyasal/yanıcı)</option>
+              <option value="makine">Makine / Yedek parça</option>
+              <option value="kisisel">Kişisel eşya</option>
+              <option value="evrak">Evrak / Numune</option>
+              <option value="diger">Diğer</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Adet (zorunlu)</label>
+            <input type="number" id="adet" min="1" value="1">
+          </div>
+        </div>
+        <div class="field">
+          <label>Açıklama (opsiyonel)</label>
+          <input type="text" id="aciklama" placeholder="Ürün içeriği kısa not">
+        </div>
+      </div>
+
+      <div class="card" id="olcuCard">
+        <div class="sec-t"><span class="n">3</span> Ölçü &amp; Ağırlık</div>
+        <div id="olcuBox">
+          <div class="row c3">
+            <div class="field"><label>En (cm)</label><input type="number" id="en" min="0" placeholder="0"></div>
+            <div class="field"><label>Boy (cm)</label><input type="number" id="boy" min="0" placeholder="0"></div>
+            <div class="field"><label>Yükseklik (cm)</label><input type="number" id="yuk" min="0" placeholder="0"></div>
+          </div>
+          <div class="field"><label>Ağırlık — parça başı (kg)</label><input type="number" id="kg" min="0" placeholder="0"></div>
+        </div>
+        <div class="hint" id="olcuHint"></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-t"><span class="n">4</span> Elleçleme Nitelikleri</div>
+        <div class="toggle" data-flag="stack"><div><div class="t">Üst üste yüklenebilir</div><div class="d">Kapalıysa "üstüne yük konmaz" — istif/doluluk yeniden hesaplanır</div></div><div class="sw"></div></div>
+        <div class="toggle" data-flag="fragile"><div><div class="t">Kırılgan</div><div class="d">Ekstra paketleme + sigorta önerisi</div></div><div class="sw"></div></div>
+        <div class="toggle" data-flag="upright"><div><div class="t">Dik taşınır (bu tarafı üste)</div><div class="d">Yön kısıtı</div></div><div class="sw"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="sec-t"><span class="n">5</span> Özel Taşıma Koşulu <span style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0">(TransportCondition)</span></div>
+
+        <div class="toggle" data-flag="adr"><div><div class="t">☣️ Tehlikeli Madde (ADR)</div><div class="d">UN no · sınıf · ambalaj grubu · MSDS gerektirir</div></div><div class="sw"></div></div>
+        <div class="sub adr hide" id="adrSub">
+          <div class="row c2">
+            <div class="field"><label>UN Numarası</label><input type="text" id="unNo" placeholder="örn. UN1203"></div>
+            <div class="field"><label>Tehlike Sınıfı (1–9)</label>
+              <select id="adrClass"><option value="">—</option><option>1 Patlayıcı</option><option>2 Gaz</option><option>3 Yanıcı sıvı</option><option>4 Yanıcı katı</option><option>5 Oksitleyici</option><option>6 Zehirli</option><option>7 Radyoaktif</option><option>8 Aşındırıcı</option><option>9 Muhtelif</option></select>
+            </div>
+          </div>
+          <div class="row c2">
+            <div class="field"><label>Ambalaj Grubu</label><select id="pg"><option value="">—</option><option>I (yüksek)</option><option>II (orta)</option><option>III (düşük)</option></select></div>
+            <div class="field"><label>Net Miktar (kg/L)</label><input type="number" id="adrQty" min="0" placeholder="0"></div>
+          </div>
+          <div class="hint">Araç: ADR donanımlı + turuncu plaka · Sürücü: SRC5/ADR sertifikası. Limited Quantity (LQ) muafiyeti varsa belirtilir.</div>
+        </div>
+
+        <div class="toggle" data-flag="cold"><div><div class="t">❄️ Soğuk Zincir</div><div class="d">Frigo araç + sıcaklık takibi gerektirir</div></div><div class="sw"></div></div>
+        <div class="sub cold hide" id="coldSub">
+          <div class="field"><label>Hedef Sıcaklık Aralığı</label>
+            <select id="tempRange"><option value="">— seçin —</option><option>+2°C / +8°C (ilaç, taze)</option><option>0°C / +4°C</option><option>-18°C ve altı (donuk)</option><option>Donmaz (oda &gt; 0°C)</option></select>
+          </div>
+          <div class="hint">Frigo donanımlı araç + veri kaydedici (datalogger) zorunlu. Gıda ise HACCP/gıda nakil izni istenir.</div>
+        </div>
+
+        <div class="toggle" data-flag="heavy"><div><div class="t">🏗️ Ağır / Gabari Dışı</div><div class="d">Tekil ağır parça veya boyut aşımı</div></div><div class="sw"></div></div>
+        <div class="sub hide" id="heavySub">
+          <div class="hint">Vinç/forklift + TIR Sal Dorse veya Lowbed. Gabari dışıysa <b>özel yük taşıma izni + güzergah izni + eskort</b> gerekir.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-t"><span class="n">6</span> Yükleme / Boşaltma Noktası</div>
+        <div class="field">
+          <label>Boşaltma noktasında forklift / rampa var mı?</label>
+          <select id="forklift"><option value="bilinmiyor">— seçin —</option><option value="var">Var (forklift/rampa mevcut)</option><option value="yok">Yok (elle/araç ekipmanı gerekli)</option></select>
+        </div>
+        <div class="hint">"Yok" + palet/ağır yük → <b>Kamyon Liftli (kuyruk lifti)</b> veya vinçli araç zorunlu olur.</div>
+      </div>
+
+      <div class="card">
+        <div class="sec-t"><span class="n">7</span> Değer &amp; Sigorta</div>
+        <div class="row c2">
+          <div class="field"><label>Beyan Değeri (₺)</label><input type="number" id="deger" min="0" placeholder="0"></div>
+          <div class="field"><label>Sigorta</label>
+            <select id="sigorta"><option value="hayir">Hayır</option><option value="standart">Standart (emtia)</option><option value="genis">Genişletilmiş (all-risk)</option></select>
+          </div>
+        </div>
+        <div class="hint">Eşik: 50.000₺ üstü <b>önerilir</b>, 250.000₺ üstü <b>zorunlu</b>. Kırılgan / değerli / ADR yükte varsayılan açılır.</div>
+      </div>
+    </div>
+
+    <!-- ===== SAĞ: SİSTEM PANELİ ===== -->
+    <div>
+      <div class="card panel">
+        <div class="sec-t">⚙️ Sistem Paneli — canlı</div>
+
+        <div class="metric">
+          <div class="m"><div class="v" id="mDesi">0</div><div class="k">Desi</div></div>
+          <div class="m"><div class="v" id="mKg">0</div><div class="k">Toplam kg</div></div>
+          <div class="m"><div class="v" id="mEsas">0</div><div class="k">Ücrete esas</div></div>
+        </div>
+
+        <div class="veh none" id="vehBox">
+          <div class="e" id="vehEmoji">🚚</div>
+          <div><div class="name" id="vehName">Araç önerisi bekliyor</div><div class="why" id="vehWhy">Kap, ölçü ve ağırlık girin.</div></div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div class="sec-t" style="margin-bottom:6px">📑 Gerekli Belgeler</div>
+          <div class="tagrow" id="docs"><span class="hint">—</span></div>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <div class="sec-t" style="margin-bottom:6px">✅ Zorunlu Kontroller</div>
+          <div class="tagrow" id="checks"><span class="hint">—</span></div>
+        </div>
+
+        <div style="margin-bottom:4px">
+          <div class="sec-t" style="margin-bottom:6px">🛡️ Sigorta Durumu</div>
+          <div class="ins off" id="insBox">Yük değeri girilmedi.</div>
+        </div>
+
+        <div class="valid bad" id="valid">Forma başlayın…</div>
+        <button class="addbtn" id="addBtn" disabled>Ürünü Siparişe Ekle</button>
+
+        <div class="legend">
+          🟦 Belge · 🟧 Zorunlu kontrol · Araç havuzu: Moto Kurye · Van Courier · Van Transit · Kamyonet · Kamyon Liftsiz/Liftli · TIR Tenteli/Sal Dorse/Lowbed.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const S = { kap:'', flags:{stack:true, fragile:false, upright:false, adr:false, cold:false, heavy:false}, auto:{} };
+
+const VEH = [
+  {id:'moto', e:'🛵', name:'Moto Kurye', kg:5, vol:0.02, pallet:false},
+  {id:'vanc', e:'🚐', name:'Van Ford Courier', kg:600, vol:4.5, pallet:false},
+  {id:'vant', e:'🚐', name:'Van Ford Transit', kg:1200, vol:8.5, pallet:false},
+  {id:'kmnt', e:'🚚', name:'Kamyonet', kg:1400, vol:16.8, pallet:true, needEquip:true},
+  {id:'klsz', e:'🚛', name:'Kamyon Liftsiz', kg:7000, vol:42, pallet:true, needRamp:true},
+  {id:'klfl', e:'🚛', name:'Kamyon Liftli', kg:7000, vol:42, pallet:true, hasLift:true},
+  {id:'tirt', e:'🚛', name:'TIR Tenteli', kg:25500, vol:91, pallet:true},
+  {id:'tsal', e:'🏗️', name:'TIR Sal Dorse', kg:25500, vol:91, pallet:true, crane:true, heavy:true},
+  {id:'tlow', e:'🏗️', name:'TIR Lowbed', kg:60000, vol:120, heavy:true, oversize:true, permit:true},
+];
+
+const $ = id => document.getElementById(id);
+const num = id => parseFloat($(id).value) || 0;
+
+// Kap selection
+document.querySelectorAll('.kap').forEach(k=>k.addEventListener('click',()=>{
+  document.querySelectorAll('.kap').forEach(x=>x.classList.remove('on'));
+  k.classList.add('on'); S.kap = k.dataset.kap; onKap(); render();
+}));
+
+const KAPINFO = {
+  dosya:{olcu:false, hint:'Dosya/Evrak: ölçü/ağırlık sorulmaz, ücret sabit/min. Değerli evrakta değer beyanı istenir.'},
+  koli:{olcu:true, hint:'Koli: ölçü → desi; ücrete esas = max(desi, kg).'},
+  palet:{olcu:true, hint:'Palet: forklift/transpalet veya liftli araç gerekir. Min. Kamyonet.', minPallet:true},
+  sandik:{olcu:true, hint:'Sandık/Kasa: ihracatta ahşap ambalaj için ISPM-15 ısıl işlem damgası gerekir.', wood:true},
+  bigbag:{olcu:true, hint:'Big Bag: forklift/vinç askı gerekir. Toz/kimyasal içerikte MSDS ve olası ADR.', minPallet:true},
+};
+
+function onKap(){
+  const info = KAPINFO[S.kap]||{};
+  $('kapHint').textContent = info.hint||'';
+  $('olcuBox').classList.toggle('hide', info.olcu===false);
+  $('olcuHint').textContent = info.olcu===false ? 'Bu kap için ölçü/ağırlık alınmaz.' : '';
+}
+
+// Toggles
+document.querySelectorAll('.toggle').forEach(t=>t.addEventListener('click',()=>{
+  const f=t.dataset.flag;
+  if(t.classList.contains('locked')) return;
+  S.flags[f]=!S.flags[f]; delete S.auto[f]; syncToggles(); subVisibility(); render();
+}));
+function syncToggles(){
+  document.querySelectorAll('.toggle').forEach(t=>{
+    t.classList.toggle('on', !!S.flags[t.dataset.flag]);
+  });
+}
+function subVisibility(){
+  $('adrSub').classList.toggle('hide', !S.flags.adr);
+  $('coldSub').classList.toggle('hide', !S.flags.cold);
+  $('heavySub').classList.toggle('hide', !S.flags.heavy);
+}
+
+// Category auto-effects
+$('kategori').addEventListener('change',()=>{
+  const c=$('kategori').value;
+  // clear flags that were auto-applied by a previous category (keep user-toggled ones)
+  Object.keys(S.auto).forEach(f=>{ S.flags[f]=false; delete S.auto[f]; });
+  const adrEl=document.querySelector('[data-flag=adr]');
+  adrEl.classList.remove('locked');
+  adrEl.querySelector('.d').textContent='UN no · sınıf · ambalaj grubu · MSDS gerektirir';
+  const apply=(f)=>{ if(!S.flags[f]){ S.flags[f]=true; S.auto[f]=true; } };
+  if(c==='tehlikeli'){ S.flags.adr=true; S.auto.adr=true; adrEl.classList.add('locked'); adrEl.querySelector('.d').textContent='Kategori "tehlikeli" → ADR otomatik açık'; }
+  if(c==='gida'||c==='ilac') apply('cold');
+  if(c==='elektronik'||c==='cam') apply('fragile');
+  if(c==='makine') apply('heavy');
+  if(c==='evrak' && !S.kap){ document.querySelector('[data-kap=dosya]').click(); return; }
+  syncToggles(); subVisibility(); render();
+});
+
+['adet','en','boy','yuk','kg','deger','aciklama','unNo','adrClass','pg','adrQty','tempRange','forklift','sigorta']
+  .forEach(id=>{ const el=$(id); el && el.addEventListener('input',render); el && el.addEventListener('change',render); });
+
+function recommend(totKg, totVol){
+  const needPallet = (KAPINFO[S.kap]||{}).minPallet || S.kap==='palet';
+  const fork = $('forklift').value;
+  let pool = VEH.filter(v=>v.kg>=totKg && v.vol>=totVol);
+  if(needPallet) pool = pool.filter(v=>v.pallet||v.heavy);
+  if(S.flags.heavy) pool = pool.filter(v=>v.heavy||v.oversize);
+  // unload equipment rule
+  let reason=[];
+  if((needPallet||totKg>1000) && fork==='yok'){
+    pool = pool.filter(v=>v.hasLift||v.crane||v.oversize);
+    reason.push('boşaltmada ekipman yok → kuyruk lifti/vinç şart');
+  }
+  if(!pool.length) return {veh:null, reason:'Tek araçla uygun seçenek yok — yük çok ağır/büyük ya da ekipman kısıtı. Operasyona düşer.'};
+  const v = pool[0];
+  let r = `${totKg.toFixed(0)} kg / ${totVol.toFixed(2)} m³`;
+  if(needPallet) r+=' · paletli';
+  if(reason.length) r+=' · '+reason.join(', ');
+  if(S.flags.cold) r+=' · FRİGO donanımlı olmalı';
+  if(S.flags.adr) r+=' · ADR donanımlı + SRC5 sürücü';
+  return {veh:v, reason:r};
+}
+
+function render(){
+  const adet = Math.max(1, parseInt($('adet').value)||1);
+  const info = KAPINFO[S.kap]||{};
+  let desi=0, totKg=0, totVol=0;
+  if(info.olcu!==false){
+    const v = num('en')*num('boy')*num('yuk'); // cm³
+    desi = (v/3000)*adet;
+    totVol = (v/1e6)*adet;
+    totKg = num('kg')*adet;
+  }
+  const esas = Math.max(desi, totKg);
+  $('mDesi').textContent = desi.toFixed(0);
+  $('mKg').textContent = totKg.toFixed(0);
+  $('mEsas').textContent = esas.toFixed(0);
+
+  // vehicle
+  const vb=$('vehBox');
+  if(S.kap==='dosya'){
+    vb.classList.remove('none'); $('vehEmoji').textContent='🛵';
+    $('vehName').textContent='Moto Kurye'; $('vehWhy').textContent='Dosya/Evrak — şehir içi hızlı kurye.';
+  } else if(esas>0){
+    const rec=recommend(totKg||0.1, totVol||0.001);
+    if(rec.veh){ vb.classList.remove('none'); $('vehEmoji').textContent=rec.veh.e; $('vehName').textContent=rec.veh.name; $('vehWhy').textContent=rec.reason; }
+    else { vb.classList.add('none'); $('vehEmoji').textContent='⚠️'; $('vehName').textContent='Araç bulunamadı'; $('vehWhy').textContent=rec.reason; }
+  } else { vb.classList.add('none'); $('vehEmoji').textContent='🚚'; $('vehName').textContent='Araç önerisi bekliyor'; $('vehWhy').textContent='Kap, ölçü ve ağırlık girin.'; }
+
+  // documents
+  const docs=['İrsaliye / e-İrsaliye'];
+  if(num('deger')>0) docs.push('Fatura');
+  if(S.flags.adr){ docs.push('ADR Taşıma Evrakı'); docs.push('MSDS (Güvenlik Bilgi Formu)'); }
+  if(S.flags.cold){ docs.push('Soğuk Zincir / Datalogger Kaydı'); if($('kategori').value==='gida') docs.push('HACCP / Gıda Nakil İzni'); }
+  if(info.wood) docs.push('ISPM-15 (ihracatta ahşap)');
+  if(S.flags.heavy){ docs.push('Özel Yük Taşıma İzni'); docs.push('Güzergah İzni'); }
+  if($('sigorta').value==='genis') docs.push('Nakliyat Sigorta Poliçesi');
+  $('docs').innerHTML = docs.map(d=>`<span class="tag doc">${d}</span>`).join('');
+
+  // checks
+  const chk=[];
+  chk.push('Araç ↔ yükleme ekipmanı uyumu');
+  chk.push('K belgesi araç–yük uyumu');
+  if(S.flags.adr) chk.push('ADR araç + turuncu plaka + SRC5 + LQ muafiyet');
+  if(S.flags.cold) chk.push('Frigo + datalogger zinciri');
+  if(!S.flags.stack) chk.push('Üst üste yüklenmez — istif kuralı');
+  if(S.flags.upright) chk.push('Dik taşıma yön kısıtı');
+  if(S.flags.heavy) chk.push('Gabari/tonaj yasal sınır + izin');
+  $('checks').innerHTML = chk.map(c=>`<span class="tag chk">${c}</span>`).join('');
+
+  // insurance
+  const deger=num('deger'); const ib=$('insBox'); let insState='off';
+  if(deger<=0 && !(S.flags.fragile||S.flags.adr)){ ib.className='ins off'; ib.textContent='Yük değeri girilmedi — sigorta opsiyonel.'; }
+  else if(deger>250000){ ib.className='ins req'; ib.innerHTML='<b>Zorunlu</b> — 250.000₺ üstü beyan. En az Standart sigorta gerekir.'; insState='req'; }
+  else if(deger>50000 || S.flags.fragile || S.flags.adr){ ib.className='ins sug'; ib.innerHTML='<b>Önerilir</b> — değerli/kırılgan/ADR yük. Standart sigorta tavsiye edilir.'; insState='sug'; }
+  else { ib.className='ins off'; ib.textContent='Düşük değerli — taşıyıcı sorumluluğu yeterli olabilir.'; }
+
+  // validation
+  const miss=[];
+  if(!S.kap) miss.push('Kap cinsi seçilmedi');
+  if(!$('kategori').value) miss.push('Ürün kategorisi seçilmedi');
+  if(info.olcu!==false){
+    if(num('en')<=0||num('boy')<=0||num('yuk')<=0) miss.push('Ölçü (en/boy/yükseklik) eksik');
+    if(num('kg')<=0) miss.push('Ağırlık girilmedi');
+    if($('forklift').value==='bilinmiyor') miss.push('Boşaltma ekipmanı (forklift/rampa) sorusu yanıtsız');
+  }
+  if(S.flags.adr){
+    if(!$('unNo').value.trim()) miss.push('ADR: UN numarası');
+    if(!$('adrClass').value) miss.push('ADR: tehlike sınıfı');
+    if(!$('pg').value) miss.push('ADR: ambalaj grubu');
+    if(num('adrQty')<=0) miss.push('ADR: net miktar');
+  }
+  if(S.flags.cold && !$('tempRange').value) miss.push('Soğuk zincir: hedef sıcaklık');
+  if(insState==='req' && $('sigorta').value==='hayir') miss.push('Sigorta zorunlu (değer eşiği aşıldı)');
+
+  const vEl=$('valid'); const btn=$('addBtn');
+  if(miss.length){ vEl.className='valid bad'; vEl.innerHTML='⛔ Eksik / engel ('+miss.length+'):<ul>'+miss.map(m=>'<li>'+m+'</li>').join('')+'</ul>'; btn.disabled=true; }
+  else { vEl.className='valid ok'; vEl.innerHTML='✅ Ürün geçerli — siparişe eklenebilir.'; btn.disabled=false; }
+}
+
+$('addBtn').addEventListener('click',()=>{ $('valid').innerHTML='✅ Ürün siparişe eklendi (demo). Yeni ürün için alanları değiştirin.'; });
+
+syncToggles(); render();
+</script>
+</body>
+</html>
