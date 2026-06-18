@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EFSO — Uçtan Uca Sipariş Yaşam Döngüsü (çalışır)</title>
+<!--
+  EFSO uçtan uca sipariş yaşam döngüsü — ÇALIŞIR demo.
+  Gerçek backend OrderStatus (Draft→Confirmed→InProgress→Delivered) + önerilen AssignmentStatus
+  + geofence + OTP teslim + ödeme/hakediş. "İlerlet" ile sipariş baştan sona akıtılır.
+-->
+<style>
+  :root{
+    --blue:#2563eb;--blue-d:#1d4ed8;--blue-l:#eff4ff;--ink:#0f172a;--slate:#475569;--muted:#94a3b8;
+    --line:#e7ecf3;--bg:#f4f7fb;--card:#fff;--soft:#f8fafc;--green:#16a34a;--amber:#f59e0b;--red:#e11d48;--teal:#0d9488;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;padding:22px}
+  .wrap{max-width:1180px;margin:0 auto}
+  header h1{font-size:21px;font-weight:800}
+  header p{color:var(--muted);font-size:13px;margin-top:4px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.03)}
+
+  .topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:16px 0}
+  .ordhead{display:flex;align-items:center;gap:12px}
+  .ordhead .oid{font-size:18px;font-weight:800}
+  .seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:3px}
+  .seg button{border:none;background:none;padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;color:var(--slate)}
+  .seg button.on{background:var(--blue);color:#fff}
+  .badges{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .bdg{font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;display:inline-flex;align-items:center;gap:6px}
+  .bdg .lab{opacity:.65;font-weight:600}
+  .bdg.order{background:var(--blue-l);color:var(--blue-d)}
+  .bdg.asgn{background:#ecfdf5;color:#047857}
+
+  .grid{display:grid;grid-template-columns:1fr 1.05fr;gap:16px;align-items:start}
+
+  /* timeline */
+  .tl{position:relative}
+  .step{display:flex;gap:13px;position:relative;padding-bottom:14px}
+  .step .line{position:absolute;left:13px;top:26px;bottom:0;width:2px;background:var(--line)}
+  .step.done .line{background:var(--green)}
+  .step .k{width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;z-index:2;flex:0 0 auto;color:var(--muted)}
+  .step.done .k{background:var(--green);border-color:var(--green);color:#fff}
+  .step.now .k{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 5px var(--blue-l)}
+  .step .t{font-size:13.5px;font-weight:700}
+  .step.todo .t{color:var(--muted);font-weight:600}
+  .step .meta{font-size:11px;color:var(--muted);margin-top:1px}
+  .step .who{font-size:10px;font-weight:700;padding:1px 7px;border-radius:6px;margin-left:7px;vertical-align:middle}
+  .who.m{background:#eff4ff;color:var(--blue)}.who.s{background:#f3e8ff;color:#7c3aed}.who.t{background:#ecfdf5;color:#047857}.who.sys{background:#fff7ed;color:#c2410c}
+
+  /* map */
+  .map{height:200px;border-radius:12px;position:relative;overflow:hidden;margin-bottom:14px;background:
+    repeating-linear-gradient(0deg,#e4ebf3 0 1px,transparent 1px 32px),
+    repeating-linear-gradient(90deg,#e4ebf3 0 1px,transparent 1px 32px),#eef3f9}
+  .route{position:absolute;height:4px;background:#cbd5e1;border-radius:4px;top:100px;left:40px;right:40px}
+  .route .prog{height:100%;background:var(--blue);border-radius:4px;width:0;transition:width .5s}
+  .mpin{position:absolute;top:100px;transform:translate(-50%,-50%);font-size:13px;z-index:3}
+  .mpin .d{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.25)}
+  .mpin .d span{transform:rotate(45deg);font-size:11px}
+  .mpin.pickup .d{background:var(--blue)}.mpin.drop .d{background:var(--green)}
+  .veh{position:absolute;top:100px;transform:translate(-50%,-50%);font-size:22px;transition:left .5s;z-index:4;filter:drop-shadow(0 3px 4px rgba(0,0,0,.25))}
+  .geo{position:absolute;top:100px;transform:translate(-50%,-50%);width:70px;height:70px;border-radius:50%;border:2px dashed var(--amber);background:rgba(245,158,11,.12);opacity:0;transition:.4s;z-index:1}
+  .geo.show{opacity:1}
+
+  /* action panel */
+  .persp{display:flex;gap:8px;margin-bottom:12px}
+  .persp .p{flex:1;text-align:center;padding:8px;border-radius:10px;font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:default;color:var(--muted)}
+  .persp .p.act{border-color:var(--blue);background:var(--blue-l);color:var(--blue-d)}
+  .actionbox{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+  .actionbox .who2{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .actionbox .desc{font-size:13px;color:var(--slate);margin:8px 0 14px}
+  .bigbtn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:800;color:#fff;background:var(--blue);cursor:pointer;box-shadow:0 8px 18px rgba(37,99,235,.3)}
+  .bigbtn:hover{background:var(--blue-d)}
+  .bigbtn.green{background:var(--green);box-shadow:0 8px 18px rgba(22,163,74,.3)}
+  .bigbtn.done{background:var(--muted);box-shadow:none;cursor:default}
+
+  /* OTP */
+  .otp{margin-top:12px}
+  .otp .row{display:flex;gap:8px;justify-content:center;margin:10px 0}
+  .otp input{width:46px;height:54px;text-align:center;font-size:22px;font-weight:800;border:2px solid var(--line);border-radius:10px}
+  .otp input:focus{outline:none;border-color:var(--blue)}
+  .otp .hint{font-size:11px;color:var(--muted)}
+  .otp .err{color:var(--red);font-weight:700;font-size:12px;margin-top:6px;display:none}
+
+  /* event log */
+  .log{margin-top:16px}
+  .log .e{display:flex;gap:10px;font-size:12px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .log .e .ts{color:var(--muted);flex:0 0 56px;font-variant-numeric:tabular-nums}
+  .log .e .tx b{color:var(--ink)}
+
+  .pricebox{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-radius:12px;padding:13px 16px;margin-top:12px}
+  .pricebox .x{font-size:20px;font-weight:800}.pricebox .l{font-size:11px;opacity:.9}
+
+  .controls{display:flex;gap:10px;margin-top:16px}
+  .btn{padding:11px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:#fff}
+  .btn.ghost{background:var(--soft)}
+  .sec-t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:12px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔄 EFSO — Uçtan Uca Sipariş Yaşam Döngüsü</h1>
+    <p>Gerçek backend <b>OrderStatus</b> (Draft→Confirmed→InProgress→Delivered) + <b>AssignmentStatus</b> + geofence + OTP teslim + ödeme/hakediş. "İlerlet" ile siparişi baştan sona akıtın.</p>
+  </header>
+
+  <div class="topbar">
+    <div class="ordhead"><span class="oid">#SP-2041</span>
+      <span class="seg"><button class="on" id="tHizli" onclick="setTur('hizli')">⚡ Hızlı</button><button id="tPlanli" onclick="setTur('planli')">🧩 Planlı</button></span>
+      <span style="font-size:13px;color:var(--slate)">🚛 TIR Tenteli · İstanbul → Ankara</span>
+    </div>
+    <div class="badges">
+      <span class="bdg order"><span class="lab">OrderStatus:</span> <b id="bOrder">Draft</b></span>
+      <span class="bdg asgn"><span class="lab">Assignment:</span> <b id="bAsgn">—</b></span>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- SOL: timeline + log -->
+    <div class="card">
+      <div class="sec-t">Yaşam Döngüsü</div>
+      <div class="tl" id="timeline"></div>
+      <div class="log">
+        <div class="sec-t" style="margin-top:6px">Olay Kaydı</div>
+        <div id="log"></div>
+      </div>
+    </div>
+
+    <!-- SAĞ: map + action -->
+    <div class="card">
+      <div class="map">
+        <div class="route"><div class="prog" id="prog"></div></div>
+        <div class="mpin pickup" style="left:40px"><div class="d"><span>📍</span></div></div>
+        <div class="mpin drop" style="right:40px;left:auto"><div class="d"><span>🏁</span></div></div>
+        <div class="geo" id="geo" style="left:40px"></div>
+        <div class="veh" id="veh" style="left:40px">🚛</div>
+      </div>
+
+      <div class="persp" id="persp">
+        <div class="p" data-r="m">🧑‍💼 Müşteri</div>
+        <div class="p" data-r="sys">⚙️ Sistem</div>
+        <div class="p" data-r="t">🚚 Taşıyıcı</div>
+      </div>
+
+      <div class="actionbox" id="actionbox"></div>
+
+      <div class="pricebox"><div><div class="l" id="priceL">Anlık fiyat (Hızlı)</div></div><div class="x" id="priceX">₺2.400</div></div>
+
+      <div class="controls">
+        <button class="btn ghost" onclick="reset()">↺ Sıfırla</button>
+        <button class="btn" onclick="jumpEnd()">⏭ Sona atla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---- Yaşam döngüsü fazları (gerçek OrderStatus + AssignmentStatus eşlemeli) ---- */
+const STEPS=[
+  {t:'Sipariş taslağı oluşturuldu', who:'m', wl:'Müşteri', meta:'CreateOrderDraft · yük + duraklar girildi', order:'Draft', asgn:'—', actor:'m', btn:'Siparişi Onayla & Öde (Pre-Auth)', desc:'Müşteri yükü ve adresleri girdi. Onaylayıp ön provizyon (Pre-Auth) alınır.'},
+  {t:'Onaylandı — ödeme bloke edildi', who:'m', wl:'Müşteri', meta:'ConfirmOrder · Sanal POS Pre-Auth', order:'Confirmed', asgn:'—', actor:'sys', btn:'Taşıyıcı Eşleştir', desc:'Sistem en uygun taşıyıcıyı arıyor (Hızlı: hızlı atama / Planlı: doluluk+rota optimizasyonu).'},
+  {t:'Taşıyıcı atandı', who:'sys', wl:'Sistem', meta:'SelectCarrier · Assignment oluşturuldu', order:'InProgress', asgn:'Atandı', actor:'t', btn:'İşi Kabul Et', desc:'Taşıyıcıya teklif düştü. Kabul/Red bekleniyor.'},
+  {t:'Taşıyıcı kabul etti', who:'t', wl:'Taşıyıcı', meta:'AcceptAssignment', order:'InProgress', asgn:'Kabul edildi', actor:'t', btn:'Sefere Başla (Alıma Yolda)', desc:'Sürücü atandı, navigasyon hazır.'},
+  {t:'Alım noktasına yolda', who:'t', wl:'Sürücü', meta:'Navigasyon · Google Maps', order:'InProgress', asgn:'Alıma yolda', actor:'sys', btn:'📍 Geofence: Alım noktasına vardı', desc:'Araç hareket halinde. 100 m geofence alanına girince otomatik tetiklenir.', move:1, geo:'pickup'},
+  {t:'Alım noktasında (geofence 100m)', who:'sys', wl:'Sistem', meta:'Geofence enter · varış bildirildi', order:'InProgress', asgn:'Alım noktasında', actor:'t', btn:'Yükü Aldım (foto)', desc:'Sürücü yükü teslim aldı; yükleme fotoğrafı eklenir.'},
+  {t:'Yük alındı', who:'t', wl:'Sürücü', meta:'PickupConfirmed · foto', order:'InProgress', asgn:'Yük alındı', actor:'t', btn:'Teslimata Başla', desc:'Yük yüklendi; teslim noktasına hareket.'},
+  {t:'Teslim noktasına yolda', who:'t', wl:'Sürücü', meta:'Navigasyon · canlı takip', order:'InProgress', asgn:'Teslime yolda', actor:'sys', btn:'🏁 Geofence: Teslim noktasına vardı', desc:'Müşteri haritadan canlı izliyor. Geofence ile varış tetiklenir.', move:2, geo:'drop'},
+  {t:'Teslim noktasında (geofence 100m)', who:'sys', wl:'Sistem', meta:'Geofence enter · OTP üretildi', order:'InProgress', asgn:'Teslim noktasında', actor:'t', btn:'', desc:'Teslim için müşteriye giden OTP kodunu sürücü doğrulamalı.', otp:true},
+  {t:'OTP doğrulandı — teslim edildi', who:'t', wl:'Sürücü', meta:'ConfirmStop · OTP teslim kodu', order:'Delivered', asgn:'Teslim edildi', actor:'sys', btn:'Ödemeyi Tahsil Et (Capture)', desc:'Teslim kanıtlandı. Müşteri provizyonu tahsil edilir.'},
+  {t:'Ödeme tahsil edildi & hakediş', who:'sys', wl:'Sistem', meta:'Capture · komisyon · taşıyıcı cüzdanı', order:'Delivered', asgn:'Tamamlandı', actor:'sys', btn:'', desc:'Satış tahsil edildi, komisyon düşüldü, taşıyıcı hakedişi cüzdana yatırıldı. ✅ Akış tamam.', end:true},
+];
+let cur=0, tur='hizli';
+const $=id=>document.getElementById(id);
+let clock=14*60+0; // 14:00 başlangıç dakika
+function stamp(){ const h=String(Math.floor(clock/60)).padStart(2,'0'), m=String(clock%60).padStart(2,'0'); clock+=Math.floor(3+Math.random()*0); return h+':'+m; }
+const logs=[];
+
+function setTur(t){ tur=t; $('tHizli').classList.toggle('on',t==='hizli'); $('tPlanli').classList.toggle('on',t==='planli');
+  $('priceL').textContent = t==='hizli'?'Anlık kesin fiyat (Hızlı)':'Ön fiyat — planlama sonrası kesinleşir (Planlı)';
+  $('priceX').textContent = t==='hizli'?'₺2.400':'₺2.180';
+  render();
+}
+
+function render(){
+  // timeline
+  $('timeline').innerHTML = STEPS.map((s,i)=>{
+    const cls = i<cur?'done':i===cur?'now':'todo';
+    const icon = i<cur?'✓':(i+1);
+    return `<div class="step ${cls}">${i<STEPS.length-1?'<span class="line"></span>':''}<span class="k">${icon}</span>
+      <div><div class="t">${s.t}<span class="who ${s.who}">${s.wl}</span></div><div class="meta">${i<=cur?s.meta:''}</div></div></div>`;
+  }).join('');
+  // badges
+  const c = STEPS[Math.min(cur,STEPS.length-1)];
+  $('bOrder').textContent = (cur===0?STEPS[0].order:STEPS[Math.min(cur,STEPS.length-1)].order);
+  $('bAsgn').textContent = STEPS[Math.min(cur,STEPS.length-1)].asgn;
+  // perspective highlight
+  const actor = c.actor;
+  document.querySelectorAll('#persp .p').forEach(p=>p.classList.toggle('act', p.dataset.r===actor));
+  // map
+  const moved = STEPS.slice(0,cur+1).filter(s=>s.move).length; // 0,1,2
+  $('veh').style.left = moved===0?'40px':moved===1?'50%':'calc(100% - 40px)';
+  $('prog').style.width = moved===0?'0%':moved===1?'50%':'100%';
+  const geoStep = STEPS[cur] && STEPS[cur].geo;
+  $('geo').className='geo'+(geoStep?' show':''); $('geo').style.left = geoStep==='drop'?'calc(100% - 40px)':'40px';
+  $('geo').style.right='auto';
+  // action box
+  renderAction();
+  // log
+  $('log').innerHTML = logs.map(l=>`<div class="e"><span class="ts">${l.ts}</span><span class="tx">${l.tx}</span></div>`).join('') || '<div class="meta" style="color:var(--muted);font-size:12px">Henüz olay yok — "Onayla" ile başlayın.</div>';
+}
+
+function renderAction(){
+  const ab=$('actionbox');
+  if(cur>=STEPS.length){ ab.innerHTML=`<div class="who2">✅ Tamamlandı</div><div class="desc">Sipariş teslim edildi, ödeme tahsil edildi, hakediş yatırıldı.</div><button class="bigbtn done">Akış tamamlandı</button>`; return; }
+  const s=STEPS[cur];
+  let perspLabel={m:'🧑‍💼 Müşteri',sys:'⚙️ Sistem',t:'🚚 Taşıyıcı / Sürücü'}[s.actor];
+  if(s.otp){
+    ab.innerHTML=`<div class="who2">${perspLabel}</div><div class="desc">${s.desc}</div>
+      <div class="otp"><div class="hint">Müşteriye giden teslim kodu: <b>1 2 3 4</b> (demo)</div>
+      <div class="row">${[0,1,2,3].map(i=>`<input maxlength="1" inputmode="numeric" id="otp${i}" oninput="otpNext(${i})">`).join('')}</div>
+      <button class="bigbtn green" onclick="verifyOtp()">Teslimi Onayla (OTP)</button>
+      <div class="err" id="otpErr">❌ Kod hatalı, tekrar deneyin.</div></div>`;
+    return;
+  }
+  const cls = s.actor==='t'?'green':'';
+  ab.innerHTML=`<div class="who2">${perspLabel}</div><div class="desc">${tur==='planli'&&cur===1?'🧩 Planlı: doluluk + rota + sıra optimizasyonu sonrası fiyat kesinleşir, sonra atama.':s.desc}</div>
+    <button class="bigbtn ${cls}" onclick="advance()">${s.btn} →</button>`;
+}
+
+function logEvent(){
+  const s=STEPS[cur];
+  logs.unshift({ts:stamp(), tx:`<b>${s.wl}</b> — ${s.t}`});
+}
+
+function advance(){
+  if(cur>=STEPS.length) return;
+  logEvent();
+  cur++;
+  render();
+}
+function otpNext(i){ const el=$('otp'+i); if(el.value && i<3) $('otp'+(i+1)).focus(); }
+function verifyOtp(){
+  const code=[0,1,2,3].map(i=>$('otp'+i).value).join('');
+  if(code==='1234'){ $('otpErr').style.display='none'; advance(); }
+  else { $('otpErr').style.display='block'; }
+}
+function reset(){ cur=0; logs.length=0; clock=14*60; render(); }
+function jumpEnd(){ while(cur<STEPS.length){ logEvent(); cur++; } render(); }
+
+render();
+</script>
+</body>
+</html>
