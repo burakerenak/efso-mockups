@@ -125,7 +125,35 @@
   .ac-pin{font-size:12px;flex:0 0 auto}
   .ac-tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .ac-src{font-size:9px;font-weight:700;color:var(--muted);background:var(--soft);border:1px solid var(--line);padding:1px 6px;border-radius:6px;flex:0 0 auto}
-  @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}}
+  /* zengin durak kartı */
+  .stop2 .link{font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer;margin-left:auto}
+  .stop2 .del{margin-left:8px}
+  .savedrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 9px}
+  .savedrow .savedleft{flex:1;min-width:150px}
+  .savedhint{font-size:11px;color:var(--muted)}
+  .mini{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:12px;font-family:inherit;background:var(--soft)}
+  .savedbtns{display:flex;gap:6px}
+  .minibtn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px;font-size:11.5px;font-weight:700;color:var(--slate);cursor:pointer;white-space:nowrap}
+  .minibtn:hover{border-color:var(--blue);color:var(--blue-d)}
+  .minibtn.ghost{background:var(--soft)}
+  .flbl{display:block;font-size:10.5px;color:var(--muted);font-weight:600;margin:0 0 4px}
+  .rq{color:var(--red);font-weight:700}
+  .finp{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:12.5px;font-family:inherit;background:var(--soft)}
+  .finp:focus{outline:none;border-color:var(--blue);background:#fff}
+  .detbox{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  .profline{font-size:11px;color:var(--muted);margin-top:9px;background:var(--soft);border-radius:8px;padding:7px 10px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 18px;border-radius:11px;font-size:13px;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.3);z-index:200;opacity:0;transition:.25s;pointer-events:none;max-width:90%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .am-mask{position:fixed;inset:0;background:rgba(2,8,23,.45);display:none;z-index:120}
+  .am-mask.open{display:block}
+  .addrMgr{position:fixed;left:50%;top:50%;transform:translate(-50%,-48%);width:min(460px,92%);max-height:80vh;overflow-y:auto;background:#fff;border-radius:16px;z-index:121;display:none;padding:18px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+  .addrMgr.open{display:block}
+  .addrMgr h3{font-size:16px;margin:0 0 12px;display:flex;align-items:center}
+  .addrMgr .amclose{margin-left:auto;cursor:pointer;color:var(--muted);font-size:22px}
+  .amrow{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px}
+  .amrow b{font-size:13px;display:block}.amrow span{font-size:11px;color:var(--muted)}
+  .amdel{margin-left:auto;color:var(--red);cursor:pointer;font-size:15px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}.frow.c3{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -249,6 +277,10 @@
 </div>
 
 
+<!-- Kayıtlı adresler yöneticisi -->
+<div class="am-mask" id="amMask" onclick="closeAddrMgr()"></div>
+<div class="addrMgr" id="addrMgr"><h3>📍 Kayıtlı Adreslerim <span class="amclose" onclick="closeAddrMgr()">×</span></h3><div id="amBody"></div></div>
+
 <script>
 const $=id=>document.getElementById(id);
 let svc='', tur='', arac='efso', scenario='normal', pickType='pick';
@@ -288,7 +320,11 @@ function chooseSvc(s){
 function chooseTur(k,t){ tur=t; if(!stops.length) initStops(); renderStops(); show(2); }
 
 /* ---- Güzergah (N→N duraklar) + inline adres autocomplete (Photon + yerel fallback) ---- */
-function initStops(){ stops=[{type:'pick',addr:'Anadolu Lojistik, Hadımköy, İstanbul',id:1},{type:'drop',addr:'Bims Yapı, Sincan, Ankara',id:2}]; stopId=2; }
+const GIRIS_RULES=[{id:'all',ad:'TIR dahil hepsi'},{id:'kamyon',ad:'Kamyona kadar'},{id:'kamyonet',ad:'Kamyonet’e kadar'},{id:'sehir',ad:'Şehir içi kamyon yasağı (TIR 22:00–06:00)'},{id:'van',ad:'Van’a kadar (dar sokak)'}];
+function girisAd(id){ return (GIRIS_RULES.find(g=>g.id===id)||GIRIS_RULES[0]).ad; }
+function initStops(){ stops=[
+  {type:'pick',addr:'Anadolu Lojistik, Hadımköy, İstanbul',id:1,kisi:'',tel:'',firma:'',detay:false,ac:'09:00',ka:'18:00',bekleme:15,giris:'all'},
+  {type:'drop',addr:'Bims Yapı, Sincan, Ankara',id:2,kisi:'',tel:'',firma:'',detay:false,ac:'09:00',ka:'18:00',bekleme:15,giris:'all'}]; stopId=2; }
 function renderStops(){
   const box=$('stopsList'); let pn=0,dn=0;
   box.innerHTML=stops.map(st=>{ const isP=st.type==='pick'; if(isP)pn++;else dn++; const n=isP?pn:dn;
@@ -296,16 +332,54 @@ function renderStops(){
     return `<div class="stop2 ${isP?'pick':'drop'}">
       <div class="rail"><div class="pinx">${n}</div><div class="conn"></div></div>
       <div class="sbody">
-        <div class="lblrow"><span class="lbl">${isP?'📍 Alım':'🏁 Teslim'} ${n}</span>${canDel?`<span class="del" onclick="delStop(${st.id})" title="Kaldır">✕</span>`:''}</div>
+        <div class="lblrow"><span class="lbl">${isP?'📍 Alım':'🏁 Teslim'} ${n}</span>
+          <span class="link" onclick="uStop(${st.id},'detay',${!st.detay})">${st.detay?'Detayı gizle':'Detay'}</span>
+          ${canDel?`<span class="del" onclick="delStop(${st.id})" title="Kaldır">🗑️</span>`:''}</div>
+        <div class="savedrow">
+          <div class="savedleft">${SAVED.length?`<select class="mini" onchange="applySaved(${st.id},this.value)"><option value="">📑 Kayıtlı adres seç…</option>${SAVED.map(a=>`<option value="${a.id}">${a.label}</option>`).join('')}</select>`:`<span class="savedhint">Henüz kayıt yok — alanları doldurup <b>kaydedin</b>.</span>`}</div>
+          <div class="savedbtns"><button class="minibtn" onclick="saveStopAddr(${st.id})">💾 Bu adresi kaydet</button><button class="minibtn ghost" onclick="openAddrMgr()">📍 Adreslerim</button></div>
+        </div>
         <div class="acwrap"><span class="pinico">🔍</span>
-          <input class="ac-in" id="acStop${st.id}" autocomplete="off" placeholder="${isP?'Alım':'Teslim'} adresi ara… (cadde, işyeri, semt)" value="${(st.addr||'').replace(/"/g,'&quot;')}" oninput="acInput(${st.id},this.value)" onfocus="acInput(${st.id},this.value)" onblur="acBlur(${st.id})">
+          <input class="ac-in" id="acStop${st.id}" autocomplete="off" placeholder="Mahalle, cadde, no… (yaz → öneri gelsin)" value="${(st.addr||'').replace(/"/g,'&quot;')}" oninput="acInput(${st.id},this.value)" onfocus="acInput(${st.id},this.value)" onblur="acBlur(${st.id})">
           <div class="ac-list" id="aclist${st.id}"></div>
         </div>
+        <div class="frow c3" style="margin-top:10px">
+          <div><label class="flbl">İlgili kişi <span class="rq">*</span></label><input class="finp" value="${(st.kisi||'').replace(/"/g,'&quot;')}" oninput="uStop(${st.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
+          <div><label class="flbl">Telefon (maskelenir) <span class="rq">*</span></label><input class="finp" id="tel${st.id}" maxlength="14" inputmode="tel" value="${st.tel||''}" oninput="telMask(this,${st.id})" placeholder="05XX XXX XX XX"></div>
+          <div><label class="flbl">Firma adı <span style="font-weight:400;color:var(--muted)">(ops.)</span></label><input class="finp" value="${(st.firma||'').replace(/"/g,'&quot;')}" oninput="uStop(${st.id},'firma',this.value)" placeholder="örn. ABC Lojistik A.Ş."></div>
+        </div>
+        ${st.detay?`<div class="detbox">
+          <div class="frow c3">
+            <div><label class="flbl">Açılış</label><input class="finp" type="time" value="${st.ac}" onchange="uStop(${st.id},'ac',this.value)"></div>
+            <div><label class="flbl">Kapanış</label><input class="finp" type="time" value="${st.ka}" onchange="uStop(${st.id},'ka',this.value)"></div>
+            <div><label class="flbl">${isP?'Yükleme':'Boşaltma'} bekleme (dk)</label><input class="finp" type="number" value="${st.bekleme}" onchange="uStop(${st.id},'bekleme',Number(this.value))"></div>
+          </div>
+          <label class="flbl" style="margin-top:8px">Araç giriş kuralı (hard filter)</label>
+          <select class="finp" onchange="uStop(${st.id},'giris',this.value)">${GIRIS_RULES.map(g=>`<option value="${g.id}" ${st.giris===g.id?'selected':''}>${g.ad}</option>`).join('')}</select>
+        </div>`:`<div class="profline">⏰ ${st.ac}–${st.ka} · bekleme ${st.bekleme} dk · giriş: <b>${girisAd(st.giris)}</b> — düzenlemek için <b>Detay</b></div>`}
       </div></div>`;
   }).join('');
   $('routeBadgeS').textContent=pn+' alım · '+dn+' teslim'+((pn>1||dn>1)?' · N→N':'');
   renderOrder();
 }
+function uStop(id,k,v){ const s=stops.find(x=>x.id===id); if(!s) return; s[k]=v; if(k==='detay') renderStops(); }
+function telFmt(v){ let d=(v||'').replace(/\D/g,''); if(d&&d[0]!=='0') d='0'+d; d=d.slice(0,11); let o=''; if(d.length)o=d.slice(0,4); if(d.length>4)o+=' '+d.slice(4,7); if(d.length>7)o+=' '+d.slice(7,9); if(d.length>9)o+=' '+d.slice(9,11); return o; }
+function telMask(el,id){ el.value=telFmt(el.value); const s=stops.find(x=>x.id===id); if(s) s.tel=el.value; }
+/* Kayıtlı adresler */
+let SAVED=[], savedId=0;
+function saveStopAddr(id){ const s=stops.find(x=>x.id===id); if(!s) return;
+  if(!s.addr||!s.addr.trim()){ toast('⚠️ Önce adres girin/seçin.'); return; }
+  if(!s.kisi||!s.kisi.trim()){ toast('⚠️ İlgili kişi olmadan kaydedilemez.'); return; }
+  SAVED.unshift({id:++savedId,label:(s.firma||s.kisi||'Adres')+' — '+(s.addr.split(',')[0]),addr:s.addr,kisi:s.kisi,tel:s.tel,firma:s.firma,ac:s.ac,ka:s.ka,bekleme:s.bekleme,giris:s.giris});
+  toast('💾 Adres kaydedildi: '+SAVED[0].label); renderStops(); }
+function applySaved(id,sid){ if(!sid) return; const a=SAVED.find(x=>x.id===Number(sid)); const s=stops.find(x=>x.id===id);
+  if(a&&s){ Object.assign(s,{addr:a.addr,kisi:a.kisi,tel:a.tel,firma:a.firma,ac:a.ac,ka:a.ka,bekleme:a.bekleme,giris:a.giris}); toast('📍 Kayıtlı adres uygulandı.'); renderStops(); } }
+function openAddrMgr(){ if(!SAVED.length){ toast('Henüz kayıtlı adres yok — bir adresi "💾 Bu adresi kaydet" ile ekleyin.'); return; }
+  $('amBody').innerHTML=SAVED.map(a=>`<div class="amrow"><div><b>${a.label}</b><span>${a.addr}${a.kisi?(' · '+a.kisi):''}${a.tel?(' · '+a.tel):''}</span></div><span class="amdel" onclick="delSaved(${a.id})" title="Sil">🗑️</span></div>`).join('');
+  $('amMask').classList.add('open'); $('addrMgr').classList.add('open'); }
+function closeAddrMgr(){ $('amMask').classList.remove('open'); $('addrMgr').classList.remove('open'); }
+function delSaved(id){ SAVED=SAVED.filter(a=>a.id!==id); renderStops(); if(SAVED.length) openAddrMgr(); else closeAddrMgr(); }
+function toast(m){ let t=$('toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); } t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
 function addStop(type){ const id=++stopId; stops.push({type,addr:'',id}); renderStops(); setTimeout(()=>{const i=$('acStop'+id); if(i) i.focus();},40); }
 function delStop(id){ stops=stops.filter(s=>s.id!==id); renderStops(); }
 
