@@ -186,7 +186,18 @@
   .vpick{border:1.5px solid var(--line);border-radius:10px;padding:9px 6px;text-align:center;cursor:pointer;background:#fff}
   .vpick:hover{border-color:var(--blue)}.vpick.on{border-color:var(--blue);background:var(--blue-l)}
   .vpick .e{font-size:22px}.vpick .n{font-size:10.5px;font-weight:700;margin-top:2px}.vpick .c{font-size:9.5px;color:var(--muted)}
-  @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}.frow.c3,.frow.c4{grid-template-columns:1fr 1fr}.kapgrid{grid-template-columns:repeat(3,1fr)}.vehpicker{grid-template-columns:repeat(2,1fr)}}
+  /* sol kolon = ayrı kartlar (kriter simülasyonu stili) */
+  .ocol{display:flex;flex-direction:column;gap:14px}
+  #yukWrap{display:flex;flex-direction:column;gap:14px}
+  .sec-t{display:flex;align-items:center;gap:8px}
+  .sec-t .n{width:19px;height:19px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:0 0 auto}
+  .field{margin-bottom:13px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:12px;font-weight:600;color:#34405a;margin:0 0 5px}
+  .field select,.field input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;background:#fff}
+  .field select:focus,.field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .row{display:grid;gap:10px}.row.c2{grid-template-columns:1fr 1fr}.row.c3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}.frow.c3,.frow.c4,.row.c3{grid-template-columns:1fr 1fr}.kapgrid{grid-template-columns:repeat(3,1fr)}.vehpicker{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -221,11 +232,9 @@
   <!-- STAGE 2: sipariş -->
   <div class="stage" id="s2">
     <div class="grid">
-      <div class="card">
-        <div class="sec-t">Sipariş Bilgileri</div>
-
-        <div class="osec">
-          <div class="osec-h"><span class="osec-n">1</span> Güzergah <span class="routeBadgeS" id="routeBadgeS">1 alım · 1 teslim</span></div>
+      <div class="ocol">
+        <div class="card">
+          <div class="sec-t"><span class="n">1</span> Güzergah <span class="routeBadgeS" id="routeBadgeS" style="margin-left:auto">1 alım · 1 teslim</span></div>
           <div id="stopsList"></div>
           <div style="display:flex;gap:8px;margin:12px 0 6px">
             <button class="addbtn-ghost pick" onclick="addStop('pick')">+ Alım noktası</button>
@@ -235,26 +244,25 @@
         </div>
 
         <div id="yukWrap">
-          <div class="osec">
-            <div class="osec-h"><span class="osec-n">2</span> Kap Cinsi</div>
+          <div class="card">
+            <div class="sec-t"><span class="n">2</span> Kap Cinsi</div>
             <div class="kapgrid" id="kapGrid"></div>
-            <div class="hint" id="kapHint"></div>
+            <div class="hint" id="kapHint" style="margin-top:8px"></div>
           </div>
-          <div class="osec">
-            <div class="osec-h"><span class="osec-n">3</span> Yük Kimliği</div>
-            <div class="frow c2">
-              <div><label class="flbl">Ürün Kategorisi <span class="rq">(zorunlu)</span></label><select class="finp" id="oKat" onchange="O.kategori=this.value;refreshVeh();renderVehBox();updateSum()"><option>Genel kargo</option><option>Gıda</option><option>İlaç</option><option>Elektronik</option><option>Tehlikeli madde</option><option>Makine/Yedek parça</option><option>Kişisel eşya</option><option>Evrak</option></select></div>
-              <div><label class="flbl">Adet <span class="rq">(zorunlu)</span></label><input class="finp" type="number" id="oAdet" min="1" value="1" oninput="onYukInput()"></div>
+          <div class="card">
+            <div class="sec-t"><span class="n">3</span> Yük Kimliği</div>
+            <div class="row c2">
+              <div class="field"><label>Ürün Kategorisi (zorunlu)</label><select id="oKat" onchange="O.kategori=this.value;refreshVeh();renderVehBox();updateSum()"><option>Genel kargo</option><option>Gıda</option><option>İlaç</option><option>Elektronik</option><option>Cam / Seramik</option><option>Tehlikeli madde</option><option>Makine / Yedek parça</option><option>Kişisel eşya</option><option>Evrak / Numune</option><option>Diğer</option></select></div>
+              <div class="field"><label>Adet (zorunlu)</label><input type="number" id="oAdet" min="1" value="1" oninput="onYukInput()"></div>
             </div>
-            <label class="flbl" style="margin-top:8px">Açıklama (opsiyonel)</label>
-            <input class="finp" id="oAcik" placeholder="örn. içerik notu" oninput="O.aciklama=this.value">
+            <div class="field"><label>Açıklama (opsiyonel)</label><input type="text" id="oAcik" placeholder="Ürün içeriği kısa not" oninput="O.aciklama=this.value"></div>
           </div>
-          <div class="osec">
-            <div class="osec-h"><span class="osec-n">4</span> Ölçü &amp; Ağırlık</div>
+          <div class="card">
+            <div class="sec-t"><span class="n">4</span> Ölçü &amp; Ağırlık</div>
             <div id="olcuBody"></div>
           </div>
-          <div class="osec">
-            <div class="osec-h"><span class="osec-n">5</span> Araç</div>
+          <div class="card">
+            <div class="sec-t"><span class="n">5</span> Araç</div>
             <div id="vehBox"></div>
           </div>
         </div>
@@ -492,12 +500,14 @@ function selKap(id){ O.kap=id;
 function renderKapHint(){ $('kapHint').textContent=(KAPS.find(k=>k.id===O.kap)||{}).hint||''; }
 function renderOlcu(){ const k=KAPS.find(x=>x.id===O.kap)||{};
   if(k.noOlcu){ $('olcuBody').innerHTML='<div class="hint" style="background:var(--soft);border-radius:9px;padding:11px 13px">Bu kap için ölçü/ağırlık alınmaz.</div>'; }
-  else { $('olcuBody').innerHTML=`<div class="frow c4">
-    <div><label class="flbl">En (cm)</label><input class="finp" type="number" id="oEn" value="${O.en}" oninput="onYukInput()"></div>
-    <div><label class="flbl">Boy (cm)</label><input class="finp" type="number" id="oBoy" value="${O.boy}" oninput="onYukInput()"></div>
-    <div><label class="flbl">Yük. (cm)</label><input class="finp" type="number" id="oYuk" value="${O.yuk}" oninput="onYukInput()"></div>
-    <div><label class="flbl">Ağırlık/parça (kg)</label><input class="finp" type="number" id="oKg" value="${O.kg}" oninput="onYukInput()"></div>
-  </div><div id="oDesi" style="margin-top:8px;font-size:11px;color:var(--blue-d);background:var(--blue-l);border-radius:8px;padding:6px 10px;font-weight:600"></div>`; renderDesi(); }
+  else { $('olcuBody').innerHTML=`
+    <div class="row c3">
+      <div class="field"><label>En (cm)</label><input type="number" id="oEn" min="0" value="${O.en}" oninput="onYukInput()"></div>
+      <div class="field"><label>Boy (cm)</label><input type="number" id="oBoy" min="0" value="${O.boy}" oninput="onYukInput()"></div>
+      <div class="field"><label>Yükseklik (cm)</label><input type="number" id="oYuk" min="0" value="${O.yuk}" oninput="onYukInput()"></div>
+    </div>
+    <div class="field"><label>Ağırlık — parça başı (kg)</label><input type="number" id="oKg" min="0" value="${O.kg}" oninput="onYukInput()"></div>
+    <div id="oDesi" style="font-size:11px;color:var(--blue-d);background:var(--blue-l);border-radius:8px;padding:6px 10px;font-weight:600"></div>`; renderDesi(); }
 }
 function onYukInput(){ O.adet=+($('oAdet').value)||1; if($('oEn'))O.en=+$('oEn').value||0; if($('oBoy'))O.boy=+$('oBoy').value||0; if($('oYuk'))O.yuk=+$('oYuk').value||0; if($('oKg'))O.kg=+$('oKg').value||0; renderDesi(); refreshVeh(); renderVehBox(); updateSum(); }
 function renderDesi(){ const el=$('oDesi'); if(!el) return; const desi=Math.round((O.en*O.boy*O.yuk/3000)*O.adet); const totKg=(O.kg||0)*O.adet; el.textContent='Hesaplanan desi: '+desi+' · ücrete esas: '+Math.max(desi,totKg)+' (desi/kg max)'; }
