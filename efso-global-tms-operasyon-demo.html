@@ -92,36 +92,39 @@
   .hint{font-size:11.5px;color:var(--muted)}
   .summary .li{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}.summary .li .k{color:var(--muted)}.summary .li .v{font-weight:600}
   .pricebox{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-radius:12px;padding:12px 15px;margin-top:10px}.pricebox .x{font-size:19px;font-weight:800}.pricebox .l{font-size:11px;opacity:.9}
-  /* güzergah / duraklar */
-  .lblr{font-size:12px;font-weight:600;color:var(--slate);display:flex;align-items:center;margin-bottom:6px}
+  /* güzergah — rota timeline */
+  .lblr{font-size:12.5px;font-weight:700;color:var(--slate);display:flex;align-items:center;margin-bottom:12px}
   .routeBadgeS{font-size:11px;font-weight:700;color:var(--blue-d);background:var(--blue-l);padding:2px 9px;border-radius:999px;margin-left:8px}
-  .stop2{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--soft);overflow:hidden}
-  .stop2 .top{display:flex;align-items:center;gap:10px;padding:10px 11px}
-  .stop2 .pin{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
-  .pin.pick{background:#dbeafe}.pin.drop{background:#dcfce7}
-  .stop2 .meta{flex:1;min-width:0}.stop2 .meta b{font-size:13px}.stop2 .meta span{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .stop2 .del{color:var(--red);font-size:15px;cursor:pointer}
-  .addbtn-ghost{flex:1;border:1px dashed var(--blue);color:var(--blue-d);background:var(--blue-l);border-radius:10px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer}
-  .addbtn-ghost:active{transform:scale(.99)}
-  /* adres sheet */
-  .sheet-mask{position:fixed;inset:0;background:rgba(2,8,23,.45);display:none;z-index:90}
-  .sheet-mask.open{display:block}
-  .sheet2{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:min(460px,100%);background:#fff;border-radius:20px 20px 0 0;z-index:91;transition:transform .28s;max-height:88vh;overflow-y:auto;padding:14px 16px 22px;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
-  .sheet2.open{transform:translateX(-50%) translateY(0)}
-  .sheet2 .grab{width:42px;height:5px;border-radius:999px;background:#e2e8f0;margin:0 auto 10px}
-  .sheet2 h3{font-size:16px;margin:0 0 2px}.sheet2 .sub{font-size:11.5px;color:var(--muted);margin-bottom:8px}
-  .search2{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--soft)}
-  .search2 input{border:0;background:transparent;outline:none;width:100%;font-size:13px;font-family:inherit}
-  .search2 .g{font-size:11px;color:#4285F4;font-weight:700}
-  .map2{height:104px;border-radius:12px;margin-top:10px;background:linear-gradient(45deg,#e7eef6 25%,transparent 25%) -10px 0/22px 22px,linear-gradient(-45deg,#e7eef6 25%,transparent 25%) -10px 0/22px 22px,#eef3f9;position:relative;border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .map2 .pinc{font-size:28px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.25))}
-  .sec-t2{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin:14px 2px 2px;letter-spacing:.4px}
-  .addr-row{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:11px;cursor:pointer}
-  .addr-row:hover{background:var(--soft)}
-  .addr-row .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;background:#eef2ff}
-  .addr-row .ic.sv{background:#dcfce7}.addr-row .ic.rc{background:#fef9c3}.addr-row .ic.gg{background:#e8f0fe}
-  .addr-row .tx{flex:1;min-width:0}.addr-row .tx b{font-size:13px;display:block}.addr-row .tx span{font-size:11.5px;color:var(--muted)}
-  .savebtn{margin-left:auto;color:var(--amber);font-size:17px;flex:0 0 auto}
+  #stopsList{position:relative}
+  .stop2{position:relative;display:flex;gap:12px;padding-bottom:14px}
+  .stop2 .rail{position:relative;width:28px;flex:0 0 auto;display:flex;justify-content:center}
+  .stop2 .pinx{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;z-index:2;box-shadow:0 3px 8px rgba(15,23,42,.18)}
+  .stop2.pick .pinx{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+  .stop2.drop .pinx{background:linear-gradient(135deg,#22c55e,#16a34a)}
+  .stop2 .conn{position:absolute;top:28px;bottom:-14px;left:50%;transform:translateX(-50%);width:2px;background:repeating-linear-gradient(180deg,#cbd5e1 0 5px,transparent 5px 10px)}
+  .stop2:last-child .conn{display:none}
+  .stop2 .sbody{flex:1;min-width:0;background:#fff;border:1px solid var(--line);border-radius:13px;padding:9px 12px 11px;box-shadow:0 1px 2px rgba(15,23,42,.04);transition:.15s}
+  .stop2 .sbody:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+  .stop2 .lblrow{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .stop2 .lbl{font-size:11.5px;font-weight:800;letter-spacing:.2px}
+  .stop2.pick .lbl{color:#1d4ed8}.stop2.drop .lbl{color:#15803d}
+  .stop2 .del{margin-left:auto;color:var(--muted);font-size:13px;cursor:pointer;width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+  .stop2 .del:hover{color:var(--red);background:#fee2e2}
+  .addbtn-ghost{flex:1;border:1px dashed var(--line);border-radius:10px;padding:10px;font-weight:700;font-size:12.5px;cursor:pointer;background:#fff;transition:.15s}
+  .addbtn-ghost.pick{color:#1d4ed8;border-color:#bfdbfe;background:#eff6ff}.addbtn-ghost.pick:hover{background:#dbeafe}
+  .addbtn-ghost.drop{color:#15803d;border-color:#bbf7d0;background:#f0fdf4}.addbtn-ghost.drop:hover{background:#dcfce7}
+  /* inline autocomplete */
+  .acwrap{position:relative}
+  .acwrap .pinico{position:absolute;left:11px;top:10px;font-size:12px;opacity:.55;pointer-events:none}
+  .ac-in{width:100%;padding:9px 11px 9px 31px;border:1px solid var(--line);border-radius:10px;font-size:13px;font-family:inherit;background:var(--soft)}
+  .ac-in:focus{outline:none;border-color:var(--blue);background:#fff}
+  .ac-list{position:absolute;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(15,23,42,.18);z-index:50;display:none;overflow:hidden;max-height:240px;overflow-y:auto}
+  .ac-list.show{display:block}
+  .ac-item{display:flex;align-items:center;gap:9px;padding:9px 12px;font-size:12.5px;cursor:pointer}
+  .ac-item:hover{background:var(--blue-l)}
+  .ac-pin{font-size:12px;flex:0 0 auto}
+  .ac-tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ac-src{font-size:9px;font-weight:700;color:var(--muted);background:var(--soft);border:1px solid var(--line);padding:1px 6px;border-radius:6px;flex:0 0 auto}
   @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -161,11 +164,11 @@
         <div class="sec-t">Sipariş Bilgileri</div>
         <label class="lblr">Güzergah — alım / teslim noktaları <span class="routeBadgeS" id="routeBadgeS">1 alım · 1 teslim</span></label>
         <div id="stopsList"></div>
-        <div style="display:flex;gap:8px;margin:10px 0 6px">
-          <button class="addbtn-ghost" onclick="openPicker('pick')">+ Alım ekle</button>
-          <button class="addbtn-ghost" onclick="openPicker('drop')">+ Teslim ekle</button>
+        <div style="display:flex;gap:8px;margin:12px 0 6px">
+          <button class="addbtn-ghost pick" onclick="addStop('pick')">+ Alım noktası</button>
+          <button class="addbtn-ghost drop" onclick="addStop('drop')">+ Teslim noktası</button>
         </div>
-        <div class="hint" style="margin:0 0 14px">Adres <b>aratılır</b> (Google), kayıtlı/son adresten seçilir, kaydedilir veya manuel girilir. Çoklu durak otomatik <b>N→N</b> olur.</div>
+        <div class="hint" style="margin:0 0 14px">Her noktada adres <b>yazarak aranır</b> (Google/OpenStreetMap canlı sonuç + yerel öneri). Çoklu durak otomatik <b>N→N</b> olur.</div>
         <div class="frow c3" id="yukFields">
           <div class="field"><label>Kap</label><select id="oKap"><option>Palet</option><option>Koli</option><option>Sandık</option><option>Big Bag</option></select></div>
           <div class="field"><label>Adet</label><input type="number" id="oAdet" value="6"></div>
@@ -245,29 +248,6 @@
   </div>
 </div>
 
-<!-- Adres seçici -->
-<div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
-<div class="sheet2" id="sheet">
-  <div class="grab"></div>
-  <h3 id="sheetTitle">Alım adresi seç</h3>
-  <div class="sub">Ara, kayıtlı/son adresten seç, haritadan PIN bırak veya manuel gir.</div>
-  <div class="search2">🔎 <input id="addrSearch" placeholder="Adres, cadde, işyeri ara…" oninput="filterAddr()"><span class="g">Google</span></div>
-  <div class="map2" onclick="pickFrom('Haritadan seçilen konum','PIN 41.0082, 28.9784 · Google Maps')"><span class="pinc">📍</span></div>
-  <div id="addrResults"></div>
-  <div style="border-top:1px dashed var(--line);margin-top:12px;padding-top:6px">
-    <div class="sec-t2">Manuel (İl / İlçe / Mahalle)</div>
-    <div class="frow c3" style="margin-top:6px">
-      <input list="ilList" placeholder="İl ara…" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit">
-      <input list="ilceList" placeholder="İlçe ara…" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit">
-      <input list="mahList" placeholder="Mahalle ara…" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit">
-    </div>
-    <datalist id="ilList"><option>İstanbul</option><option>Ankara</option><option>İzmir</option><option>Bursa</option><option>Kocaeli</option><option>Antalya</option><option>Adana</option><option>Konya</option><option>Gaziantep</option><option>Mersin</option><option>Tekirdağ</option><option>Eskişehir</option></datalist>
-    <datalist id="ilceList"><option>Kadıköy</option><option>Beşiktaş</option><option>Şişli</option><option>Üsküdar</option><option>Ümraniye</option><option>Pendik</option><option>Başakşehir</option><option>Esenyurt</option><option>Bağcılar</option><option>Gebze</option><option>Çankaya</option><option>Nilüfer</option></datalist>
-    <datalist id="mahList"><option>Caferağa</option><option>Moda</option><option>Levent</option><option>Acıbadem</option><option>Sinanpaşa</option><option>Merkez</option><option>Cumhuriyet</option><option>Fatih</option><option>Yeni Mahalle</option><option>Barbaros</option></datalist>
-    <input id="manualAddr" style="margin-top:8px;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit" placeholder="Açık adres, kapı no, kat">
-    <button class="bigbtn" style="margin-top:10px" onclick="pickManual()">Bu adresi ekle</button>
-  </div>
-</div>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -307,58 +287,50 @@ function chooseSvc(s){
 }
 function chooseTur(k,t){ tur=t; if(!stops.length) initStops(); renderStops(); show(2); }
 
-/* ---- Güzergah (N→N duraklar) + adres seçici ---- */
-function initStops(){ stops=[{type:'pick',title:'Anadolu Lojistik',sub:'İstanbul / Hadımköy',id:1},{type:'drop',title:'Bims Yapı',sub:'Ankara / Sincan',id:2}]; stopId=2; }
+/* ---- Güzergah (N→N duraklar) + inline adres autocomplete (Photon + yerel fallback) ---- */
+function initStops(){ stops=[{type:'pick',addr:'Anadolu Lojistik, Hadımköy, İstanbul',id:1},{type:'drop',addr:'Bims Yapı, Sincan, Ankara',id:2}]; stopId=2; }
 function renderStops(){
   const box=$('stopsList'); let pn=0,dn=0;
   box.innerHTML=stops.map(st=>{ const isP=st.type==='pick'; if(isP)pn++;else dn++; const n=isP?pn:dn;
     const canDel = isP ? stops.filter(x=>x.type==='pick').length>1 : stops.filter(x=>x.type==='drop').length>1;
-    return `<div class="stop2"><div class="top"><div class="pin ${isP?'pick':'drop'}">${isP?'📍':'🏁'}</div><div class="meta"><b>${(isP?'Alım ':'Teslim ')+n} — ${st.title}</b><span>${st.sub}</span></div>${canDel?`<span class="del" onclick="delStop(${st.id})">🗑️</span>`:''}</div></div>`;
+    return `<div class="stop2 ${isP?'pick':'drop'}">
+      <div class="rail"><div class="pinx">${n}</div><div class="conn"></div></div>
+      <div class="sbody">
+        <div class="lblrow"><span class="lbl">${isP?'📍 Alım':'🏁 Teslim'} ${n}</span>${canDel?`<span class="del" onclick="delStop(${st.id})" title="Kaldır">✕</span>`:''}</div>
+        <div class="acwrap"><span class="pinico">🔍</span>
+          <input class="ac-in" id="acStop${st.id}" autocomplete="off" placeholder="${isP?'Alım':'Teslim'} adresi ara… (cadde, işyeri, semt)" value="${(st.addr||'').replace(/"/g,'&quot;')}" oninput="acInput(${st.id},this.value)" onfocus="acInput(${st.id},this.value)" onblur="acBlur(${st.id})">
+          <div class="ac-list" id="aclist${st.id}"></div>
+        </div>
+      </div></div>`;
   }).join('');
   $('routeBadgeS').textContent=pn+' alım · '+dn+' teslim'+((pn>1||dn>1)?' · N→N':'');
   renderOrder();
 }
+function addStop(type){ const id=++stopId; stops.push({type,addr:'',id}); renderStops(); setTimeout(()=>{const i=$('acStop'+id); if(i) i.focus();},40); }
 function delStop(id){ stops=stops.filter(s=>s.id!==id); renderStops(); }
-function openPicker(t){ pickType=t; $('sheetTitle').textContent=(t==='pick'?'Alım':'Teslim')+' adresi seç'; $('addrSearch').value=''; renderAddrList(''); $('sheetMask').classList.add('open'); $('sheet').classList.add('open'); }
-function closeSheet(){ $('sheetMask').classList.remove('open'); $('sheet').classList.remove('open'); }
-function pickFrom(title,sub){ stops.push({type:pickType,title,sub,id:++stopId}); closeSheet(); renderStops(); }
-function pickManual(){ const a=($('manualAddr').value||'').trim(); pickFrom('Manuel adres',(a?a+' · ':'')+'İstanbul / Kadıköy / Caferağa'); $('manualAddr').value=''; }
-const ADDR_DB={
-  google:[
-    {t:'Migros Moda',s:'Caferağa Mah., Kadıköy/İstanbul'},
-    {t:'Beşiktaş Meydanı',s:'Sinanpaşa Mah., Beşiktaş/İstanbul'},
-    {t:'İstanbul Havalimanı Kargo',s:'Tayakadın, Arnavutköy/İstanbul'},
-    {t:'Sabiha Gökçen Havalimanı',s:'Pendik/İstanbul'},
-    {t:'Dudullu OSB',s:'2. Cadde, Ümraniye/İstanbul'},
-    {t:'İkitelli OSB',s:'Başakşehir/İstanbul'},
-    {t:'Bağdat Caddesi',s:'Caddebostan, Kadıköy/İstanbul'},
-    {t:'Levent Metro',s:'Büyükdere Cad., Şişli/İstanbul'},
-    {t:'Mecidiyeköy',s:'Şişli/İstanbul'},
-    {t:'Esenyurt Sanayi',s:'Esenyurt/İstanbul'},
-    {t:'Gebze OSB',s:'Gebze/Kocaeli'},
-    {t:'Ankara Lojistik Üssü',s:'Akyurt OSB, Ankara'},
-    {t:'Ostim OSB',s:'Yenimahalle/Ankara'},
-    {t:'İzmir Atatürk OSB',s:'Çiğli/İzmir'},
-    {t:'Bursa Nilüfer OSB',s:'Nilüfer/Bursa'}
-  ],
-  saved:[{t:'Ev',s:'Acıbadem Mah. No:14 D:5, Üsküdar',i:'🏠'},{t:'İş / Ofis',s:'Levent, Büyükdere Cad. No:201, Şişli',i:'🏢'},{t:'Ana Depo',s:'Dudullu OSB 2.Cad No:7, Ümraniye',i:'📦'}],
-  recent:[{t:'Bağcılar Şube',s:'Merkez Mah. No:9, Bağcılar/İstanbul'}]
-};
-function esc(x){return (x||'').replace(/'/g,"\\'");}
-function addrRow(a,cls,ic,save){return `<div class="addr-row" onclick="pickFrom('${esc(a.t)}','${esc(a.s)}')"><div class="ic ${cls}">${ic}</div><div class="tx"><b>${a.t}</b><span>${a.s}</span></div>${save?`<span class="savebtn" onclick="event.stopPropagation();saveAddr('${esc(a.t)}','${esc(a.s)}')" title="Kayıtlı adreslerime ekle">☆</span>`:''}</div>`;}
-function renderAddrList(raw){ const q=(raw||'').trim(); const f=q.toLowerCase(); const m=a=>(a.t+' '+a.s).toLowerCase().includes(f);
-  let h='';
-  // canlı otomatik tamamlama: yazdıkça "bu metni kullan" + eşleşen yerler
-  let g=ADDR_DB.google.filter(m);
-  if(q){ g=[{t:q,s:'“'+q+'” — haritada ara ve kullan · Google',syn:true}].concat(g); }
-  if(g.length)h+='<div class="sec-t2">Arama sonuçları (Google Places)</div>'+g.map(a=>addrRow(a,'gg',a.syn?'🔍':'📍',!a.syn)).join('');
-  const s=ADDR_DB.saved.filter(m); if(s.length)h+='<div class="sec-t2">Kayıtlı adreslerim</div>'+s.map(a=>addrRow(a,'sv',a.i||'⭐',false)).join('');
-  const r=ADDR_DB.recent.filter(m); if(r.length)h+='<div class="sec-t2">Son kullanılanlar</div>'+r.map(a=>addrRow(a,'rc','🕘',true)).join('');
-  if(!h)h='<div class="sub" style="padding:14px 4px">Adres yazmaya başlayın…</div>';
-  $('addrResults').innerHTML=h;
+
+/* Photon (OpenStreetMap) autocomplete + yerel fallback + debounce */
+const AC_LOCAL=["Anadolu Lojistik, Hadımköy, İstanbul","Bims Yapı, Sincan, Ankara","Levent, Beşiktaş, İstanbul","Maslak, Sarıyer, İstanbul","Mecidiyeköy, Şişli, İstanbul","Kadıköy Rıhtım, Kadıköy, İstanbul","Bağdat Caddesi, Caddebostan, İstanbul","Ataşehir, İstanbul","Ümraniye Merkez, İstanbul","Dudullu OSB, Ümraniye, İstanbul","İkitelli OSB, Başakşehir, İstanbul","Tuzla Organize Sanayi, İstanbul","İstanbul Havalimanı (IST), Arnavutköy","Sabiha Gökçen Havalimanı (SAW), Pendik","Esenyurt Sanayi, İstanbul","Gebze OSB, Kocaeli","Ankara Lojistik Üssü, Akyurt","Ostim OSB, Yenimahalle, Ankara","İzmir Atatürk OSB, Çiğli","Bursa Nilüfer OSB","Ev — Acıbadem Mah. No:14, Üsküdar","İş/Ofis — Levent, Büyükdere Cad. No:201","Ana Depo — Dudullu OSB 2.Cad No:7"];
+let acTimer=null, acReqId=0;
+function acInput(id,q){
+  const st=stops.find(s=>s.id===id); if(st) st.addr=q;
+  const list=$('aclist'+id); if(!list) return;
+  if(!q||q.trim().length<2){ list.classList.remove('show'); list.innerHTML=''; return; }
+  renderAc(id, AC_LOCAL.filter(a=>a.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr'))).slice(0,6).map(a=>({label:a,src:'yerel'})));
+  clearTimeout(acTimer); const my=++acReqId;
+  acTimer=setTimeout(()=>acFetch(id,q,my),260);
 }
-function filterAddr(){ renderAddrList($('addrSearch').value); }
-function saveAddr(t,s){ if(!ADDR_DB.saved.some(a=>a.t===t)) ADDR_DB.saved.unshift({t,s,i:'⭐'}); renderAddrList($('addrSearch').value); }
+async function acFetch(id,q,reqId){ try{
+  const url='https://photon.komoot.io/api/?lang=default&limit=6&lat=41.01&lon=28.97&q='+encodeURIComponent(q);
+  const r=await fetch(url); if(!r.ok) throw 0; const j=await r.json(); if(reqId!==acReqId) return;
+  const items=(j.features||[]).map(f=>{ const p=f.properties||{}; const street=p.street?(p.street+(p.housenumber?' '+p.housenumber:'')):null; const parts=[p.name,street,p.district,p.city||p.county,p.state,p.country].filter(Boolean); return {label:[...new Set(parts)].join(', '),src:'harita'};}).filter(x=>x.label);
+  if(items.length) renderAc(id,items);
+}catch(e){} }
+function renderAc(id,items){ const list=$('aclist'+id); if(!list) return; if(!items.length){ list.classList.remove('show'); list.innerHTML=''; return; }
+  list.innerHTML=items.map(it=>`<div class="ac-item" onmousedown="acPick(${id},this)" data-v="${it.label.replace(/"/g,'&quot;')}"><span class="ac-pin">📍</span><span class="ac-tx">${it.label}</span><span class="ac-src">${it.src}</span></div>`).join('');
+  list.classList.add('show'); }
+function acPick(id,el){ const v=el.getAttribute('data-v'); const st=stops.find(s=>s.id===id); if(st) st.addr=v; const inp=$('acStop'+id); if(inp) inp.value=v; const l=$('aclist'+id); if(l){l.classList.remove('show');l.innerHTML='';} renderOrder(); }
+function acBlur(id){ setTimeout(()=>{const l=$('aclist'+id); if(l) l.classList.remove('show');},160); }
 
 /* STAGE 2: sipariş */
 function setArac(a){ arac=a; $('segArac').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.a===a)); }
