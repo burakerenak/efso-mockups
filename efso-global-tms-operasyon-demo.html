@@ -257,10 +257,13 @@
   <div style="border-top:1px dashed var(--line);margin-top:12px;padding-top:6px">
     <div class="sec-t2">Manuel (İl / İlçe / Mahalle)</div>
     <div class="frow c3" style="margin-top:6px">
-      <select><option>İstanbul</option><option>Ankara</option><option>İzmir</option></select>
-      <select><option>Kadıköy</option><option>Beşiktaş</option><option>Şişli</option></select>
-      <select><option>Caferağa</option><option>Moda</option><option>Levent</option></select>
+      <input list="ilList" placeholder="İl ara…" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit">
+      <input list="ilceList" placeholder="İlçe ara…" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit">
+      <input list="mahList" placeholder="Mahalle ara…" style="padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit">
     </div>
+    <datalist id="ilList"><option>İstanbul</option><option>Ankara</option><option>İzmir</option><option>Bursa</option><option>Kocaeli</option><option>Antalya</option><option>Adana</option><option>Konya</option><option>Gaziantep</option><option>Mersin</option><option>Tekirdağ</option><option>Eskişehir</option></datalist>
+    <datalist id="ilceList"><option>Kadıköy</option><option>Beşiktaş</option><option>Şişli</option><option>Üsküdar</option><option>Ümraniye</option><option>Pendik</option><option>Başakşehir</option><option>Esenyurt</option><option>Bağcılar</option><option>Gebze</option><option>Çankaya</option><option>Nilüfer</option></datalist>
+    <datalist id="mahList"><option>Caferağa</option><option>Moda</option><option>Levent</option><option>Acıbadem</option><option>Sinanpaşa</option><option>Merkez</option><option>Cumhuriyet</option><option>Fatih</option><option>Yeni Mahalle</option><option>Barbaros</option></datalist>
     <input id="manualAddr" style="margin-top:8px;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit" placeholder="Açık adres, kapı no, kat">
     <button class="bigbtn" style="margin-top:10px" onclick="pickManual()">Bu adresi ekle</button>
   </div>
@@ -321,17 +324,37 @@ function closeSheet(){ $('sheetMask').classList.remove('open'); $('sheet').class
 function pickFrom(title,sub){ stops.push({type:pickType,title,sub,id:++stopId}); closeSheet(); renderStops(); }
 function pickManual(){ const a=($('manualAddr').value||'').trim(); pickFrom('Manuel adres',(a?a+' · ':'')+'İstanbul / Kadıköy / Caferağa'); $('manualAddr').value=''; }
 const ADDR_DB={
-  google:[{t:'Migros Moda',s:'Caferağa Mah., Kadıköy/İstanbul'},{t:'Beşiktaş Meydanı',s:'Sinanpaşa Mah., Beşiktaş/İstanbul'},{t:'İstanbul Havalimanı Kargo',s:'Tayakadın, Arnavutköy/İstanbul'},{t:'Dudullu OSB',s:'2. Cadde, Ümraniye/İstanbul'},{t:'Ankara Lojistik Üssü',s:'Akyurt OSB, Ankara'}],
+  google:[
+    {t:'Migros Moda',s:'Caferağa Mah., Kadıköy/İstanbul'},
+    {t:'Beşiktaş Meydanı',s:'Sinanpaşa Mah., Beşiktaş/İstanbul'},
+    {t:'İstanbul Havalimanı Kargo',s:'Tayakadın, Arnavutköy/İstanbul'},
+    {t:'Sabiha Gökçen Havalimanı',s:'Pendik/İstanbul'},
+    {t:'Dudullu OSB',s:'2. Cadde, Ümraniye/İstanbul'},
+    {t:'İkitelli OSB',s:'Başakşehir/İstanbul'},
+    {t:'Bağdat Caddesi',s:'Caddebostan, Kadıköy/İstanbul'},
+    {t:'Levent Metro',s:'Büyükdere Cad., Şişli/İstanbul'},
+    {t:'Mecidiyeköy',s:'Şişli/İstanbul'},
+    {t:'Esenyurt Sanayi',s:'Esenyurt/İstanbul'},
+    {t:'Gebze OSB',s:'Gebze/Kocaeli'},
+    {t:'Ankara Lojistik Üssü',s:'Akyurt OSB, Ankara'},
+    {t:'Ostim OSB',s:'Yenimahalle/Ankara'},
+    {t:'İzmir Atatürk OSB',s:'Çiğli/İzmir'},
+    {t:'Bursa Nilüfer OSB',s:'Nilüfer/Bursa'}
+  ],
   saved:[{t:'Ev',s:'Acıbadem Mah. No:14 D:5, Üsküdar',i:'🏠'},{t:'İş / Ofis',s:'Levent, Büyükdere Cad. No:201, Şişli',i:'🏢'},{t:'Ana Depo',s:'Dudullu OSB 2.Cad No:7, Ümraniye',i:'📦'}],
   recent:[{t:'Bağcılar Şube',s:'Merkez Mah. No:9, Bağcılar/İstanbul'}]
 };
 function esc(x){return (x||'').replace(/'/g,"\\'");}
 function addrRow(a,cls,ic,save){return `<div class="addr-row" onclick="pickFrom('${esc(a.t)}','${esc(a.s)}')"><div class="ic ${cls}">${ic}</div><div class="tx"><b>${a.t}</b><span>${a.s}</span></div>${save?`<span class="savebtn" onclick="event.stopPropagation();saveAddr('${esc(a.t)}','${esc(a.s)}')" title="Kayıtlı adreslerime ekle">☆</span>`:''}</div>`;}
-function renderAddrList(f){ f=(f||'').toLowerCase(); const m=a=>(a.t+' '+a.s).toLowerCase().includes(f);
-  let h=''; const g=ADDR_DB.google.filter(m); if(g.length)h+='<div class="sec-t2">Arama sonuçları (Google Places)</div>'+g.map(a=>addrRow(a,'gg','📍',true)).join('');
+function renderAddrList(raw){ const q=(raw||'').trim(); const f=q.toLowerCase(); const m=a=>(a.t+' '+a.s).toLowerCase().includes(f);
+  let h='';
+  // canlı otomatik tamamlama: yazdıkça "bu metni kullan" + eşleşen yerler
+  let g=ADDR_DB.google.filter(m);
+  if(q){ g=[{t:q,s:'“'+q+'” — haritada ara ve kullan · Google',syn:true}].concat(g); }
+  if(g.length)h+='<div class="sec-t2">Arama sonuçları (Google Places)</div>'+g.map(a=>addrRow(a,'gg',a.syn?'🔍':'📍',!a.syn)).join('');
   const s=ADDR_DB.saved.filter(m); if(s.length)h+='<div class="sec-t2">Kayıtlı adreslerim</div>'+s.map(a=>addrRow(a,'sv',a.i||'⭐',false)).join('');
   const r=ADDR_DB.recent.filter(m); if(r.length)h+='<div class="sec-t2">Son kullanılanlar</div>'+r.map(a=>addrRow(a,'rc','🕘',true)).join('');
-  if(!h)h='<div class="sub" style="padding:14px 4px">Sonuç yok — aşağıdan manuel ekleyebilirsiniz.</div>';
+  if(!h)h='<div class="sub" style="padding:14px 4px">Adres yazmaya başlayın…</div>';
   $('addrResults').innerHTML=h;
 }
 function filterAddr(){ renderAddrList($('addrSearch').value); }
