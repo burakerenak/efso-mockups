@@ -197,6 +197,22 @@
   .field select,.field input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;background:#fff}
   .field select:focus,.field input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
   .row{display:grid;gap:10px}.row.c2{grid-template-columns:1fr 1fr}.row.c3{grid-template-columns:repeat(3,1fr)}
+  /* adım adım sihirbaz */
+  .wzwrap{max-width:600px;margin:0 auto}
+  .wzbar{max-width:600px;margin:0 auto 16px;display:flex;gap:4px}
+  .wzstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--muted);text-align:center;position:relative}
+  .wzstep::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0}
+  .wzstep:first-child::before{display:none}
+  .wzstep.done::before,.wzstep.on::before{background:var(--green)}
+  .wzstep .wzn{width:27px;height:27px;border-radius:50%;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--muted);transition:.15s;z-index:1}
+  .wzstep.on .wzn{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px var(--blue-l)}
+  .wzstep.done .wzn{background:var(--green);border-color:var(--green);color:#fff}
+  .wzstep.on .wzl{color:var(--ink);font-weight:700}.wzstep .wzl{font-weight:600;line-height:1.2}
+  .wzscreen{display:none}
+  .wznav{display:flex;gap:10px;margin-top:14px}
+  .wznav .btn{padding:13px 18px;border-radius:11px;font-weight:700;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:14px;color:var(--slate)}
+  .wznav .btn:hover{border-color:var(--blue)}
+  .subdiv{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin:16px 0 11px;padding-top:14px;border-top:1px dashed var(--line)}
   @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}.frow.c3,.frow.c4,.row.c3{grid-template-columns:1fr 1fr}.kapgrid{grid-template-columns:repeat(3,1fr)}.vehpicker{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -231,48 +247,49 @@
 
   <!-- STAGE 2: sipariş -->
   <div class="stage" id="s2">
-    <div class="grid">
-      <div class="ocol">
-        <div class="card">
-          <div class="sec-t"><span class="n">1</span> Güzergah <span class="routeBadgeS" id="routeBadgeS" style="margin-left:auto">1 alım · 1 teslim</span></div>
-          <div id="stopsList"></div>
-          <div style="display:flex;gap:8px;margin:12px 0 6px">
-            <button class="addbtn-ghost pick" onclick="addStop('pick')">+ Alım noktası</button>
-            <button class="addbtn-ghost drop" onclick="addStop('drop')">+ Teslim noktası</button>
-          </div>
-          <div class="hint">Her noktada adres <b>yazarak aranır</b> (canlı harita önerisi). Çoklu durak otomatik <b>N→N</b>.</div>
+    <div class="wzbar" id="wzSteps"></div>
+    <div class="wzwrap">
+      <div class="wzscreen card" data-step="guz">
+        <div class="sec-t"><span class="n">📍</span> Alım &amp; Teslim Noktaları <span class="routeBadgeS" id="routeBadgeS" style="margin-left:auto">1 alım · 1 teslim</span></div>
+        <div id="stopsList"></div>
+        <div style="display:flex;gap:8px;margin:12px 0 6px">
+          <button class="addbtn-ghost pick" onclick="addStop('pick')">+ Alım noktası</button>
+          <button class="addbtn-ghost drop" onclick="addStop('drop')">+ Teslim noktası</button>
         </div>
-
-        <div id="yukWrap">
-          <div class="card">
-            <div class="sec-t"><span class="n">2</span> Kap Cinsi</div>
-            <div class="kapgrid" id="kapGrid"></div>
-            <div class="hint" id="kapHint" style="margin-top:8px"></div>
-          </div>
-          <div class="card">
-            <div class="sec-t"><span class="n">3</span> Yük Kimliği</div>
-            <div class="row c2">
-              <div class="field"><label>Ürün Kategorisi (zorunlu)</label><select id="oKat" onchange="O.kategori=this.value;refreshVeh();renderVehBox();updateSum()"><option>Genel kargo</option><option>Gıda</option><option>İlaç</option><option>Elektronik</option><option>Cam / Seramik</option><option>Tehlikeli madde</option><option>Makine / Yedek parça</option><option>Kişisel eşya</option><option>Evrak / Numune</option><option>Diğer</option></select></div>
-              <div class="field"><label>Adet (zorunlu)</label><input type="number" id="oAdet" min="1" value="1" oninput="onYukInput()"></div>
-            </div>
-            <div class="field"><label>Açıklama (opsiyonel)</label><input type="text" id="oAcik" placeholder="Ürün içeriği kısa not" oninput="O.aciklama=this.value"></div>
-          </div>
-          <div class="card">
-            <div class="sec-t"><span class="n">4</span> Ölçü &amp; Ağırlık</div>
-            <div id="olcuBody"></div>
-          </div>
-          <div class="card">
-            <div class="sec-t"><span class="n">5</span> Araç</div>
-            <div id="vehBox"></div>
-          </div>
-        </div>
-
-        <button class="bigbtn" onclick="confirmOrder()">Siparişi Onayla &amp; Ödeme Bloke (Pre-Auth)</button>
+        <div class="hint">Her noktada adres <b>yazarak aranır</b> (canlı harita önerisi). Çoklu durak otomatik <b>N→N</b>.</div>
       </div>
-      <div class="card">
-        <div class="sec-t">Özet</div>
+
+      <div class="wzscreen card" data-step="kap">
+        <div class="sec-t">📦 Kap Cinsi</div>
+        <div class="kapgrid" id="kapGrid"></div>
+        <div class="hint" id="kapHint" style="margin-top:10px"></div>
+      </div>
+
+      <div class="wzscreen card" data-step="yuk">
+        <div class="sec-t">🏷️ Yük Detayı</div>
+        <div class="row c2">
+          <div class="field"><label>Ürün Kategorisi (zorunlu)</label><select id="oKat" onchange="O.kategori=this.value;refreshVeh();renderVehBox();updateSum()"><option>Genel kargo</option><option>Gıda</option><option>İlaç</option><option>Elektronik</option><option>Cam / Seramik</option><option>Tehlikeli madde</option><option>Makine / Yedek parça</option><option>Kişisel eşya</option><option>Evrak / Numune</option><option>Diğer</option></select></div>
+          <div class="field"><label>Adet (zorunlu)</label><input type="number" id="oAdet" min="1" value="1" oninput="onYukInput()"></div>
+        </div>
+        <div class="field"><label>Açıklama (opsiyonel)</label><input type="text" id="oAcik" placeholder="Ürün içeriği kısa not" oninput="O.aciklama=this.value"></div>
+        <div class="subdiv">Ölçü &amp; Ağırlık</div>
+        <div id="olcuBody"></div>
+      </div>
+
+      <div class="wzscreen card" data-step="arac">
+        <div class="sec-t">🚚 Araç</div>
+        <div id="vehBox"></div>
+      </div>
+
+      <div class="wzscreen card" data-step="ozet">
+        <div class="sec-t">✅ Özet &amp; Onay</div>
         <div class="summary" id="oSum"></div>
         <div class="pricebox"><div class="l" id="oPriceL">Tahmini fiyat</div><div class="x" id="oPriceX">—</div></div>
+      </div>
+
+      <div class="wznav">
+        <button class="btn" id="wzBack" onclick="wzBack()">← Geri</button>
+        <button class="bigbtn" id="wzNext" onclick="wzNext()" style="flex:1">İleri →</button>
       </div>
     </div>
   </div>
@@ -379,7 +396,30 @@ function chooseSvc(s){
     show(1);
   }
 }
-function chooseTur(k,t){ tur=t; if(!stops.length) initStops(); renderStops(); show(2); }
+function chooseTur(k,t){ tur=t; if(!stops.length) initStops(); renderStops(); wzInit(); show(2); }
+
+/* ---- Adım adım sihirbaz (Next/Next) ---- */
+const WZ_DEF={guz:'Adres',kap:'Kap',yuk:'Yük',arac:'Araç',ozet:'Onay'};
+let wzList=[], wzIdx=0;
+function wzInit(){ wzList = (svc==='yuk') ? ['guz','kap','yuk','arac','ozet'] : ['guz','ozet']; wzIdx=0; renderWz(); }
+function renderWz(){ const key=wzList[wzIdx];
+  document.querySelectorAll('#s2 .wzscreen').forEach(s=>s.style.display = s.dataset.step===key ? 'block':'none');
+  $('wzSteps').innerHTML = wzList.map((k,i)=>`<div class="wzstep ${i<wzIdx?'done':i===wzIdx?'on':''}"><span class="wzn">${i<wzIdx?'✓':i+1}</span><span class="wzl">${WZ_DEF[k]}</span></div>`).join('');
+  $('wzBack').style.visibility = wzIdx===0?'hidden':'visible';
+  const last = wzIdx===wzList.length-1;
+  $('wzNext').textContent = last?'Onayla & Ödeme Bloke':'İleri →';
+  $('wzNext').className = last?'bigbtn green':'bigbtn';
+  if(key==='ozet') updateSum();
+  if(key==='arac'){ refreshVeh(); renderVehBox(); }
+  window.scrollTo(0,0);
+}
+function wzNext(){ const key=wzList[wzIdx];
+  if(key==='guz' && stops.some(s=>!s.addr||!s.addr.trim())){ toast('⚠️ Tüm noktalara adres girin.'); return; }
+  if(key==='arac' && !O.accepted){ toast('⚠️ "Aracı gördüm, kabul ediyorum" kutusunu işaretleyin.'); return; }
+  if(wzIdx===wzList.length-1){ confirmOrder(); return; }
+  wzIdx++; renderWz();
+}
+function wzBack(){ if(wzIdx>0){ wzIdx--; renderWz(); } }
 
 /* ---- Güzergah (N→N duraklar) + inline adres autocomplete (Photon + yerel fallback) ---- */
 const GIRIS_RULES=[{id:'all',ad:'TIR dahil hepsi'},{id:'kamyon',ad:'Kamyona kadar'},{id:'kamyonet',ad:'Kamyonet’e kadar'},{id:'sehir',ad:'Şehir içi kamyon yasağı (TIR 22:00–06:00)'},{id:'van',ad:'Van’a kadar (dar sokak)'}];
