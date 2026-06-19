@@ -92,6 +92,36 @@
   .hint{font-size:11.5px;color:var(--muted)}
   .summary .li{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}.summary .li .k{color:var(--muted)}.summary .li .v{font-weight:600}
   .pricebox{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-radius:12px;padding:12px 15px;margin-top:10px}.pricebox .x{font-size:19px;font-weight:800}.pricebox .l{font-size:11px;opacity:.9}
+  /* güzergah / duraklar */
+  .lblr{font-size:12px;font-weight:600;color:var(--slate);display:flex;align-items:center;margin-bottom:6px}
+  .routeBadgeS{font-size:11px;font-weight:700;color:var(--blue-d);background:var(--blue-l);padding:2px 9px;border-radius:999px;margin-left:8px}
+  .stop2{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--soft);overflow:hidden}
+  .stop2 .top{display:flex;align-items:center;gap:10px;padding:10px 11px}
+  .stop2 .pin{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+  .pin.pick{background:#dbeafe}.pin.drop{background:#dcfce7}
+  .stop2 .meta{flex:1;min-width:0}.stop2 .meta b{font-size:13px}.stop2 .meta span{display:block;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stop2 .del{color:var(--red);font-size:15px;cursor:pointer}
+  .addbtn-ghost{flex:1;border:1px dashed var(--blue);color:var(--blue-d);background:var(--blue-l);border-radius:10px;padding:10px;font-weight:600;font-size:12.5px;cursor:pointer}
+  .addbtn-ghost:active{transform:scale(.99)}
+  /* adres sheet */
+  .sheet-mask{position:fixed;inset:0;background:rgba(2,8,23,.45);display:none;z-index:90}
+  .sheet-mask.open{display:block}
+  .sheet2{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:min(460px,100%);background:#fff;border-radius:20px 20px 0 0;z-index:91;transition:transform .28s;max-height:88vh;overflow-y:auto;padding:14px 16px 22px;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+  .sheet2.open{transform:translateX(-50%) translateY(0)}
+  .sheet2 .grab{width:42px;height:5px;border-radius:999px;background:#e2e8f0;margin:0 auto 10px}
+  .sheet2 h3{font-size:16px;margin:0 0 2px}.sheet2 .sub{font-size:11.5px;color:var(--muted);margin-bottom:8px}
+  .search2{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:var(--soft)}
+  .search2 input{border:0;background:transparent;outline:none;width:100%;font-size:13px;font-family:inherit}
+  .search2 .g{font-size:11px;color:#4285F4;font-weight:700}
+  .map2{height:104px;border-radius:12px;margin-top:10px;background:linear-gradient(45deg,#e7eef6 25%,transparent 25%) -10px 0/22px 22px,linear-gradient(-45deg,#e7eef6 25%,transparent 25%) -10px 0/22px 22px,#eef3f9;position:relative;border:1px solid var(--line);cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .map2 .pinc{font-size:28px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.25))}
+  .sec-t2{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;margin:14px 2px 2px;letter-spacing:.4px}
+  .addr-row{display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:11px;cursor:pointer}
+  .addr-row:hover{background:var(--soft)}
+  .addr-row .ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto;background:#eef2ff}
+  .addr-row .ic.sv{background:#dcfce7}.addr-row .ic.rc{background:#fef9c3}.addr-row .ic.gg{background:#e8f0fe}
+  .addr-row .tx{flex:1;min-width:0}.addr-row .tx b{font-size:13px;display:block}.addr-row .tx span{font-size:11.5px;color:var(--muted)}
+  .savebtn{margin-left:auto;color:var(--amber);font-size:17px;flex:0 0 auto}
   @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -129,13 +159,13 @@
     <div class="grid">
       <div class="card">
         <div class="sec-t">Sipariş Bilgileri</div>
-        <div class="frow c2">
-          <div class="field"><label>Alım</label><input id="oPickup" value="İstanbul / Hadımköy"></div>
-          <div class="field"><label>Teslim</label><input id="oDrop" value="Ankara / Sincan"></div>
+        <label class="lblr">Güzergah — alım / teslim noktaları <span class="routeBadgeS" id="routeBadgeS">1 alım · 1 teslim</span></label>
+        <div id="stopsList"></div>
+        <div style="display:flex;gap:8px;margin:10px 0 6px">
+          <button class="addbtn-ghost" onclick="openPicker('pick')">+ Alım ekle</button>
+          <button class="addbtn-ghost" onclick="openPicker('drop')">+ Teslim ekle</button>
         </div>
-        <div class="field"><label>Nokta yapısı</label>
-          <span class="seg" id="segNokta"><button class="on" data-n="tek" onclick="setNokta('tek')">Tek → Tek</button><button data-n="cokt" onclick="setNokta('cokt')">Tek → Çoklu</button><button data-n="cok" onclick="setNokta('cok')">Çoklu → Çoklu</button></span>
-        </div>
+        <div class="hint" style="margin:0 0 14px">Adres <b>aratılır</b> (Google), kayıtlı/son adresten seçilir, kaydedilir veya manuel girilir. Çoklu durak otomatik <b>N→N</b> olur.</div>
         <div class="frow c3" id="yukFields">
           <div class="field"><label>Kap</label><select id="oKap"><option>Palet</option><option>Koli</option><option>Sandık</option><option>Big Bag</option></select></div>
           <div class="field"><label>Adet</label><input type="number" id="oAdet" value="6"></div>
@@ -215,9 +245,31 @@
   </div>
 </div>
 
+<!-- Adres seçici -->
+<div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+<div class="sheet2" id="sheet">
+  <div class="grab"></div>
+  <h3 id="sheetTitle">Alım adresi seç</h3>
+  <div class="sub">Ara, kayıtlı/son adresten seç, haritadan PIN bırak veya manuel gir.</div>
+  <div class="search2">🔎 <input id="addrSearch" placeholder="Adres, cadde, işyeri ara…" oninput="filterAddr()"><span class="g">Google</span></div>
+  <div class="map2" onclick="pickFrom('Haritadan seçilen konum','PIN 41.0082, 28.9784 · Google Maps')"><span class="pinc">📍</span></div>
+  <div id="addrResults"></div>
+  <div style="border-top:1px dashed var(--line);margin-top:12px;padding-top:6px">
+    <div class="sec-t2">Manuel (İl / İlçe / Mahalle)</div>
+    <div class="frow c3" style="margin-top:6px">
+      <select><option>İstanbul</option><option>Ankara</option><option>İzmir</option></select>
+      <select><option>Kadıköy</option><option>Beşiktaş</option><option>Şişli</option></select>
+      <select><option>Caferağa</option><option>Moda</option><option>Levent</option></select>
+    </div>
+    <input id="manualAddr" style="margin-top:8px;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit" placeholder="Açık adres, kapı no, kat">
+    <button class="bigbtn" style="margin-top:10px" onclick="pickManual()">Bu adresi ekle</button>
+  </div>
+</div>
+
 <script>
 const $=id=>document.getElementById(id);
-let svc='', tur='', nokta='tek', arac='efso', scenario='normal';
+let svc='', tur='', arac='efso', scenario='normal', pickType='pick';
+let stops=[], stopId=0;
 function setSM(id,label,val,active){ const el=$('sm'+id); el.classList.toggle('idle',!active); $('v'+id).textContent=val||'—'; }
 function show(s){ document.querySelectorAll('.stage').forEach(x=>x.classList.remove('on')); $('s'+s).classList.add('on'); window.scrollTo(0,0); }
 function crumb(txt){ $('crumb').innerHTML = txt?`<a onclick="reset()">↺ Baştan</a> · ${txt}`:''; }
@@ -250,10 +302,42 @@ function chooseSvc(s){
     show(1);
   }
 }
-function chooseTur(k,t){ tur=t; renderOrder(); show(2); }
+function chooseTur(k,t){ tur=t; if(!stops.length) initStops(); renderStops(); show(2); }
+
+/* ---- Güzergah (N→N duraklar) + adres seçici ---- */
+function initStops(){ stops=[{type:'pick',title:'Anadolu Lojistik',sub:'İstanbul / Hadımköy',id:1},{type:'drop',title:'Bims Yapı',sub:'Ankara / Sincan',id:2}]; stopId=2; }
+function renderStops(){
+  const box=$('stopsList'); let pn=0,dn=0;
+  box.innerHTML=stops.map(st=>{ const isP=st.type==='pick'; if(isP)pn++;else dn++; const n=isP?pn:dn;
+    const canDel = isP ? stops.filter(x=>x.type==='pick').length>1 : stops.filter(x=>x.type==='drop').length>1;
+    return `<div class="stop2"><div class="top"><div class="pin ${isP?'pick':'drop'}">${isP?'📍':'🏁'}</div><div class="meta"><b>${(isP?'Alım ':'Teslim ')+n} — ${st.title}</b><span>${st.sub}</span></div>${canDel?`<span class="del" onclick="delStop(${st.id})">🗑️</span>`:''}</div></div>`;
+  }).join('');
+  $('routeBadgeS').textContent=pn+' alım · '+dn+' teslim'+((pn>1||dn>1)?' · N→N':'');
+  renderOrder();
+}
+function delStop(id){ stops=stops.filter(s=>s.id!==id); renderStops(); }
+function openPicker(t){ pickType=t; $('sheetTitle').textContent=(t==='pick'?'Alım':'Teslim')+' adresi seç'; $('addrSearch').value=''; renderAddrList(''); $('sheetMask').classList.add('open'); $('sheet').classList.add('open'); }
+function closeSheet(){ $('sheetMask').classList.remove('open'); $('sheet').classList.remove('open'); }
+function pickFrom(title,sub){ stops.push({type:pickType,title,sub,id:++stopId}); closeSheet(); renderStops(); }
+function pickManual(){ const a=($('manualAddr').value||'').trim(); pickFrom('Manuel adres',(a?a+' · ':'')+'İstanbul / Kadıköy / Caferağa'); $('manualAddr').value=''; }
+const ADDR_DB={
+  google:[{t:'Migros Moda',s:'Caferağa Mah., Kadıköy/İstanbul'},{t:'Beşiktaş Meydanı',s:'Sinanpaşa Mah., Beşiktaş/İstanbul'},{t:'İstanbul Havalimanı Kargo',s:'Tayakadın, Arnavutköy/İstanbul'},{t:'Dudullu OSB',s:'2. Cadde, Ümraniye/İstanbul'},{t:'Ankara Lojistik Üssü',s:'Akyurt OSB, Ankara'}],
+  saved:[{t:'Ev',s:'Acıbadem Mah. No:14 D:5, Üsküdar',i:'🏠'},{t:'İş / Ofis',s:'Levent, Büyükdere Cad. No:201, Şişli',i:'🏢'},{t:'Ana Depo',s:'Dudullu OSB 2.Cad No:7, Ümraniye',i:'📦'}],
+  recent:[{t:'Bağcılar Şube',s:'Merkez Mah. No:9, Bağcılar/İstanbul'}]
+};
+function esc(x){return (x||'').replace(/'/g,"\\'");}
+function addrRow(a,cls,ic,save){return `<div class="addr-row" onclick="pickFrom('${esc(a.t)}','${esc(a.s)}')"><div class="ic ${cls}">${ic}</div><div class="tx"><b>${a.t}</b><span>${a.s}</span></div>${save?`<span class="savebtn" onclick="event.stopPropagation();saveAddr('${esc(a.t)}','${esc(a.s)}')" title="Kayıtlı adreslerime ekle">☆</span>`:''}</div>`;}
+function renderAddrList(f){ f=(f||'').toLowerCase(); const m=a=>(a.t+' '+a.s).toLowerCase().includes(f);
+  let h=''; const g=ADDR_DB.google.filter(m); if(g.length)h+='<div class="sec-t2">Arama sonuçları (Google Places)</div>'+g.map(a=>addrRow(a,'gg','📍',true)).join('');
+  const s=ADDR_DB.saved.filter(m); if(s.length)h+='<div class="sec-t2">Kayıtlı adreslerim</div>'+s.map(a=>addrRow(a,'sv',a.i||'⭐',false)).join('');
+  const r=ADDR_DB.recent.filter(m); if(r.length)h+='<div class="sec-t2">Son kullanılanlar</div>'+r.map(a=>addrRow(a,'rc','🕘',true)).join('');
+  if(!h)h='<div class="sub" style="padding:14px 4px">Sonuç yok — aşağıdan manuel ekleyebilirsiniz.</div>';
+  $('addrResults').innerHTML=h;
+}
+function filterAddr(){ renderAddrList($('addrSearch').value); }
+function saveAddr(t,s){ if(!ADDR_DB.saved.some(a=>a.t===t)) ADDR_DB.saved.unshift({t,s,i:'⭐'}); renderAddrList($('addrSearch').value); }
 
 /* STAGE 2: sipariş */
-function setNokta(n){ nokta=n; $('segNokta').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.n===n)); renderOrder(); }
 function setArac(a){ arac=a; $('segArac').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.a===a)); }
 function renderOrder(){
   const yuk = svc==='yuk';
@@ -264,7 +348,7 @@ function renderOrder(){
   $('oSum').innerHTML=`
     <div class="li"><span class="k">Hizmet</span><span class="v">${({yuk:'📦 Yük',ev:'🏠 Ev & Ofis',yolcu:'🚗 Yolcu'})[svc]}</span></div>
     <div class="li"><span class="k">Tür</span><span class="v">${tur}</span></div>
-    <div class="li"><span class="k">Nokta</span><span class="v">${({tek:'Tek→Tek',cokt:'Tek→Çoklu',cok:'Çoklu→Çoklu'})[nokta]}</span></div>
+    <div class="li"><span class="k">Nokta</span><span class="v">${stops.filter(s=>s.type==='pick').length} alım · ${stops.filter(s=>s.type==='drop').length} teslim</span></div>
     <div class="li"><span class="k">Araç</span><span class="v">${arac==='efso'?'EFSO planlasın':'Manuel'}</span></div>`;
   setSM('Order','','Draft',true);
 }
@@ -358,7 +442,7 @@ function verifyOtp(){
   } else $('oErr').style.display='block';
 }
 
-function reset(){ svc='';tur='';nokta='tek';arac='efso';scenario='normal';opsCur=0;
+function reset(){ svc='';tur='';arac='efso';scenario='normal';opsCur=0;initStops();
   ['Order','Asgn','Deliv','Pay'].forEach(id=>setSM(id,'','—',false));
   crumb(''); show(0);
 }
