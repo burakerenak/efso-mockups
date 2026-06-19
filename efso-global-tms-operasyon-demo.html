@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EFSO — Global TMS Operasyon Demosu (çalışır)</title>
+<!--
+  EFSO Global TMS — çalışan uçtan uca demo.
+  Akış: Hizmet seçimi → (Yük) teslimat türü → sipariş → taşıyıcı atama (otomatik eşleştirme + marketplace + taşıyıcı-yok fallback)
+        → operasyon takibi (geofence) → OTP teslim → ödeme/hakediş.
+  4 state machine canlı: OrderStatus · AssignmentStatus · DeliveryStatus · PaymentStatus.
+-->
+<style>
+  :root{
+    --blue:#2563eb;--blue-d:#1d4ed8;--blue-l:#eff4ff;--ink:#0f172a;--slate:#475569;--muted:#94a3b8;
+    --line:#e7ecf3;--bg:#f4f7fb;--card:#fff;--soft:#f8fafc;--green:#16a34a;--amber:#f59e0b;--red:#e11d48;--teal:#0d9488;--purple:#7c3aed;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;padding:20px}
+  .wrap{max-width:1140px;margin:0 auto}
+  header h1{font-size:20px;font-weight:800}
+  header p{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 8px 24px rgba(15,23,42,.03)}
+
+  /* state machine bar */
+  .smbar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+  .sm{background:#fff;border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+  .sm .l{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+  .sm .v{font-size:14px;font-weight:800;margin-top:3px;display:flex;align-items:center;gap:6px}
+  .sm .v .dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+  .sm.order .v .dot{background:var(--blue)} .sm.asgn .v .dot{background:var(--teal)} .sm.deliv .v .dot{background:var(--amber)} .sm.pay .v .dot{background:var(--purple)}
+  .sm.idle .v{color:var(--muted)} .sm.idle .v .dot{background:#cbd5e1}
+
+  .crumb{font-size:12px;color:var(--muted);margin:6px 0 14px}
+  .crumb a{color:var(--blue);cursor:pointer;font-weight:600}
+  .stage{display:none}.stage.on{display:block;animation:f .25s}
+  @keyframes f{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;align-items:start}
+  .sec-t{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:700;margin-bottom:12px}
+
+  .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .svc{border:2px solid var(--line);border-radius:16px;padding:22px;text-align:center;cursor:pointer;transition:.15s;background:#fff}
+  .svc:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(16,24,40,.12);border-color:var(--blue)}
+  .svc .e{font-size:40px}.svc h3{font-size:16px;margin:10px 0 5px}.svc p{font-size:12px;color:var(--muted);line-height:1.5}
+  .svc.yuk{border-top:4px solid var(--blue)} .svc.ev{border-top:4px solid var(--teal)} .svc.yolcu{border-top:4px solid var(--purple)}
+
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .opt{border:1.5px solid var(--line);border-radius:12px;padding:14px;cursor:pointer;background:#fff;transition:.12s}
+  .opt:hover{border-color:var(--blue)} .opt.on{border-color:var(--blue);background:var(--blue-l)}
+  .opt b{font-size:13.5px;display:block} .opt small{color:var(--muted);font-size:11.5px}
+  .opt .sla{font-size:10px;font-weight:700;color:var(--green);margin-top:5px}
+
+  .field{margin-bottom:12px}.field label{font-size:12px;font-weight:600;color:var(--slate);display:block;margin-bottom:5px}
+  .field input,.field select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit}
+  .frow{display:grid;gap:10px}.frow.c2{grid-template-columns:1fr 1fr}.frow.c3{grid-template-columns:1fr 1fr 1fr}
+  .seg{display:inline-flex;background:var(--soft);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .seg button{border:none;background:none;padding:7px 13px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;color:var(--slate)}
+  .seg button.on{background:var(--blue);color:#fff}
+
+  .bigbtn{width:100%;padding:13px;border:none;border-radius:11px;font-size:14px;font-weight:800;color:#fff;background:var(--blue);cursor:pointer;box-shadow:0 6px 16px rgba(37,99,235,.28);margin-top:6px}
+  .bigbtn:hover{background:var(--blue-d)} .bigbtn.green{background:var(--green)} .bigbtn.amber{background:var(--amber)}
+  .bigbtn.done{background:var(--muted);box-shadow:none;cursor:default}
+
+  /* carrier candidates */
+  .carrier{display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:11px;padding:11px;margin-bottom:9px;transition:.2s}
+  .carrier.best{border-color:var(--green);background:#f0fdf4}
+  .carrier.out{opacity:.5}
+  .carrier .av{width:38px;height:38px;border-radius:10px;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .carrier .nm{font-size:13px;font-weight:700}.carrier .mt{font-size:11px;color:var(--muted)}
+  .carrier .score{margin-left:auto;text-align:right}.carrier .score .s{font-size:16px;font-weight:800;color:var(--green)}.carrier .score .sl{font-size:9px;color:var(--muted)}
+  .scanning{text-align:center;padding:20px;color:var(--muted);font-size:13px}
+  .spinner{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--blue);border-radius:50%;margin:0 auto 10px;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .fallback{border-radius:11px;padding:12px;margin-top:10px;font-size:12.5px}
+  .fallback.warn{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+  .surge-step{display:flex;gap:8px;align-items:center;font-size:12px;padding:4px 0}
+
+  /* map */
+  .map{height:190px;border-radius:12px;position:relative;overflow:hidden;margin-bottom:12px;background:repeating-linear-gradient(0deg,#e4ebf3 0 1px,transparent 1px 30px),repeating-linear-gradient(90deg,#e4ebf3 0 1px,transparent 1px 30px),#eef3f9}
+  .route{position:absolute;height:4px;background:#cbd5e1;border-radius:4px;top:95px;left:36px;right:36px}.route .prog{height:100%;background:var(--blue);border-radius:4px;width:0;transition:width .5s}
+  .mpin{position:absolute;top:95px;transform:translate(-50%,-50%);z-index:3}.mpin .d{width:24px;height:24px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.25)}.mpin .d span{transform:rotate(45deg);font-size:10px}
+  .mpin.p .d{background:var(--blue)}.mpin.dd .d{background:var(--green)}
+  .veh{position:absolute;top:95px;transform:translate(-50%,-50%);font-size:20px;transition:left .5s;z-index:4}
+  .geo{position:absolute;top:95px;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;border:2px dashed var(--amber);background:rgba(245,158,11,.12);opacity:0;transition:.3s;z-index:1}.geo.show{opacity:1}
+
+  .tl{margin-top:4px}.tlstep{display:flex;gap:11px;position:relative;padding-bottom:11px}.tlstep .line{position:absolute;left:11px;top:24px;bottom:0;width:2px;background:var(--line)}.tlstep.done .line{background:var(--green)}
+  .tlstep .k{width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;z-index:2;flex:0 0 auto;color:var(--muted)}.tlstep.done .k{background:var(--green);border-color:var(--green);color:#fff}.tlstep.now .k{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 4px var(--blue-l)}
+  .tlstep .t{font-size:12.5px;font-weight:700}.tlstep.todo .t{color:var(--muted);font-weight:600}
+
+  .otp .r{display:flex;gap:8px;justify-content:center;margin:10px 0}.otp input{width:42px;height:50px;text-align:center;font-size:20px;font-weight:800;border:2px solid var(--line);border-radius:10px}.otp input:focus{outline:none;border-color:var(--blue)}.otp .err{color:var(--red);font-weight:700;font-size:12px;display:none;margin-top:5px}
+  .hint{font-size:11.5px;color:var(--muted)}
+  .summary .li{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}.summary .li .k{color:var(--muted)}.summary .li .v{font-weight:600}
+  .pricebox{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-radius:12px;padding:12px 15px;margin-top:10px}.pricebox .x{font-size:19px;font-weight:800}.pricebox .l{font-size:11px;opacity:.9}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}.smbar{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>🌐 EFSO — Global TMS Operasyon Demosu</h1><p>Hizmet → teslimat türü → sipariş → taşıyıcı atama (otomatik + marketplace) → takip (geofence) → OTP teslim → ödeme. <b>4 state machine canlı.</b></p></header>
+
+  <!-- STATE MACHINE BAR -->
+  <div class="smbar">
+    <div class="sm order idle" id="smOrder"><div class="l">OrderStatus</div><div class="v"><span class="dot"></span><span id="vOrder">—</span></div></div>
+    <div class="sm asgn idle" id="smAsgn"><div class="l">AssignmentStatus</div><div class="v"><span class="dot"></span><span id="vAsgn">—</span></div></div>
+    <div class="sm deliv idle" id="smDeliv"><div class="l">DeliveryStatus</div><div class="v"><span class="dot"></span><span id="vDeliv">—</span></div></div>
+    <div class="sm pay idle" id="smPay"><div class="l">PaymentStatus</div><div class="v"><span class="dot"></span><span id="vPay">—</span></div></div>
+  </div>
+
+  <div class="crumb" id="crumb"></div>
+
+  <!-- STAGE 0: hizmet -->
+  <div class="stage on" id="s0">
+    <div class="card">
+      <div class="sec-t">Hangi hizmeti istiyorsunuz?</div>
+      <div class="cards3">
+        <div class="svc yuk" onclick="chooseSvc('yuk')"><div class="e">📦</div><h3>Yük Taşımacılığı</h3><p>Kap/palet/araç · tek-çoklu nokta · parsiyel/tam araç · teslimat türü seçimi</p></div>
+        <div class="svc ev" onclick="chooseSvc('ev')"><div class="e">🏠</div><h3>Ev & Ofis</h3><p>Keşif (video/yerinde) · kat/asansör/paketleme/montaj · fiyat aralığı→keşifte kilit</p></div>
+        <div class="svc yolcu" onclick="chooseSvc('yolcu')"><div class="e">🚗</div><h3>Yolcu Taşıma</h3><p>Kişi sayısı → araç sınıfı (binek/Sprinter) · anlık · yük yok</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 1: teslimat türü (yük) / vertical intro -->
+  <div class="stage" id="s1"></div>
+
+  <!-- STAGE 2: sipariş -->
+  <div class="stage" id="s2">
+    <div class="grid">
+      <div class="card">
+        <div class="sec-t">Sipariş Bilgileri</div>
+        <div class="frow c2">
+          <div class="field"><label>Alım</label><input id="oPickup" value="İstanbul / Hadımköy"></div>
+          <div class="field"><label>Teslim</label><input id="oDrop" value="Ankara / Sincan"></div>
+        </div>
+        <div class="field"><label>Nokta yapısı</label>
+          <span class="seg" id="segNokta"><button class="on" data-n="tek" onclick="setNokta('tek')">Tek → Tek</button><button data-n="cokt" onclick="setNokta('cokt')">Tek → Çoklu</button><button data-n="cok" onclick="setNokta('cok')">Çoklu → Çoklu</button></span>
+        </div>
+        <div class="frow c3" id="yukFields">
+          <div class="field"><label>Kap</label><select id="oKap"><option>Palet</option><option>Koli</option><option>Sandık</option><option>Big Bag</option></select></div>
+          <div class="field"><label>Adet</label><input type="number" id="oAdet" value="6"></div>
+          <div class="field"><label>Ağırlık (kg)</label><input type="number" id="oKg" value="1800"></div>
+        </div>
+        <div class="field"><label>Araç seçimi</label>
+          <span class="seg" id="segArac"><button class="on" data-a="efso" onclick="setArac('efso')">⚙️ EFSO planlasın</button><button data-a="ben" onclick="setArac('ben')">🙋 Ben seçeyim</button></span>
+        </div>
+        <button class="bigbtn" onclick="confirmOrder()">Siparişi Onayla & Ödeme Bloke (Pre-Auth)</button>
+      </div>
+      <div class="card">
+        <div class="sec-t">Özet</div>
+        <div class="summary" id="oSum"></div>
+        <div class="pricebox"><div class="l" id="oPriceL">Tahmini fiyat</div><div class="x" id="oPriceX">—</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 3: taşıyıcı atama -->
+  <div class="stage" id="s3">
+    <div class="grid">
+      <div class="card">
+        <div class="sec-t">Taşıyıcı Eşleştirme — Otomatik + Marketplace</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">
+          <span class="hint">Senaryo:</span>
+          <span class="seg"><button class="on" id="scNormal" onclick="setScenario('normal')">Taşıyıcı var</button><button id="scNone" onclick="setScenario('none')">Taşıyıcı yok (fallback)</button></span>
+        </div>
+        <div id="matchArea"></div>
+      </div>
+      <div class="card">
+        <div class="sec-t">Eşleştirme Mantığı</div>
+        <div class="summary">
+          <div class="li"><span class="k">1. Otomatik eşleştirme</span><span class="v">hard filter + soft score</span></div>
+          <div class="li"><span class="k">2. Başarısızsa</span><span class="v">Marketplace açık teklif</span></div>
+          <div class="li"><span class="k">3. O da yoksa</span><span class="v">Surge (max 3 tur)</span></div>
+          <div class="li"><span class="k">4. Son çare</span><span class="v">Manuel kuyruk / müşteri seçenekleri</span></div>
+        </div>
+        <div class="hint" style="margin-top:10px">Soft score: ETA %40 · maliyet %25 · puan %20 · kabul oranı %15</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 4: operasyon takibi -->
+  <div class="stage" id="s4">
+    <div class="grid">
+      <div class="card">
+        <div class="sec-t">Operasyon Takibi</div>
+        <div class="map">
+          <div class="route"><div class="prog" id="prog"></div></div>
+          <div class="mpin p" style="left:36px"><div class="d"><span>📍</span></div></div>
+          <div class="mpin dd" style="right:36px;left:auto"><div class="d"><span>🏁</span></div></div>
+          <div class="geo" id="geo" style="left:36px"></div>
+          <div class="veh" id="veh" style="left:36px">🚛</div>
+        </div>
+        <div class="tl" id="opsTl"></div>
+      </div>
+      <div class="card">
+        <div class="sec-t">Aksiyon</div>
+        <div id="opsAction"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 5: bitti -->
+  <div class="stage" id="s5">
+    <div class="card" style="text-align:center;padding:36px">
+      <div style="font-size:46px">✅</div>
+      <h2 style="margin:10px 0 6px">Teslimat tamamlandı</h2>
+      <p style="color:var(--muted);font-size:13px">OTP doğrulandı · ödeme tahsil edildi · taşıyıcı hakedişi cüzdana yatırıldı.</p>
+      <div class="summary" style="max-width:380px;margin:18px auto 0;text-align:left">
+        <div class="li"><span class="k">OrderStatus</span><span class="v">Delivered</span></div>
+        <div class="li"><span class="k">PaymentStatus</span><span class="v">Captured</span></div>
+        <div class="li"><span class="k">Hakediş (Payout)</span><span class="v">Settled</span></div>
+      </div>
+      <button class="bigbtn" style="max-width:240px;margin:20px auto 0" onclick="reset()">↺ Yeni Demo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let svc='', tur='', nokta='tek', arac='efso', scenario='normal';
+function setSM(id,label,val,active){ const el=$('sm'+id); el.classList.toggle('idle',!active); $('v'+id).textContent=val||'—'; }
+function show(s){ document.querySelectorAll('.stage').forEach(x=>x.classList.remove('on')); $('s'+s).classList.add('on'); window.scrollTo(0,0); }
+function crumb(txt){ $('crumb').innerHTML = txt?`<a onclick="reset()">↺ Baştan</a> · ${txt}`:''; }
+
+/* STAGE 0 → 1 */
+const TUR=[
+  {k:'hemen',t:'Hemen Teslimat',s:'En kısa sürede · anlık eşleştirme',sla:'SLA ~2 saat'},
+  {k:'gun',t:'Gün İçi',s:'Bugün, belirlenen saat aralığı',sla:'SLA bugün'},
+  {k:'ertesi',t:'Ertesi Gün',s:'Yarın teslim · planlı slot',sla:'SLA +1 gün'},
+  {k:'ileri',t:'İleri Tarihli',s:'Gün + saat seçimi · optimize',sla:'tarih seç'},
+];
+function chooseSvc(s){
+  svc=s; crumb({yuk:'Yük Taşımacılığı',ev:'Ev & Ofis',yolcu:'Yolcu Taşıma'}[s]);
+  if(s==='yuk'){
+    $('s1').innerHTML=`<div class="card"><div class="sec-t">Teslimat Türü</div><div class="opts">${TUR.map(t=>`<div class="opt" onclick="chooseTur('${t.k}','${t.t}')"><b>${t.t}</b><small>${t.s}</small><div class="sla">${t.sla}</div></div>`).join('')}</div></div>`;
+    show(1);
+  } else if(s==='ev'){
+    $('s1').innerHTML=`<div class="card"><div class="sec-t">Ev & Ofis — Keşif Akışı</div>
+      <p class="hint" style="margin-bottom:12px">Ev/ofis taşımada fiyat <b>keşif sonrası</b> kesinleşir. Önce yaklaşık bilgi alınır, sonra video/yerinde keşif yapılır.</p>
+      <div class="frow c2"><div class="field"><label>Çıkış (kat/asansör)</label><input value="5. kat · asansör yok"></div><div class="field"><label>Varış</label><input value="2. kat · asansör var"></div></div>
+      <div class="field"><label>Hizmetler</label><div class="opts" style="grid-template-columns:repeat(3,1fr)"><div class="opt on"><b>📦 Paketleme</b></div><div class="opt"><b>🔧 Montaj</b></div><div class="opt"><b>🏗️ Asansörlü taşıma</b></div></div></div>
+      <button class="bigbtn amber" onclick="tur='kesif';chooseTur('kesif','Keşif sonrası fiyat')">Keşif Planla → (fiyat aralığı verilir, keşifte kilitlenir)</button></div>`;
+    show(1);
+  } else {
+    $('s1').innerHTML=`<div class="card"><div class="sec-t">Yolcu Taşıma</div>
+      <p class="hint" style="margin-bottom:12px">Yolcu taşımada yük yok; kişi sayısına göre araç sınıfı belirlenir (anlık, Uber tarzı).</p>
+      <div class="frow c2"><div class="field"><label>Kişi sayısı</label><input type="number" value="3"></div><div class="field"><label>Araç sınıfı</label><select><option>Binek / Sedan (1-4 kişi)</option><option>Sprinter / Minibüs (9-19 kişi)</option></select></div></div>
+      <div class="frow c2"><div class="field"><label>Nereden</label><input value="Kadıköy"></div><div class="field"><label>Nereye</label><input value="Sabiha Gökçen"></div></div>
+      <button class="bigbtn" style="background:var(--purple)" onclick="tur='yolcu';chooseTur('yolcu','Anlık yolcu')">Araç Çağır →</button></div>`;
+    show(1);
+  }
+}
+function chooseTur(k,t){ tur=t; renderOrder(); show(2); }
+
+/* STAGE 2: sipariş */
+function setNokta(n){ nokta=n; $('segNokta').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.n===n)); renderOrder(); }
+function setArac(a){ arac=a; $('segArac').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.a===a)); }
+function renderOrder(){
+  const yuk = svc==='yuk';
+  $('yukFields').style.display = yuk?'grid':'none';
+  const price = yuk?(tur.includes('Hemen')||tur==='hemen'?2400:2180):(svc==='ev'?'2.500–3.800':900);
+  $('oPriceX').textContent = typeof price==='number'?'₺'+price.toLocaleString('tr'):'₺'+price;
+  $('oPriceL').textContent = svc==='ev'?'Fiyat aralığı (keşifte kesinleşir)':(tur.includes('Hemen')||tur==='hemen'?'Anlık kesin fiyat':'Ön fiyat (planlama sonrası)');
+  $('oSum').innerHTML=`
+    <div class="li"><span class="k">Hizmet</span><span class="v">${({yuk:'📦 Yük',ev:'🏠 Ev & Ofis',yolcu:'🚗 Yolcu'})[svc]}</span></div>
+    <div class="li"><span class="k">Tür</span><span class="v">${tur}</span></div>
+    <div class="li"><span class="k">Nokta</span><span class="v">${({tek:'Tek→Tek',cokt:'Tek→Çoklu',cok:'Çoklu→Çoklu'})[nokta]}</span></div>
+    <div class="li"><span class="k">Araç</span><span class="v">${arac==='efso'?'EFSO planlasın':'Manuel'}</span></div>`;
+  setSM('Order','','Draft',true);
+}
+function confirmOrder(){
+  setSM('Order','','Confirmed',true);
+  setSM('Pay','','PreAuthorized',true);
+  setScenario('normal'); show(3);
+}
+
+/* STAGE 3: atama */
+const CARRIERS=[
+  {n:'Hızlı Filo Taşımacılık',e:'🚛',mt:'TIR Tenteli · ★4.8 · 12 km',score:94,best:true},
+  {n:'Ege Nakliyat',e:'🚛',mt:'Kamyon Liftli · ★4.6 · 18 km',score:81},
+  {n:'Ahmet Yıldız (bireysel)',e:'🚚',mt:'Kamyonet · ★4.9 · 25 km',score:73,out:true},
+];
+function setScenario(s){ scenario=s; document.getElementById('scNormal').classList.toggle('on',s==='normal'); document.getElementById('scNone').classList.toggle('on',s==='none'); renderMatch(); }
+function renderMatch(){
+  const a=$('matchArea');
+  a.innerHTML=`<div class="scanning"><div class="spinner"></div>Otomatik eşleştirme çalışıyor… (hard filter + soft score)</div>`;
+  setTimeout(()=>{
+    if(scenario==='normal'){
+      a.innerHTML = CARRIERS.map(c=>`<div class="carrier ${c.best?'best':''} ${c.out?'out':''}"><div class="av">${c.e}</div><div><div class="nm">${c.n}</div><div class="mt">${c.mt}${c.out?' · giriş kısıtı: elendi':''}</div></div><div class="score"><div class="s">${c.out?'—':c.score}</div><div class="sl">${c.out?'elendi':'skor'}</div></div></div>`).join('')
+        + `<button class="bigbtn green" onclick="assign()">En iyi adaya ata → Hızlı Filo (94)</button>`;
+    } else {
+      a.innerHTML = `<div class="fallback warn">⚠️ <b>Uygun taşıyıcı bulunamadı.</b> Kademeli fallback devreye giriyor:</div>
+        <div id="surge" style="margin-top:10px"></div>`;
+      runSurge();
+    }
+  }, 1100);
+}
+function runSurge(){
+  const box=$('surge'); let tur=0;
+  const steps=['🔁 Surge Tur 1/3 — fiyat +%8, daha geniş havuz…','🔁 Surge Tur 2/3 — fiyat +%15…','🔁 Surge Tur 3/3 — son çağrı…'];
+  const iv=setInterval(()=>{
+    if(tur<3){ box.innerHTML += `<div class="surge-step">${steps[tur]} <span class="hint">(yanıt yok)</span></div>`; tur++; }
+    else{
+      clearInterval(iv);
+      box.innerHTML += `<div class="fallback warn" style="margin-top:8px">📋 3 tur sonuçsuz → <b>Marketplace açık teklife</b> ve <b>manuel operasyon kuyruğuna</b> düştü. Müşteriye seçenekler sunuldu:</div>
+        <div class="opts" style="margin-top:10px"><div class="opt"><b>⏳ Bekle</b><small>arz çıkınca otomatik</small></div><div class="opt"><b>☀️ Gün içi slota al</b><small>−%18</small></div><div class="opt"><b>📅 İleri tarih</b><small>−%22</small></div><div class="opt"><b>🧑‍💼 Operasyon planlasın</b><small>manuel kuyruk</small></div></div>
+        <button class="bigbtn" style="margin-top:10px" onclick="setScenario('normal')">↩ 'Taşıyıcı var' senaryosuna dön</button>`;
+    }
+  }, 900);
+}
+function assign(){
+  setSM('Order','','InProgress',true);
+  setSM('Asgn','','Atandı',true);
+  setSM('Deliv','','Pending',true);
+  opsCur=0; renderOps(); show(4);
+}
+
+/* STAGE 4: operasyon */
+const OPS=[
+  {t:'Taşıyıcı kabul etti',asgn:'Kabul edildi',deliv:'Pending',btn:'Sefere Başla',move:0},
+  {t:'Alım noktasına yolda',asgn:'Alıma yolda',deliv:'EnRoute',btn:'📍 Geofence: alıma vardı',move:1,geo:'p'},
+  {t:'Alım noktasında (100m)',asgn:'Alım noktasında',deliv:'EnRoute',btn:'Yükü Aldım',move:1},
+  {t:'Yük alındı',asgn:'Yük alındı',deliv:'EnRoute',btn:'Teslimata Başla',move:1},
+  {t:'Teslim noktasına yolda',asgn:'Teslime yolda',deliv:'EnRoute',btn:'🏁 Geofence: teslime vardı',move:2,geo:'dd'},
+  {t:'Teslim noktasında (100m)',asgn:'Teslim noktasında',deliv:'Arrived',btn:'',otp:true,move:2},
+];
+let opsCur=0;
+function renderOps(){
+  $('opsTl').innerHTML = OPS.map((s,i)=>{const cls=i<opsCur?'done':i===opsCur?'now':'todo';return `<div class="tlstep ${cls}">${i<OPS.length-1?'<span class="line"></span>':''}<span class="k">${i<opsCur?'✓':i+1}</span><div class="t">${s.t}</div></div>`;}).join('');
+  const moved = opsCur<OPS.length ? OPS[Math.min(opsCur,OPS.length-1)].move : 2;
+  $('veh').style.left = moved===0?'36px':moved===1?'50%':'calc(100% - 36px)';
+  $('prog').style.width = moved===0?'0%':moved===1?'50%':'100%';
+  const g = opsCur<OPS.length && OPS[opsCur].geo;
+  $('geo').className='geo'+(g?' show':''); $('geo').style.left=g==='dd'?'calc(100% - 36px)':'36px'; $('geo').style.right='auto';
+  if(opsCur<OPS.length){ setSM('Asgn','',OPS[opsCur].asgn,true); setSM('Deliv','',OPS[opsCur].deliv,true); }
+  renderOpsAction();
+}
+function renderOpsAction(){
+  const a=$('opsAction');
+  if(opsCur>=OPS.length){ a.innerHTML='<div class="bigbtn done">Tamamlandı</div>'; return; }
+  const s=OPS[opsCur];
+  if(s.otp){
+    setSM('Deliv','','OtpVerifying',true);
+    a.innerHTML=`<div class="otp"><div class="hint">Teslim için müşteriye giden kod: <b>1 2 3 4</b> (demo)</div>
+      <div class="r">${[0,1,2,3].map(i=>`<input maxlength="1" inputmode="numeric" id="o${i}" oninput="if(this.value&&${i}<3)document.getElementById('o'+${i+1}).focus()">`).join('')}</div>
+      <button class="bigbtn green" onclick="verifyOtp()">Teslimi Onayla (OTP)</button><div class="err" id="oErr">❌ Kod hatalı.</div></div>`;
+    return;
+  }
+  a.innerHTML=`<p class="hint" style="margin-bottom:12px">Sürücü perspektifi — tek dokunuş durum akışı.</p><button class="bigbtn" onclick="opsAdvance()">${s.btn} →</button>`;
+}
+function opsAdvance(){ opsCur++; renderOps(); }
+function verifyOtp(){
+  const code=[0,1,2,3].map(i=>$('o'+i).value).join('');
+  if(code==='1234'){
+    setSM('Asgn','','Teslim edildi',true); setSM('Deliv','','Delivered',true);
+    setSM('Order','','Delivered',true); setSM('Pay','','Captured',true);
+    show(5);
+  } else $('oErr').style.display='block';
+}
+
+function reset(){ svc='';tur='';nokta='tek';arac='efso';scenario='normal';opsCur=0;
+  ['Order','Asgn','Deliv','Pay'].forEach(id=>setSM(id,'','—',false));
+  crumb(''); show(0);
+}
+reset();
+</script>
+</body>
+</html>
