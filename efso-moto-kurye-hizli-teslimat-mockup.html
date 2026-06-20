@@ -194,11 +194,11 @@
 
         <!-- 01 BUTON -->
         <div class="card">
-          <button class="btn01" id="btn01" onclick="openVehicleDetail('moto','sayfa1')">
+          <button class="btn01" id="btn01" onclick="startBilmiyorum()">
             <div class="ic">01</div>
             <div>
-              <div class="t1" id="b01t1">Yük detaylarını bilmiyorum</div>
-              <div class="t2" id="b01t2">Seçtiğiniz araçla adet, ağırlık ve ölçü girmeden devam edin →</div>
+              <div class="t1" id="b01t1">Yük ölçülerini (en·boy·yükseklik) bilmiyorum</div>
+              <div class="t2" id="b01t2">Adet, ağırlık, kategori ve içeriği bir sonraki ekranda girersiniz — ölçü girmeden devam →</div>
             </div>
           </button>
         </div>
@@ -282,6 +282,36 @@
         </div>
       </div>
       <div class="body">
+        <!-- ÜST: ölçü hariç yük bilgileri — bilmiyorum modunda bile zorunlu -->
+        <div class="banner warn" style="margin-bottom:13px"><span>ℹ️</span><div>Ölçü (en·boy·yükseklik) <b>bilinmiyor</b> — alımda kurye ölçer. <b>Adet, ağırlık, kategori ve içeriği</b> yine de girmeniz gerekir.</div></div>
+
+        <div class="card">
+          <p class="lbl">📦 Yük Bilgileri (ölçü hariç) <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--slate);background:#f1f5f9;border-radius:6px;padding:2px 6px" id="detKapChip">Kap: Dosya</span></p>
+          <div class="grid2">
+            <div class="ig"><label>Adet</label><input class="field" id="dAdet" type="number" min="1" value="1" inputmode="numeric"></div>
+            <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" id="dKg" type="number" min="0" placeholder="0" inputmode="decimal"><span>kg</span></div></div>
+          </div>
+          <p class="lbl" style="margin-top:13px">🏷️ Ürün Kategorisi <span class="req">*</span></p>
+          <select class="field" id="dKat">
+            <option value="">Kategori seçin…</option>
+            <option>Belge / Evrak</option>
+            <option>Yedek Parça</option>
+            <option>Tekstil / Giyim</option>
+            <option>Elektronik (kırılgan)</option>
+            <option>Gıda (ambalajlı)</option>
+            <option>Çiçek / Bitki</option>
+            <option>Kozmetik / İlaç (reçetesiz)</option>
+            <option>Hediye / Çeşitli</option>
+          </select>
+          <p class="lbl" style="margin-top:13px">📝 Ürün İçeriği <span class="req">*</span> <span style="margin-left:auto;font-size:10px;color:var(--slate2);font-weight:600">🔒 maskeli</span></p>
+          <input class="field" id="dIcerik" placeholder="örn. çiçek, kitap, numune…" oninput="updateMaskD()">
+          <div class="maskrow">
+            <span class="pill">Kuryeye görünen:</span>
+            <span class="pill masked" id="maskOutD">•••••</span>
+            <span style="margin-left:auto">içerik gizlenir</span>
+          </div>
+        </div>
+
         <div class="card">
           <p class="lbl">🔎 <span id="detName">Moto Kurye</span> — Detaylı Görünüm</p>
           <div class="photoset" id="detPhotos"><!-- doldurulur --></div>
@@ -302,7 +332,7 @@
         </div>
       </div>
       <div class="cta">
-        <button class="go" id="detGo" style="background:#cbd5e1;box-shadow:none" onclick="confirmResp()">Onayla ve İşleme Devam Et</button>
+        <button class="go" id="detGo" style="background:#cbd5e1;box-shadow:none" onclick="confirmResp()">Yük Bilgilerini ve Sorumluluğu Onayla → Devam</button>
       </div>
     </div>
 
@@ -444,30 +474,40 @@ function setKap(k){
   refreshOlcu();
   recalc();
 }
-// Ölçü kısmı: yalnızca (Dosya harici) VE (01 basılı değil) ise açık
+// Ölçü (En/Boy/Yükseklik) yalnızca Dosya harici iken ana formda açık
 function refreshOlcu(){
-  const open = (S.kap!=='dosya') && !S.bilmiyorum;
-  document.getElementById('olcuWrap').classList.toggle('open', open);
+  document.getElementById('olcuWrap').classList.toggle('open', S.kap!=='dosya');
 }
+// Ana ekran her zaman "biliyorum" alanlarını gösterir; 01 yalnız Sayfa 1'e götürür
 function applyBilmiyorumUI(){
-  const on=S.bilmiyorum;
-  const b=document.getElementById('btn01');
-  b.classList.toggle('on',on);
-  document.getElementById('b01t1').textContent = on? 'Yük detayını bilmiyorum (aktif)' : 'Yük detaylarını bilmiyorum';
-  document.getElementById('b01t2').textContent = on? VEHICLES[S.vehicle].name+' sorumluluğu onaylandı · değiştirmek için dokunun'
-                                                    : 'Seçtiğiniz araçla adet, ağırlık ve ölçü girmeden devam edin →';
-  document.getElementById('adetAgirlikBlk').style.display = on?'none':'block';
-  document.getElementById('bilmiyorumInfo').style.display = on?'flex':'none';
-  document.getElementById('b01veh').textContent = VEHICLES[S.vehicle].name;
+  document.getElementById('adetAgirlikBlk').style.display='block';
+  document.getElementById('bilmiyorumInfo').style.display='none';
+  document.getElementById('btn01').classList.remove('on');
   refreshOlcu();
 }
+function val(id){ return document.getElementById(id).value.trim(); }
+function kapName(k){ return {dosya:'Dosya / Zarf',koli:'Koli',diger:'Diğer'}[k]; }
 
 /* ----------------------------- ARAÇ DETAY (Sayfa 1) ----------------------------- */
+// 01 butonu: "ölçüyü bilmiyorum" → adres kontrolü + alanları ön-doldur + Sayfa 1
+function startBilmiyorum(){
+  if(!val('adrA') || !val('adrB')){ toast('Önce alım (A) ve teslim (B) adresini girin'); show('pg-main'); return; }
+  prefillDetailFields();
+  openVehicleDetail(S.vehicle||'moto','sayfa1');
+}
+function prefillDetailFields(){
+  document.getElementById('dAdet').value   = document.getElementById('fAdet').value || 1;
+  document.getElementById('dKg').value     = document.getElementById('fKg').value || '';
+  document.getElementById('dKat').value    = document.getElementById('fKat').value || '';
+  document.getElementById('dIcerik').value = document.getElementById('fIcerik').value || '';
+  updateMaskD();
+}
 function openVehicleDetail(veh, flow){
   S.vehicle = veh;
-  S.flowAfterResp = flow || 'main';
+  S.flowAfterResp = flow || 'sayfa1';
   S.respOk=false;
   renderDetail(veh);
+  document.getElementById('detKapChip').textContent = 'Kap: '+kapName(S.kap);
   show('pg-detail');
 }
 function renderDetail(vehKey){
@@ -505,14 +545,17 @@ function toggleResp(){
   g.style.boxShadow = S.respOk? '0 6px 14px rgba(41,182,216,.35)':'none';
 }
 function confirmResp(){
-  if(!S.respOk){ toast('Önce sorumluluk bildirimini onaylayın'); return; }
+  // ölçü hariç yük bilgileri — bilmiyorum modunda da ZORUNLU
+  if(num('dKg')<=0){ toast('Ağırlık girin'); document.getElementById('dKg').focus(); return; }
+  if(!val('dKat')){ toast('Ürün kategorisi seçin'); return; }
+  if(!val('dIcerik')){ toast('Ürün içeriği girin'); return; }
+  if(!S.respOk){ toast('Sorumluluk bildirimini onaylayın'); return; }
   S.respFor=S.vehicle; S.bilmiyorum=true;
-  // araç çipini güncelle
   document.getElementById('vehChip').textContent = VEHICLES[S.vehicle].emoji+' '+VEHICLES[S.vehicle].name;
-  applyBilmiyorumUI();
-  recalc();
-  goMain();
-  toast('✅ '+VEHICLES[S.vehicle].name+' onaylandı — detay girmeden devam');
+  // fiyat (ağırlık üzerinden; ölçü bilinmiyor)
+  document.getElementById('priceTxt').textContent = priceFromKg(num('dKg'), num('dAdet')||1, S.kap==='diger'?15:0);
+  buildSummary(); show('pg-done');
+  toast('✅ '+VEHICLES[S.vehicle].name+' onaylandı — siparişe devam');
 }
 
 /* ----------------------------- ARAÇ YENİDEN SEÇİM ----------------------------- */
@@ -547,20 +590,21 @@ function goToSelectedDetail(){
 /* ----------------------------- HESAP / MASKE ----------------------------- */
 function num(id){ const v=parseFloat(document.getElementById(id).value); return isNaN(v)?0:v; }
 function calcDesi(){ return (num('fBoy')*num('fEn')*num('fYuk'))/3000; }
+function priceFromKg(kg, adet, kapExtra){ let b=149; b+=Math.round(kg*4)+(adet>1?(adet-1)*8:0)+(kapExtra||0); return '₺'+b; }
 function recalc(){
-  // basit fiyat: kap + ölçü/ağırlık etkisi (mockup)
-  let base=149;
-  if(S.bilmiyorum){ document.getElementById('priceTxt').textContent='₺149'; document.getElementById('etaTxt').textContent='· 25–35 dk'; return; }
+  // ana ekran (biliyorum) fiyatı: max(kg,desi) + adet + kap etkisi (mockup)
   const kg=num('fKg'), desi=calcDesi(), adet=num('fAdet')||1;
-  const esas=Math.max(kg, desi);
-  base += Math.round(esas*4) + (adet>1?(adet-1)*8:0);
-  if(S.kap==='diger') base+=15;
+  let base=149 + Math.round(Math.max(kg,desi)*4) + (adet>1?(adet-1)*8:0) + (S.kap==='diger'?15:0);
   document.getElementById('priceTxt').textContent='₺'+base;
 }
-function updateMask(){
-  const t=document.getElementById('fIcerik').value.trim();
-  document.getElementById('maskOut').textContent = t? '•'.repeat(Math.min(Math.max(t.length,3),10)) : '•••••';
-}
+function mask(t){ return t? '•'.repeat(Math.min(Math.max(t.length,3),10)) : '•••••'; }
+function updateMask(){ document.getElementById('maskOut').textContent = mask(val('fIcerik')); }
+function updateMaskD(){ document.getElementById('maskOutD').textContent = mask(val('dIcerik')); }
+// Özet/fiyat için aktif kaynak (bilmiyorum → d-alanları, biliyorum → f-alanları)
+function loadAdet(){ return S.bilmiyorum ? (num('dAdet')||1) : (num('fAdet')||1); }
+function loadKg(){ return S.bilmiyorum ? num('dKg') : num('fKg'); }
+function loadKat(){ return S.bilmiyorum ? val('dKat') : val('fKat'); }
+function loadIcerik(){ return S.bilmiyorum ? val('dIcerik') : val('fIcerik'); }
 
 /* ----------------------------- DEVAM ET (ana validasyon) ----------------------------- */
 function onDevam(){
@@ -571,10 +615,7 @@ function onDevam(){
   if(!document.getElementById('fKat').value){ toast('Ürün kategorisi zorunlu'); return; }
   if(!document.getElementById('fIcerik').value.trim()){ toast('Ürün içeriği zorunlu'); return; }
 
-  // 01 basılıysa: araç sorumluluğu onaylı → ölçü doğrulaması atlanır
-  if(S.bilmiyorum){ buildSummary(); show('pg-done'); return; }
-
-  // 01 basılı DEĞİL:
+  // Bu "biliyorum" yoludur (ölçü dahil). Ölçüyü bilmeyen 01 butonunu kullanır.
   // Dosya/Zarf → Adet + Ağırlık yeter (ölçü yok)
   if(S.kap==='dosya'){
     if(num('fKg')<=0){ toast('Dosya/Zarf için ağırlık girin'); return; }
@@ -638,9 +679,9 @@ function addrText(){
   return s;
 }
 function kapText(){
-  const m={dosya:'Dosya / Zarf',koli:'Koli',diger:'Diğer'}[S.kap];
-  if(S.bilmiyorum) return m+' · yük detayı girilmedi (01)';
-  let t=m+' · '+(num('fAdet')||1)+' adet · '+num('fKg')+' kg';
+  const m=kapName(S.kap);
+  if(S.bilmiyorum) return m+' · '+loadAdet()+' adet · '+loadKg()+' kg · ölçü: bilinmiyor (alımda kurye ölçer)';
+  let t=m+' · '+loadAdet()+' adet · '+loadKg()+' kg';
   if(S.kap!=='dosya') t+=' · '+num('fEn')+'×'+num('fBoy')+'×'+num('fYuk')+' cm (E×B×Y · '+calcDesi().toFixed(1)+' desi)';
   return t;
 }
@@ -651,9 +692,9 @@ function buildSummary(){
     row('Araç', VEHICLES[S.vehicle].emoji+' '+VEHICLES[S.vehicle].name)+
     row('Adres', addrText())+
     row('Kap', kapText())+
-    row('Kategori', document.getElementById('fKat').value||'—')+
-    row('İçerik', '🔒 maskeli ('+(document.getElementById('fIcerik').value||'—')+')')+
-    (S.bilmiyorum?row('Sorumluluk','✅ Araç sorumluluk bildirimi onaylandı'):'')+
+    row('Kategori', loadKat()||'—')+
+    row('İçerik', '🔒 maskeli ('+(loadIcerik()||'—')+')')+
+    (S.bilmiyorum?row('Sorumluluk','✅ Araç sorumluluk bildirimi onaylandı (ölçü bilinmiyor)'):'')+
     row('Ücret', document.getElementById('priceTxt').textContent);
 }
 function buildRedirect(suit){
@@ -672,11 +713,12 @@ function buildRedirect(suit){
 
 /* ----------------------------- RESET / TOAST ----------------------------- */
 function resetAll(){
-  ['adrA','adrB','adrC','fKg','fBoy','fEn','fYuk','fIcerik'].forEach(i=>document.getElementById(i).value='');
+  ['adrA','adrB','adrC','fKg','fBoy','fEn','fYuk','fIcerik','dKg','dIcerik'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('fAdet').value=1; document.getElementById('fKat').value='';
+  document.getElementById('dAdet').value=1; document.getElementById('dKat').value='';
   S.vehicle='moto'; S.bilmiyorum=false; S.kap='dosya'; S.respOk=false; S.respFor=null;
   document.getElementById('vehChip').textContent='🏍️ Moto Kurye';
-  setKap('dosya'); applyBilmiyorumUI(); updateMask(); recalc(); toggleC(false); goMain();
+  setKap('dosya'); applyBilmiyorumUI(); updateMask(); updateMaskD(); recalc(); toggleC(false); goMain();
 }
 let tT;
 function toast(m){
@@ -685,7 +727,7 @@ function toast(m){
 }
 
 /* ----------------------------- INIT ----------------------------- */
-setKap('dosya'); applyBilmiyorumUI(); updateMask(); recalc();
+setKap('dosya'); applyBilmiyorumUI(); updateMask(); updateMaskD(); recalc();
 </script>
 </body>
 </html>
