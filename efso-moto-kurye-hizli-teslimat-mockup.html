@@ -203,42 +203,26 @@
           </button>
         </div>
 
-        <!-- KAP BİLGİLERİ -->
+        <!-- KAP + YÜK BİLGİLERİ (tek blok) -->
         <div class="card">
-          <p class="lbl">📦 Kap Bilgileri <span class="req">*</span></p>
+          <p class="lbl">📦 Kap Bilgileri <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#e8f8fc;border-radius:6px;padding:2px 6px">hep açık</span></p>
+          <div class="hint" style="margin:-3px 0 9px">Yük ölçüleri bilinsin ya da bilinmesin kap cinsi <b>her zaman</b> seçilir.</div>
           <div class="seg" id="kapSeg">
             <button data-kap="dosya" class="sel" onclick="setKap('dosya')"><span class="e">📄</span>Dosya / Zarf</button>
             <button data-kap="koli" onclick="setKap('koli')"><span class="e">📦</span>Koli</button>
             <button data-kap="diger" onclick="setKap('diger')"><span class="e">🗃️</span>Diğer</button>
           </div>
 
-          <!-- Adet / Ağırlık (01 basılı değilse) -->
+          <!-- Adet / Ağırlık — yalnız "biliyorum" (01 basılı değil) -->
           <div id="adetAgirlikBlk" style="margin-top:12px">
             <div class="grid2">
               <div class="ig"><label>Adet</label><input class="field" id="fAdet" type="number" min="1" value="1" inputmode="numeric" oninput="recalc()"></div>
               <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" id="fKg" type="number" min="0" placeholder="0" inputmode="decimal" oninput="recalc()"><span>kg</span></div></div>
             </div>
-
-            <!-- Ölçü: yalnız Dosya harici + 01 basılı değil → açılır/kapanır -->
-            <div class="olcu-wrap" id="olcuWrap">
-              <div class="grid3">
-                <div class="ig"><label>Boy</label><div class="suf"><input class="field" id="fBoy" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
-                <div class="ig"><label>En</label><div class="suf"><input class="field" id="fEn" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
-                <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" id="fYuk" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
-              </div>
-              <div class="hint" id="desiHint" style="margin-top:7px">Hacmi/desi hesaplanır · Moto Kurye standardı: tek parça ≤ 8 kg · ≤ 50 cm · toplam ≤ 12 kg / 30 desi</div>
-            </div>
           </div>
 
-          <!-- 01 basılıysa gösterilecek bilgi -->
-          <div id="bilmiyorumInfo" class="banner ok" style="display:none;margin-top:12px">
-            <span>✅</span><div><b>Yük detayı girilmeyecek.</b> Seçtiğiniz <b id="b01veh">Moto Kurye</b> aracının sorumluluğunu onayladınız. Alım noktasında ölçüm/uygunluk kuryede.</div>
-          </div>
-        </div>
-
-        <!-- ÜRÜN KATEGORİSİ + İÇERİK (her durumda) -->
-        <div class="card">
-          <p class="lbl">🏷️ Ürün Kategorisi <span class="req">*</span></p>
+          <!-- Kategori — her durumda -->
+          <p class="lbl" style="margin-top:13px">🏷️ Ürün Kategorisi <span class="req">*</span></p>
           <select class="field" id="fKat">
             <option value="">Kategori seçin…</option>
             <option>Belge / Evrak</option>
@@ -250,13 +234,31 @@
             <option>Kozmetik / İlaç (reçetesiz)</option>
             <option>Hediye / Çeşitli</option>
           </select>
+          <div class="hint" style="margin-top:5px">Liste açık kaynaklı / standart kataloğdan beslenir.</div>
 
+          <!-- İçerik — her durumda, maskeli -->
           <p class="lbl" style="margin-top:13px">📝 Ürün İçeriği <span class="req">*</span> <span style="margin-left:auto;font-size:10px;color:var(--slate2);font-weight:600">🔒 maskeli</span></p>
           <input class="field" id="fIcerik" placeholder="örn. çiçek, kitap, numune…" oninput="updateMask()">
           <div class="maskrow">
             <span class="pill">Kuryeye görünen:</span>
             <span class="pill masked" id="maskOut">•••••</span>
             <span style="margin-left:auto">içerik gizlenir</span>
+          </div>
+
+          <!-- Ölçü (En/Boy/Yükseklik) — yalnız Dosya harici + 01 basılı değil → açılıp kapanır -->
+          <div class="olcu-wrap" id="olcuWrap">
+            <p class="lbl" style="margin-top:13px">📐 Ölçü Bilgileri <span class="req">*</span></p>
+            <div class="grid3">
+              <div class="ig"><label>En</label><div class="suf"><input class="field" id="fEn" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
+              <div class="ig"><label>Boy</label><div class="suf"><input class="field" id="fBoy" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
+              <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" id="fYuk" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
+            </div>
+            <div class="hint" id="desiHint" style="margin-top:7px">Hacim/desi hesaplanır · Moto Kurye standardı: tek parça ≤ 8 kg · ≤ 50 cm · toplam ≤ 12 kg / 30 desi</div>
+          </div>
+
+          <!-- 01 basılıysa gösterilecek bilgi -->
+          <div id="bilmiyorumInfo" class="banner ok" style="display:none;margin-top:12px">
+            <span>✅</span><div><b>Adet, ağırlık ve ölçü girilmeyecek.</b> Seçtiğiniz <b id="b01veh">Moto Kurye</b> aracının sorumluluğunu onayladınız. Kap cinsi, kategori ve içerik yine girilir; ölçüm/uygunluk alımda kuryede.</div>
           </div>
         </div>
 
@@ -581,7 +583,7 @@ function onDevam(){
 
   // Koli / Diğer → Adet + Ağırlık + Ölçü zorunlu
   if(num('fKg')<=0 || num('fBoy')<=0 || num('fEn')<=0 || num('fYuk')<=0){
-    toast('Koli/Diğer için ağırlık ve ölçü (boy·en·yükseklik) zorunlu'); return;
+    toast('Koli/Diğer için ağırlık ve ölçü (en·boy·yükseklik) zorunlu'); return;
   }
 
   // Moto Kurye standardına uygunluk
@@ -639,7 +641,7 @@ function kapText(){
   const m={dosya:'Dosya / Zarf',koli:'Koli',diger:'Diğer'}[S.kap];
   if(S.bilmiyorum) return m+' · yük detayı girilmedi (01)';
   let t=m+' · '+(num('fAdet')||1)+' adet · '+num('fKg')+' kg';
-  if(S.kap!=='dosya') t+=' · '+num('fBoy')+'×'+num('fEn')+'×'+num('fYuk')+' cm ('+calcDesi().toFixed(1)+' desi)';
+  if(S.kap!=='dosya') t+=' · '+num('fEn')+'×'+num('fBoy')+'×'+num('fYuk')+' cm (E×B×Y · '+calcDesi().toFixed(1)+' desi)';
   return t;
 }
 function row(k,v){ return `<div class="sumrow"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
