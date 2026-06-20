@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EFSO — Moto Kurye · Hemen Al Hemen Teslim (Mockup)</title>
+<style>
+  :root{
+    --cyan:#29b6d8; --cyan-d:#1d93b0; --ink:#0f172a; --slate:#64748b; --slate2:#94a3b8;
+    --line:#e2e8f0; --bg:#eef2f6; --card:#ffffff; --ok:#16a34a; --okbg:#dcfce7;
+    --warn:#d97706; --warnbg:#fef3c7; --err:#dc2626; --errbg:#fee2e2; --shadow:0 6px 22px rgba(15,23,42,.10);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);
+       display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:24px 12px}
+  /* Telefon çerçevesi */
+  .phone{width:390px;max-width:100%;background:#fff;border-radius:34px;box-shadow:var(--shadow);
+         overflow:hidden;border:10px solid #0b1220;position:relative}
+  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:24px;background:#0b1220;
+         border-radius:0 0 16px 16px;z-index:30}
+  .scr{height:780px;overflow-y:auto;overflow-x:hidden;background:var(--bg);scroll-behavior:smooth}
+  .scr::-webkit-scrollbar{width:0}
+  /* Üst bar */
+  .top{position:sticky;top:0;z-index:20;background:linear-gradient(120deg,var(--cyan),var(--cyan-d));
+       color:#fff;padding:30px 16px 12px;display:flex;align-items:center;gap:10px}
+  .top .back{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.18);border:none;color:#fff;
+       font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .top h1{font-size:15px;margin:0;font-weight:700;line-height:1.2}
+  .top .sub{font-size:11px;opacity:.85;margin-top:1px}
+  .top .veh{margin-left:auto;background:rgba(255,255,255,.16);border-radius:20px;padding:5px 10px;font-size:11px;
+       font-weight:600;display:flex;align-items:center;gap:5px;flex:0 0 auto}
+  /* İçerik */
+  .body{padding:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:13px}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate);margin:0 0 9px;
+       display:flex;align-items:center;gap:6px}
+  .lbl .req{color:var(--err);font-weight:700}
+  .hint{font-size:11.5px;color:var(--slate);line-height:1.45}
+  /* Adres satırı */
+  .addr{display:flex;gap:10px;align-items:flex-start;margin-bottom:9px}
+  .dot{width:22px;height:22px;border-radius:50%;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+       color:#fff;font-size:11px;font-weight:700;margin-top:6px}
+  .dot.a{background:var(--ok)} .dot.b{background:var(--err)} .dot.c{background:#7c3aed}
+  .field{width:100%;border:1px solid var(--line);border-radius:11px;padding:10px 11px;font-size:13px;font-family:inherit;
+       background:#f8fafc;color:var(--ink);outline:none}
+  .field:focus{border-color:var(--cyan);background:#fff;box-shadow:0 0 0 3px rgba(41,182,216,.13)}
+  .addr .field{flex:1}
+  .stopline{height:14px;border-left:2px dashed var(--slate2);margin:-4px 0 -4px 10px}
+  .addmore{background:none;border:1px dashed var(--cyan);color:var(--cyan-d);border-radius:11px;padding:8px;font-size:12px;
+       font-weight:600;width:100%;cursor:pointer;margin-top:3px}
+  .rmstop{background:none;border:none;color:var(--err);font-size:11px;cursor:pointer;padding:2px 4px;margin-top:7px}
+  /* 01 BUTON */
+  .btn01{width:100%;text-align:left;border:2px solid var(--warn);background:var(--warnbg);border-radius:14px;
+       padding:12px 13px;cursor:pointer;display:flex;gap:11px;align-items:center;transition:.15s}
+  .btn01:hover{background:#fde9b8}
+  .btn01.on{border-color:var(--ok);background:var(--okbg)}
+  .btn01 .ic{width:34px;height:34px;border-radius:10px;background:var(--warn);color:#fff;font-weight:800;font-size:14px;
+       display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .btn01.on .ic{background:var(--ok)}
+  .btn01 .t1{font-size:12.5px;font-weight:700;line-height:1.25}
+  .btn01 .t2{font-size:11px;color:var(--slate);margin-top:2px;line-height:1.35}
+  .btn01.on .t2{color:var(--ok);font-weight:600}
+  /* Segment (kap cinsi) */
+  .seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+  .seg button{border:1.5px solid var(--line);background:#f8fafc;border-radius:11px;padding:11px 4px;cursor:pointer;
+       font-size:12.5px;font-weight:600;color:var(--slate);font-family:inherit;display:flex;flex-direction:column;
+       align-items:center;gap:4px}
+  .seg button .e{font-size:19px}
+  .seg button.sel{border-color:var(--cyan);background:#e8f8fc;color:var(--cyan-d)}
+  /* Grid inputs */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+  .ig{display:flex;flex-direction:column;gap:4px}
+  .ig label{font-size:10.5px;color:var(--slate);font-weight:600}
+  .suf{position:relative}
+  .suf span{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--slate2)}
+  .olcu-wrap{overflow:hidden;transition:max-height .28s ease, opacity .2s, margin .2s;max-height:0;opacity:0;margin-top:0}
+  .olcu-wrap.open{max-height:240px;opacity:1;margin-top:10px}
+  .masked{font-family:monospace;letter-spacing:1px}
+  .maskrow{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:11px;color:var(--slate)}
+  .maskrow .pill{background:#f1f5f9;border-radius:7px;padding:3px 7px;border:1px solid var(--line)}
+  /* CTA */
+  .cta{position:sticky;bottom:0;background:linear-gradient(0deg,#fff 70%,rgba(255,255,255,0));padding:12px 14px 16px}
+  .cta .price{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;font-size:12px;color:var(--slate)}
+  .cta .price b{font-size:18px;color:var(--ink)}
+  .go{width:100%;border:none;border-radius:13px;background:var(--cyan);color:#fff;font-size:15px;font-weight:700;
+       padding:14px;cursor:pointer;box-shadow:0 6px 14px rgba(41,182,216,.35)}
+  .go:active{transform:translateY(1px)}
+  /* Sorumluluk / detay sayfa kartı */
+  .photoset{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .photoset .ph{background:repeating-conic-gradient(#eef2f6 0% 25%,#fff 0% 50%) 50%/16px 16px;border:1px solid var(--line);
+       border-radius:12px;padding:8px;text-align:center}
+  .photoset .ph img{width:100%;height:74px;object-fit:contain}
+  .photoset .ph.full{grid-column:1/3}
+  .photoset .ph .cap{font-size:10.5px;color:var(--slate);font-weight:600;margin-top:3px}
+  .specgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 4px}
+  .spec{background:#f8fafc;border:1px solid var(--line);border-radius:11px;padding:9px 10px}
+  .spec .k{font-size:10px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em}
+  .spec .v{font-size:14px;font-weight:700;margin-top:2px}
+  .legal{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:11px;font-size:11.5px;
+       line-height:1.5;color:#334155;margin:12px 0}
+  .chk{display:flex;gap:9px;align-items:flex-start;cursor:pointer;font-size:12px;line-height:1.4;user-select:none;
+       padding:10px;border:1.5px solid var(--line);border-radius:11px}
+  .chk.on{border-color:var(--ok);background:var(--okbg)}
+  .chk .box{width:20px;height:20px;border:2px solid var(--slate2);border-radius:6px;flex:0 0 auto;display:flex;
+       align-items:center;justify-content:center;font-size:13px;color:#fff;margin-top:1px}
+  .chk.on .box{background:var(--ok);border-color:var(--ok)}
+  .ghost{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:12px;font-size:13px;
+       font-weight:600;color:var(--slate);cursor:pointer;margin-top:9px}
+  /* Araç seçim listesi */
+  .vrow{display:flex;gap:11px;align-items:center;border:1.5px solid var(--line);border-radius:13px;padding:10px;
+       margin-bottom:9px;cursor:pointer;background:#fff}
+  .vrow.sel{border-color:var(--cyan);background:#e8f8fc}
+  .vrow.dis{opacity:.5}
+  .vrow .vic{width:46px;height:46px;border-radius:11px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;
+       font-size:24px;flex:0 0 auto}
+  .vrow .vn{font-size:13.5px;font-weight:700}
+  .vrow .vs{font-size:11px;color:var(--slate);margin-top:2px}
+  .vrow .vtag{margin-left:auto;font-size:10px;font-weight:700;color:var(--cyan-d);background:#e8f8fc;border-radius:7px;
+       padding:3px 7px;flex:0 0 auto}
+  /* Modal */
+  .scrim{position:absolute;inset:0;background:rgba(15,23,42,.5);display:none;align-items:flex-end;z-index:50}
+  .scrim.show{display:flex}
+  .sheet{background:#fff;border-radius:20px 20px 0 0;width:100%;padding:18px 16px 18px;animation:up .25s ease}
+  @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .sheet .ttl{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .sheet .msg{font-size:12.5px;color:#334155;line-height:1.5;margin-bottom:14px}
+  .opt{width:100%;text-align:left;border:1.5px solid var(--line);border-radius:13px;padding:12px;cursor:pointer;
+       background:#fff;margin-bottom:9px;display:flex;gap:11px;align-items:center}
+  .opt:hover{border-color:var(--cyan)}
+  .opt .oic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:0 0 auto}
+  .opt.primary .oic{background:#e8f8fc}.opt.alt .oic{background:var(--warnbg)}
+  .opt .ot{font-size:13px;font-weight:700}.opt .od{font-size:11px;color:var(--slate);margin-top:2px;line-height:1.35}
+  /* toast */
+  .toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;
+       padding:10px 15px;border-radius:11px;font-size:12px;z-index:60;opacity:0;transition:.25s;max-width:88%;text-align:center;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* başarı */
+  .success{text-align:center;padding:30px 18px}
+  .success .big{width:74px;height:74px;border-radius:50%;background:var(--okbg);color:var(--ok);font-size:38px;
+       display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+  .sumrow{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .sumrow .k{color:var(--slate)} .sumrow .v{font-weight:600;text-align:right;max-width:60%}
+  .banner{border-radius:12px;padding:10px 12px;font-size:11.5px;line-height:1.45;margin-bottom:12px;display:flex;gap:8px}
+  .banner.ok{background:var(--okbg);color:#14532d}
+  .banner.warn{background:var(--warnbg);color:#7c2d12}
+  .page{display:none} .page.active{display:block}
+  .smallnote{font-size:10.5px;color:var(--slate2);text-align:center;margin-top:8px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="notch"></div>
+  <div class="scr" id="scr">
+
+    <!-- ===================== PAGE: MAIN ORDER ===================== -->
+    <div class="page active" id="pg-main">
+      <div class="top">
+        <button class="back" onclick="toast('Önceki ekran (araç seçimi)')">‹</button>
+        <div>
+          <h1>Hemen Al, Hemen Teslim</h1>
+          <div class="sub">Anında kurye · sabit fiyat</div>
+        </div>
+        <div class="veh" id="vehChip">🏍️ Moto Kurye</div>
+      </div>
+
+      <div class="body">
+
+        <!-- ADRES -->
+        <div class="card">
+          <p class="lbl">📍 Adres Bilgileri <span class="req">*</span></p>
+          <div class="addr">
+            <div class="dot a">A</div>
+            <input class="field" id="adrA" placeholder="Alım adresi (nereden alınacak?)">
+          </div>
+          <div class="stopline"></div>
+          <div class="addr">
+            <div class="dot b">B</div>
+            <input class="field" id="adrB" placeholder="Teslim adresi (nereye teslim?)">
+          </div>
+          <!-- C durağı (A-B+B-C) -->
+          <div id="stopC" style="display:none">
+            <div class="stopline"></div>
+            <div class="addr">
+              <div class="dot c">C</div>
+              <div style="flex:1">
+                <input class="field" id="adrC" placeholder="2. teslim adresi (B → C)">
+                <button class="rmstop" onclick="toggleC(false)">✕ Durağı kaldır</button>
+              </div>
+            </div>
+          </div>
+          <button class="addmore" id="addCbtn" onclick="toggleC(true)">＋ Ara durak ekle (A-B + B-C)</button>
+        </div>
+
+        <!-- 01 BUTON -->
+        <div class="card">
+          <button class="btn01" id="btn01" onclick="openVehicleDetail('moto','sayfa1')">
+            <div class="ic">01</div>
+            <div>
+              <div class="t1" id="b01t1">Yük detaylarını bilmiyorum</div>
+              <div class="t2" id="b01t2">Seçtiğiniz araçla adet, ağırlık ve ölçü girmeden devam edin →</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- KAP BİLGİLERİ -->
+        <div class="card">
+          <p class="lbl">📦 Kap Bilgileri <span class="req">*</span></p>
+          <div class="seg" id="kapSeg">
+            <button data-kap="dosya" class="sel" onclick="setKap('dosya')"><span class="e">📄</span>Dosya / Zarf</button>
+            <button data-kap="koli" onclick="setKap('koli')"><span class="e">📦</span>Koli</button>
+            <button data-kap="diger" onclick="setKap('diger')"><span class="e">🗃️</span>Diğer</button>
+          </div>
+
+          <!-- Adet / Ağırlık (01 basılı değilse) -->
+          <div id="adetAgirlikBlk" style="margin-top:12px">
+            <div class="grid2">
+              <div class="ig"><label>Adet</label><input class="field" id="fAdet" type="number" min="1" value="1" inputmode="numeric" oninput="recalc()"></div>
+              <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" id="fKg" type="number" min="0" placeholder="0" inputmode="decimal" oninput="recalc()"><span>kg</span></div></div>
+            </div>
+
+            <!-- Ölçü: yalnız Dosya harici + 01 basılı değil → açılır/kapanır -->
+            <div class="olcu-wrap" id="olcuWrap">
+              <div class="grid3">
+                <div class="ig"><label>Boy</label><div class="suf"><input class="field" id="fBoy" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
+                <div class="ig"><label>En</label><div class="suf"><input class="field" id="fEn" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
+                <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" id="fYuk" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
+              </div>
+              <div class="hint" id="desiHint" style="margin-top:7px">Hacmi/desi hesaplanır · Moto Kurye standardı: tek parça ≤ 8 kg · ≤ 50 cm · toplam ≤ 12 kg / 30 desi</div>
+            </div>
+          </div>
+
+          <!-- 01 basılıysa gösterilecek bilgi -->
+          <div id="bilmiyorumInfo" class="banner ok" style="display:none;margin-top:12px">
+            <span>✅</span><div><b>Yük detayı girilmeyecek.</b> Seçtiğiniz <b id="b01veh">Moto Kurye</b> aracının sorumluluğunu onayladınız. Alım noktasında ölçüm/uygunluk kuryede.</div>
+          </div>
+        </div>
+
+        <!-- ÜRÜN KATEGORİSİ + İÇERİK (her durumda) -->
+        <div class="card">
+          <p class="lbl">🏷️ Ürün Kategorisi <span class="req">*</span></p>
+          <select class="field" id="fKat">
+            <option value="">Kategori seçin…</option>
+            <option>Belge / Evrak</option>
+            <option>Yedek Parça</option>
+            <option>Tekstil / Giyim</option>
+            <option>Elektronik (kırılgan)</option>
+            <option>Gıda (ambalajlı)</option>
+            <option>Çiçek / Bitki</option>
+            <option>Kozmetik / İlaç (reçetesiz)</option>
+            <option>Hediye / Çeşitli</option>
+          </select>
+
+          <p class="lbl" style="margin-top:13px">📝 Ürün İçeriği <span class="req">*</span> <span style="margin-left:auto;font-size:10px;color:var(--slate2);font-weight:600">🔒 maskeli</span></p>
+          <input class="field" id="fIcerik" placeholder="örn. çiçek, kitap, numune…" oninput="updateMask()">
+          <div class="maskrow">
+            <span class="pill">Kuryeye görünen:</span>
+            <span class="pill masked" id="maskOut">•••••</span>
+            <span style="margin-left:auto">içerik gizlenir</span>
+          </div>
+        </div>
+
+        <div class="smallnote">EFSO — Lojistiğin Efsanesi · mockup (gerçek fiyat/araç motoru bağlanmamıştır)</div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta">
+        <div class="price"><span>Tahmini ücret <span id="etaTxt">· 25–35 dk</span></span><b id="priceTxt">₺149</b></div>
+        <button class="go" onclick="onDevam()">Devam Et →</button>
+      </div>
+    </div>
+
+    <!-- ===================== PAGE: VEHICLE DETAIL (Sayfa 1) ===================== -->
+    <div class="page" id="pg-detail">
+      <div class="top">
+        <button class="back" onclick="goMain()">‹</button>
+        <div>
+          <h1 id="detTitle">Araç Detayı</h1>
+          <div class="sub">Kasa · Kapı · Ölçü · Kapasite</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="card">
+          <p class="lbl">🔎 <span id="detName">Moto Kurye</span> — Detaylı Görünüm</p>
+          <div class="photoset" id="detPhotos"><!-- doldurulur --></div>
+          <div class="specgrid" id="detSpecs"><!-- doldurulur --></div>
+        </div>
+
+        <div class="card">
+          <p class="lbl">⚠️ Araç Sorumluluk Bildirimi</p>
+          <div class="legal" id="detLegal"></div>
+          <label class="chk" id="detChk" onclick="toggleResp()">
+            <span class="box" id="detBox">✓</span>
+            <span>Yukarıdaki araç detaylarını <b>gördüm</b>. Göndereceğim yükün bu araca uygun olduğunu; uygun olmaması hâlinde alımda reddedilebileceğini ve doğabilecek ek ücret/iptal sorumluluğunun bana ait olduğunu kabul ediyorum.</span>
+          </label>
+        </div>
+
+        <div class="body" style="padding:0 0 10px">
+          <button class="ghost" onclick="openVehicleSelect()">🔄 İlk seçtiğim araç yanlış — Yeniden araç seç</button>
+        </div>
+      </div>
+      <div class="cta">
+        <button class="go" id="detGo" style="background:#cbd5e1;box-shadow:none" onclick="confirmResp()">Onayla ve İşleme Devam Et</button>
+      </div>
+    </div>
+
+    <!-- ===================== PAGE: VEHICLE SELECT ===================== -->
+    <div class="page" id="pg-select">
+      <div class="top">
+        <button class="back" onclick="show('pg-detail')">‹</button>
+        <div>
+          <h1>Araç Seçimi</h1>
+          <div class="sub">En detaylı kasa-kapı-ölçü-kg ile seçin</div>
+        </div>
+      </div>
+      <div class="body">
+        <div class="banner warn"><span>ℹ️</span><div>Her aracın <b>kasa iç ölçüsü, kapı, ölçü ve kapasitesini</b> görerek seçin. Seçiminizden sonra sorumluluk bildirimini tekrar onaylayacaksınız.</div></div>
+        <div id="vehList"></div>
+      </div>
+      <div class="cta">
+        <button class="go" id="selGo" style="background:#cbd5e1;box-shadow:none" onclick="goToSelectedDetail()">Seçilen Aracın Detayına Git →</button>
+      </div>
+    </div>
+
+    <!-- ===================== PAGE: SUCCESS ===================== -->
+    <div class="page" id="pg-done">
+      <div class="top"><div><h1>Sipariş Özeti</h1><div class="sub">Onaya hazır</div></div></div>
+      <div class="body">
+        <div class="success" style="padding:20px 0 6px">
+          <div class="big">🏍️</div>
+          <div style="font-size:16px;font-weight:800">Siparişiniz oluşturuluyor</div>
+          <div class="hint" style="margin-top:5px">Yakındaki kurye aranıyor…</div>
+        </div>
+        <div class="card">
+          <p class="lbl">Sipariş Detayı</p>
+          <div id="sumBox"></div>
+        </div>
+        <button class="ghost" onclick="resetAll()">← Yeni sipariş</button>
+      </div>
+    </div>
+
+    <!-- ===================== PAGE: REDIRECT (uygun araç) ===================== -->
+    <div class="page" id="pg-redirect">
+      <div class="top">
+        <button class="back" onclick="goMain()">‹</button>
+        <div><h1 id="redTitle">Uygun Araç Ekranı</h1><div class="sub">Adres ve kap bilgileriniz taşındı</div></div>
+        <div class="veh" id="redChip">🚐</div>
+      </div>
+      <div class="body">
+        <div class="banner ok"><span>✅</span><div><b>Bilgileriniz korundu.</b> Adres ve kap bilgilerinizi tekrar girmenize gerek yok — yükünüze uygun araç ekranına taşındı.</div></div>
+        <div class="card">
+          <p class="lbl">Taşınan Bilgiler</p>
+          <div id="redBox"></div>
+        </div>
+        <div class="card">
+          <p class="lbl">Önerilen Araç</p>
+          <div class="vrow sel" id="redVeh"></div>
+          <div class="hint" style="margin-top:8px">Bu ekranda kap ölçülerinize göre fiyat ve süre yeniden hesaplanır. (Mockup'ta akış burada biter.)</div>
+        </div>
+        <button class="go" onclick="toast('Bu araç tipiyle siparişe devam (mockup sonu)')">Bu Araçla Devam Et →</button>
+      </div>
+    </div>
+
+  </div><!-- /scr -->
+
+  <!-- MODAL: kapasite uyarısı -->
+  <div class="scrim" id="scrim">
+    <div class="sheet">
+      <div class="ttl">⚠️ Kap bilgileriniz uygun değil</div>
+      <div class="msg" id="warnMsg">Kap bilgileriniz Moto Kurye kg ve hacim standartlarına uymamaktadır. Ne yapmak istersiniz?</div>
+      <button class="opt primary" onclick="warnUpdate()">
+        <div class="oic">✏️</div>
+        <div><div class="ot">Kap bilgilerimi güncellemek istiyorum</div><div class="od">Forma dön, ölçüleri düzelt. Adres ve kap bilgilerin kaybolmaz.</div></div>
+      </button>
+      <button class="opt alt" onclick="warnRedirect()">
+        <div class="oic">🚚</div>
+        <div><div class="ot">Uygun araç tipine yönlendir</div><div class="od" id="warnRedDesc">Yüküme uygun araç ekranına geç. Bilgilerim taşınsın.</div></div>
+      </button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ----------------------------- VERİ ----------------------------- */
+// Moto Kurye taşıma standardı (mockup)
+const MOTO = { maxKgParca:8, maxKenarCm:50, maxKgTop:12, maxDesi:30 };
+
+// Araç fotoğraf seti (docs/mockup tree). Moto için inline SVG kullanıyoruz.
+const MOTO_SVG = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'><g fill='none' stroke='%2329b6d8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><circle cx='28' cy='66' r='13'/><circle cx='94' cy='66' r='13'/><path d='M28 66 L52 66 L62 44 L84 44 L94 66'/><path d='M52 66 L44 44 L34 44'/><rect x='70' y='20' width='26' height='24' rx='3' fill='%23e8f8fc'/><path d='M70 32 H96'/></g></svg>`);
+
+// 9 kanonik yük aracı
+const VEHICLES = {
+  moto:    {emoji:'🏍️', name:'Moto Kurye',        kasa:'Çanta 45×35×30 cm', kapi:'Çanta (üst kapak)', ds:'≤ 50 cm kenar', kg:'12 kg / 30 desi', maxKg:12, maxDesi:30, photo:'moto'},
+  courier: {emoji:'🚐', name:'Van Ford Courier',   kasa:'180×120×120 cm', kapi:'Arka çift + yan sürgü', ds:'~2,6 m³', kg:'650 kg', maxKg:650, maxDesi:870, photo:'arac'},
+  transit: {emoji:'🚐', name:'Van Ford Transit',   kasa:'280×170×170 cm', kapi:'Arka çift + yan sürgü', ds:'~8 m³', kg:'1.200 kg', maxKg:1200, maxDesi:2700, photo:'arac'},
+  kamyonet:{emoji:'🚚', name:'Kamyonet',           kasa:'320×180×180 cm', kapi:'Arka kapak', ds:'~10 m³', kg:'2.500 kg', maxKg:2500, maxDesi:3500, photo:'kamyonet'},
+  kliftsiz:{emoji:'🚛', name:'Kamyon (Liftsiz)',   kasa:'600×240×240 cm', kapi:'Arka kapak', ds:'~34 m³', kg:'8.000 kg', maxKg:8000, maxDesi:11000, photo:'kamyonet'},
+  kliftli: {emoji:'🚛', name:'Kamyon (Liftli)',    kasa:'600×240×240 cm', kapi:'Arka + hidrolik lift', ds:'~34 m³', kg:'8.000 kg', maxKg:8000, maxDesi:11000, photo:'kamyonet'},
+  tirtente:{emoji:'🚛', name:'TIR Tenteli',        kasa:'1360×245×270 cm', kapi:'Yan tente + arka', ds:'~90 m³', kg:'24.000 kg', maxKg:24000, maxDesi:90000, photo:'kamyonet'},
+  tirsal:  {emoji:'🚛', name:'TIR Sal Dorse',      kasa:'1360×245 açık', kapi:'Açık platform', ds:'üstten yük', kg:'24.000 kg', maxKg:24000, maxDesi:90000, photo:'kamyonet'},
+  lowbed:  {emoji:'🚛', name:'TIR Lowbed',         kasa:'Alçak şasi', kapi:'Rampa', ds:'iş makinesi', kg:'40.000 kg', maxKg:40000, maxDesi:120000, photo:'kamyonet'},
+};
+const PHOTO = {
+  moto:   [['',MOTO_SVG,'Yan']],
+  arac:   [['arac-foto/arac-on.png','Ön'],['arac-foto/arac-arka.png','Arka'],['arac-foto/arac-sol.png','Sol'],['arac-foto/arac-kasa-ici.png','Kasa İçi']],
+  kamyonet:[['arac-ikon-kamyonet/onizleme.html','']], // fallback emoji set
+};
+
+/* ----------------------------- STATE ----------------------------- */
+const S = {
+  vehicle:'moto',          // seçili araç
+  bilmiyorum:false,        // 01 butonu aktif mi
+  kap:'dosya',             // dosya|koli|diger
+  respFor:null,            // sorumluluk onayı verilen araç (sayfa1)
+  respOk:false,
+  selTmp:null,             // araç seçim ekranında geçici seçim
+  flowAfterResp:'main',    // onay sonrası: main
+};
+
+/* ----------------------------- NAV ----------------------------- */
+function show(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('scr').scrollTop=0;
+}
+function goMain(){ show('pg-main'); }
+
+/* ----------------------------- ADRES ----------------------------- */
+function toggleC(on){
+  document.getElementById('stopC').style.display = on?'block':'none';
+  document.getElementById('addCbtn').style.display = on?'none':'block';
+  if(!on) document.getElementById('adrC').value='';
+}
+
+/* ----------------------------- KAP / 01 mantığı ----------------------------- */
+function setKap(k){
+  S.kap=k;
+  document.querySelectorAll('#kapSeg button').forEach(b=>b.classList.toggle('sel', b.dataset.kap===k));
+  refreshOlcu();
+  recalc();
+}
+// Ölçü kısmı: yalnızca (Dosya harici) VE (01 basılı değil) ise açık
+function refreshOlcu(){
+  const open = (S.kap!=='dosya') && !S.bilmiyorum;
+  document.getElementById('olcuWrap').classList.toggle('open', open);
+}
+function applyBilmiyorumUI(){
+  const on=S.bilmiyorum;
+  const b=document.getElementById('btn01');
+  b.classList.toggle('on',on);
+  document.getElementById('b01t1').textContent = on? 'Yük detayını bilmiyorum (aktif)' : 'Yük detaylarını bilmiyorum';
+  document.getElementById('b01t2').textContent = on? VEHICLES[S.vehicle].name+' sorumluluğu onaylandı · değiştirmek için dokunun'
+                                                    : 'Seçtiğiniz araçla adet, ağırlık ve ölçü girmeden devam edin →';
+  document.getElementById('adetAgirlikBlk').style.display = on?'none':'block';
+  document.getElementById('bilmiyorumInfo').style.display = on?'flex':'none';
+  document.getElementById('b01veh').textContent = VEHICLES[S.vehicle].name;
+  refreshOlcu();
+}
+
+/* ----------------------------- ARAÇ DETAY (Sayfa 1) ----------------------------- */
+function openVehicleDetail(veh, flow){
+  S.vehicle = veh;
+  S.flowAfterResp = flow || 'main';
+  S.respOk=false;
+  renderDetail(veh);
+  show('pg-detail');
+}
+function renderDetail(vehKey){
+  const v=VEHICLES[vehKey];
+  document.getElementById('detTitle').textContent=v.name+' Detayı';
+  document.getElementById('detName').textContent=v.name;
+  // fotoğraflar
+  const pset=document.getElementById('detPhotos'); pset.innerHTML='';
+  if(v.photo==='moto'){
+    pset.innerHTML = `<div class="ph full"><img src="${MOTO_SVG}" alt="moto"><div class="cap">Moto kurye + taşıma çantası</div></div>`;
+  } else if(v.photo==='arac'){
+    PHOTO.arac.forEach(p=>{ pset.innerHTML += `<div class="ph"><img src="${p[0]}" alt="${p[1]}"><div class="cap">${p[1]}</div></div>`; });
+  } else {
+    ['Ön','Arka','Sol','Kasa İçi'].forEach(c=>{ pset.innerHTML += `<div class="ph"><div style="height:74px;display:flex;align-items:center;justify-content:center;font-size:34px">${v.emoji}</div><div class="cap">${c}</div></div>`; });
+  }
+  // specler
+  const sg=document.getElementById('detSpecs');
+  sg.innerHTML =
+    spec('KASA / İÇ ÖLÇÜ', v.kasa)+spec('KAPI', v.kapi)+spec('DIŞ ÖLÇÜ (DS)', v.ds)+spec('KAPASİTE (KG)', v.kg);
+  // legal
+  document.getElementById('detLegal').innerHTML =
+    `<b>${v.name}</b> taşıma kapasitesi <b>${v.kg}</b>, kasa iç ölçüsü <b>${v.kasa}</b>, kapı tipi <b>${v.kapi}</b> olarak yukarıda gösterilmiştir. Yükünüzün bu ölçü ve kapasiteye uygun olduğunu doğrulayın.`;
+  // reset onay
+  S.respOk=false;
+  document.getElementById('detChk').classList.remove('on');
+  document.getElementById('detGo').style.background='#cbd5e1';
+  document.getElementById('detGo').style.boxShadow='none';
+}
+function spec(k,v){ return `<div class="spec"><div class="k">${k}</div><div class="v">${v}</div></div>`; }
+function toggleResp(){
+  S.respOk=!S.respOk;
+  document.getElementById('detChk').classList.toggle('on',S.respOk);
+  const g=document.getElementById('detGo');
+  g.style.background = S.respOk? 'var(--cyan)':'#cbd5e1';
+  g.style.boxShadow = S.respOk? '0 6px 14px rgba(41,182,216,.35)':'none';
+}
+function confirmResp(){
+  if(!S.respOk){ toast('Önce sorumluluk bildirimini onaylayın'); return; }
+  S.respFor=S.vehicle; S.bilmiyorum=true;
+  // araç çipini güncelle
+  document.getElementById('vehChip').textContent = VEHICLES[S.vehicle].emoji+' '+VEHICLES[S.vehicle].name;
+  applyBilmiyorumUI();
+  recalc();
+  goMain();
+  toast('✅ '+VEHICLES[S.vehicle].name+' onaylandı — detay girmeden devam');
+}
+
+/* ----------------------------- ARAÇ YENİDEN SEÇİM ----------------------------- */
+function openVehicleSelect(){
+  S.selTmp=S.vehicle;
+  renderVehList();
+  show('pg-select');
+}
+function renderVehList(){
+  const wrap=document.getElementById('vehList'); wrap.innerHTML='';
+  Object.entries(VEHICLES).forEach(([k,v])=>{
+    const sel=k===S.selTmp?'sel':'';
+    wrap.innerHTML += `<div class="vrow ${sel}" onclick="pickVeh('${k}')">
+        <div class="vic">${v.emoji}</div>
+        <div><div class="vn">${v.name}</div><div class="vs">Kasa ${v.kasa} · ${v.kg}</div></div>
+        ${k==='moto'?'<div class="vtag">mevcut hizmet</div>':''}
+      </div>`;
+  });
+  updateSelGo();
+}
+function pickVeh(k){ S.selTmp=k; renderVehList(); }
+function updateSelGo(){
+  const g=document.getElementById('selGo'), ok=!!S.selTmp;
+  g.style.background = ok?'var(--cyan)':'#cbd5e1';
+  g.style.boxShadow = ok?'0 6px 14px rgba(41,182,216,.35)':'none';
+}
+function goToSelectedDetail(){
+  if(!S.selTmp){ toast('Bir araç seçin'); return; }
+  openVehicleDetail(S.selTmp, S.flowAfterResp);
+}
+
+/* ----------------------------- HESAP / MASKE ----------------------------- */
+function num(id){ const v=parseFloat(document.getElementById(id).value); return isNaN(v)?0:v; }
+function calcDesi(){ return (num('fBoy')*num('fEn')*num('fYuk'))/3000; }
+function recalc(){
+  // basit fiyat: kap + ölçü/ağırlık etkisi (mockup)
+  let base=149;
+  if(S.bilmiyorum){ document.getElementById('priceTxt').textContent='₺149'; document.getElementById('etaTxt').textContent='· 25–35 dk'; return; }
+  const kg=num('fKg'), desi=calcDesi(), adet=num('fAdet')||1;
+  const esas=Math.max(kg, desi);
+  base += Math.round(esas*4) + (adet>1?(adet-1)*8:0);
+  if(S.kap==='diger') base+=15;
+  document.getElementById('priceTxt').textContent='₺'+base;
+}
+function updateMask(){
+  const t=document.getElementById('fIcerik').value.trim();
+  document.getElementById('maskOut').textContent = t? '•'.repeat(Math.min(Math.max(t.length,3),10)) : '•••••';
+}
+
+/* ----------------------------- DEVAM ET (ana validasyon) ----------------------------- */
+function onDevam(){
+  // ortak zorunlular
+  if(!document.getElementById('adrA').value.trim() || !document.getElementById('adrB').value.trim()){
+    toast('Alım (A) ve teslim (B) adresi zorunlu'); show('pg-main'); return;
+  }
+  if(!document.getElementById('fKat').value){ toast('Ürün kategorisi zorunlu'); return; }
+  if(!document.getElementById('fIcerik').value.trim()){ toast('Ürün içeriği zorunlu'); return; }
+
+  // 01 basılıysa: araç sorumluluğu onaylı → ölçü doğrulaması atlanır
+  if(S.bilmiyorum){ buildSummary(); show('pg-done'); return; }
+
+  // 01 basılı DEĞİL:
+  // Dosya/Zarf → Adet + Ağırlık yeter (ölçü yok)
+  if(S.kap==='dosya'){
+    if(num('fKg')<=0){ toast('Dosya/Zarf için ağırlık girin'); return; }
+    buildSummary(); show('pg-done'); return;
+  }
+
+  // Koli / Diğer → Adet + Ağırlık + Ölçü zorunlu
+  if(num('fKg')<=0 || num('fBoy')<=0 || num('fEn')<=0 || num('fYuk')<=0){
+    toast('Koli/Diğer için ağırlık ve ölçü (boy·en·yükseklik) zorunlu'); return;
+  }
+
+  // Moto Kurye standardına uygunluk
+  const kgTop=num('fKg'), desi=calcDesi(), adet=num('fAdet')||1;
+  const enUzun=Math.max(num('fBoy'),num('fEn'),num('fYuk'));
+  const uymaz = kgTop>MOTO.maxKgTop || desi>MOTO.maxDesi || enUzun>MOTO.maxKenarCm || (kgTop/adet)>MOTO.maxKgParca;
+
+  if(uymaz){ openWarn(kgTop,desi,enUzun); return; }
+
+  buildSummary(); show('pg-done');
+}
+
+/* ----------------------------- KAPASİTE UYARI MODALI ----------------------------- */
+function openWarn(kg,desi,enUzun){
+  const sebep=[];
+  if(kg>MOTO.maxKgTop) sebep.push(`toplam ${kg} kg > ${MOTO.maxKgTop} kg`);
+  if(desi>MOTO.maxDesi) sebep.push(`${desi.toFixed(1)} desi > ${MOTO.maxDesi}`);
+  if(enUzun>MOTO.maxKenarCm) sebep.push(`en uzun kenar ${enUzun} cm > ${MOTO.maxKenarCm} cm`);
+  document.getElementById('warnMsg').innerHTML =
+    `Kap bilgileriniz <b>Moto Kurye</b> kg ve hacim standartlarına uymuyor (${sebep.join(' · ')}). Kap bilgilerinizi mi değiştirmek istersiniz, yoksa yükünüze uygun bir araç ekranına mı yönlendirelim?`;
+  const suit=suggestVehicle(kg,desi);
+  document.getElementById('warnRedDesc').textContent = `Yüküne uygun: ${VEHICLES[suit].name}. Adres ve kap bilgilerin taşınsın.`;
+  document.getElementById('scrim').classList.add('show');
+}
+function closeWarn(){ document.getElementById('scrim').classList.remove('show'); }
+// Seçenek 1: kap bilgilerini güncelle → forma dön, hiçbir bilgi kaybolmaz
+function warnUpdate(){
+  closeWarn();
+  show('pg-main');
+  document.getElementById('fKg').focus();
+  toast('Kap bilgilerinizi güncelleyin — adres & kap bilgileri korundu');
+}
+// Seçenek 2: uygun araç ekranına yönlendir → bilgiler taşınır
+function warnRedirect(){
+  closeWarn();
+  const suit=suggestVehicle(num('fKg'),calcDesi());
+  buildRedirect(suit);
+  show('pg-redirect');
+}
+function suggestVehicle(kg,desi){
+  // sistemde bu yüke uygun en küçük araç
+  const order=['courier','transit','kamyonet','kliftsiz','kliftli','tirtente'];
+  for(const k of order){ if(kg<=VEHICLES[k].maxKg && desi<=VEHICLES[k].maxDesi) return k; }
+  return 'kamyonet';
+}
+
+/* ----------------------------- ÖZET / YÖNLENDİRME EKRANI ----------------------------- */
+function addrText(){
+  let s='A: '+(document.getElementById('adrA').value||'—')+'  →  B: '+(document.getElementById('adrB').value||'—');
+  if(document.getElementById('stopC').style.display!=='none' && document.getElementById('adrC').value)
+    s+='  →  C: '+document.getElementById('adrC').value;
+  return s;
+}
+function kapText(){
+  const m={dosya:'Dosya / Zarf',koli:'Koli',diger:'Diğer'}[S.kap];
+  if(S.bilmiyorum) return m+' · yük detayı girilmedi (01)';
+  let t=m+' · '+(num('fAdet')||1)+' adet · '+num('fKg')+' kg';
+  if(S.kap!=='dosya') t+=' · '+num('fBoy')+'×'+num('fEn')+'×'+num('fYuk')+' cm ('+calcDesi().toFixed(1)+' desi)';
+  return t;
+}
+function row(k,v){ return `<div class="sumrow"><span class="k">${k}</span><span class="v">${v}</span></div>`; }
+function buildSummary(){
+  document.getElementById('sumBox').innerHTML =
+    row('Hizmet','Hemen Al, Hemen Teslim')+
+    row('Araç', VEHICLES[S.vehicle].emoji+' '+VEHICLES[S.vehicle].name)+
+    row('Adres', addrText())+
+    row('Kap', kapText())+
+    row('Kategori', document.getElementById('fKat').value||'—')+
+    row('İçerik', '🔒 maskeli ('+(document.getElementById('fIcerik').value||'—')+')')+
+    (S.bilmiyorum?row('Sorumluluk','✅ Araç sorumluluk bildirimi onaylandı'):'')+
+    row('Ücret', document.getElementById('priceTxt').textContent);
+}
+function buildRedirect(suit){
+  document.getElementById('redTitle').textContent=VEHICLES[suit].name+' Ekranı';
+  document.getElementById('redChip').textContent=VEHICLES[suit].emoji;
+  document.getElementById('redBox').innerHTML =
+    row('Adres', addrText())+
+    row('Kap', kapText())+
+    row('Kategori', document.getElementById('fKat').value||'—')+
+    row('İçerik', '🔒 maskeli');
+  document.getElementById('redVeh').innerHTML =
+    `<div class="vic">${VEHICLES[suit].emoji}</div>
+     <div><div class="vn">${VEHICLES[suit].name}</div><div class="vs">Kasa ${VEHICLES[suit].kasa} · ${VEHICLES[suit].kg}</div></div>
+     <div class="vtag">uygun</div>`;
+}
+
+/* ----------------------------- RESET / TOAST ----------------------------- */
+function resetAll(){
+  ['adrA','adrB','adrC','fKg','fBoy','fEn','fYuk','fIcerik'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('fAdet').value=1; document.getElementById('fKat').value='';
+  S.vehicle='moto'; S.bilmiyorum=false; S.kap='dosya'; S.respOk=false; S.respFor=null;
+  document.getElementById('vehChip').textContent='🏍️ Moto Kurye';
+  setKap('dosya'); applyBilmiyorumUI(); updateMask(); recalc(); toggleC(false); goMain();
+}
+let tT;
+function toast(m){
+  const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show');
+  clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ----------------------------- INIT ----------------------------- */
+setKap('dosya'); applyBilmiyorumUI(); updateMask(); recalc();
+</script>
+</body>
+</html>
