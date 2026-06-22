@@ -216,6 +216,14 @@
   .addr-form .ai{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;box-sizing:border-box;background:#f8fafc}
   .atag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:4px;vertical-align:middle}
   .atag.p{background:#dcfce7;color:#166534}.atag.d{background:#dbeafe;color:#1e40af}.atag.x{background:#f1f5f9;color:#64748b}
+  /* ---- Kayıtlı adres buton kartları (noktada) ---- */
+  .savedwrap{display:flex;flex-wrap:wrap;gap:8px}
+  .savedchip{display:flex;align-items:center;gap:9px;border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:8px 11px;cursor:pointer;font-family:inherit;text-align:left;transition:.12s;max-width:100%}
+  .savedchip:hover{border-color:var(--cyan);background:#ecfdff;box-shadow:0 4px 12px rgba(15,23,42,.07)}
+  .savedchip .sic{width:30px;height:30px;border-radius:8px;background:#ecfdff;display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+  .savedchip .stxt{display:flex;flex-direction:column;min-width:0}
+  .savedchip .stxt b{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .savedchip .stxt small{font-size:10.5px;color:var(--slate);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
   @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}.g4,.vgrid{grid-template-columns:1fr 1fr}.photoset,.specgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -739,10 +747,20 @@ function stopsPanel(){
     <div class="stop"><div class="shead"><div class="pin ${t.c}">${t.e}</div><b>${stopLabel(s)}</b>
       <button class="btn sm sec" style="margin-left:auto" onclick="uS(${s.id},'detay',${!s.detay})">${s.detay?'Detayı gizle':'Detay'}</button>
       <button class="btn sm ghost" onclick="delStop(${s.id})" title="Noktayı sil">🗑</button></div>
-      <div class="grid2" style="margin-bottom:9px">
-        <div>${aktifAdresler().length?`<label class="fld">📑 Kayıtlı adreslerden seç</label>
-          <select class="field" onchange="applySavedAddr(${s.id},this.value)"><option value="">— Kayıtlı adres seç —</option>${aktifAdresler().map(a=>`<option value="${a.id}">${savedAddrLabel(a)}${(s.type==='alim'&&a.defPickup)||(s.type==='teslim'&&a.defDelivery)?' ⭐':''}</option>`).join('')}</select>`:`<label class="fld">Kayıtlı adres</label><div class="hint" style="padding:7px 0">Henüz kayıt yok — alanları doldurup <b>kaydedin</b>.</div>`}</div>
-        <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap"><button class="btn sm sec" onclick="saveStopAddr(${s.id})">💾 Bu adresi kaydet</button><button class="btn sm ghost" onclick="openAddrMgr()">📍 Adreslerim</button></div>
+      <div style="margin-bottom:11px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <label class="fld" style="margin:0">📍 Kayıtlı Adreslerim <span style="font-weight:400;color:var(--slate2)">— tıkla, alanlar dolsun</span></label>
+          <div style="margin-left:auto;display:flex;gap:6px">
+            <button class="btn sm sec" onclick="saveStopAddr(${s.id})">💾 Bu adresi kaydet</button>
+            <button class="btn sm ghost" onclick="openAddrMgr()">⚙️ Yönet</button>
+          </div>
+        </div>
+        ${aktifAdresler().length?`<div class="savedwrap">${aktifAdresler().map(a=>`
+          <button class="savedchip" onclick="applySavedAddr(${s.id},'${a.id}')">
+            <span class="sic">📍</span>
+            <span class="stxt"><b>${savedAddrLabel(a)}</b><small>${(a.addr||'—')}</small></span>
+            ${(s.type==='alim'&&a.defPickup)?'<span class="atag p">⭐ Vars. Alım</span>':(s.type==='teslim'&&a.defDelivery)?'<span class="atag d">⭐ Vars. Teslim</span>':''}
+          </button>`).join('')}</div>`:`<div class="hint" style="padding:3px 0">Henüz kayıtlı adres yok — aşağıyı doldurup <b>💾 Bu adresi kaydet</b> ile ekleyin.</div>`}
       </div>
       <label class="fld">Adres <span style="font-weight:400;color:var(--slate2)">— yazınca otomatik arama (Google/harita)</span></label>
       ${acField('st'+s.id, s.addr, 'Mahalle, cadde, no… (yaz → öneri gelsin)')}
