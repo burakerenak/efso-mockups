@@ -55,9 +55,8 @@
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   .h2{font-size:18px;font-weight:800;margin:0 0 3px}
   .sub{color:var(--slate);font-size:13px;margin:0 0 18px}
-  .pick{display:grid;gap:13px}
-  .pick.c3{grid-template-columns:repeat(3,1fr)}
-  .pick.c4{grid-template-columns:repeat(4,1fr)}
+  .g1{grid-template-columns:1fr}.g2{grid-template-columns:repeat(2,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:980px){.g4{grid-template-columns:1fr 1fr}}
   .opt{border:2px solid var(--line);border-radius:15px;padding:16px;cursor:pointer;background:#fff;transition:.15s;position:relative}
   .opt:hover{border-color:var(--cyan-l);transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.07)}
   .opt.sel{border-color:var(--cyan);background:#ecfdff}
@@ -170,7 +169,7 @@
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 17px;border-radius:11px;font-size:13px;z-index:60;opacity:0;transition:.25s;max-width:80%;text-align:center;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .kapsetnote{font-size:11px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:8px;padding:4px 9px;display:inline-block;margin-bottom:9px}
-  @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}.pick.c3,.pick.c4,.vgrid{grid-template-columns:1fr 1fr}.photoset,.specgrid{grid-template-columns:1fr 1fr}}
+  @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}.g4,.vgrid{grid-template-columns:1fr 1fr}.photoset,.specgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
@@ -179,19 +178,19 @@
   <aside class="sidebar">
     <div class="brand"><div class="logo">EF</div><div><b>EFSO Admin</b><span>Operasyon Paneli</span></div></div>
     <nav class="nav">
-      <div class="sec">Operasyon</div>
-      <a onclick="toast('Dashboard — mockup')"><span class="ic">📊</span> Dashboard</a>
-      <a onclick="toast('Sipariş listesi — mockup')"><span class="ic">📋</span> Siparişler</a>
-      <a class="on"><span class="ic">➕</span> Sipariş Oluştur</a>
-      <a onclick="toast('Canlı takip — mockup')"><span class="ic">🗺️</span> Canlı Takip</a>
-      <a onclick="toast('Eşleştirme kuyruğu — mockup')"><span class="ic">⚙️</span> Eşleştirme</a>
+      <div class="sec">Siparişler</div>
+      <a data-nav="yolcu" onclick="navService('yolcu')"><span class="ic">🚖</span> Yolcu Taşımacılığı</a>
+      <a data-nav="yuk" onclick="navService('yuk')"><span class="ic">📦</span> Yük Taşımacılığı</a>
+      <a data-nav="evdeneve" onclick="navService('evdeneve')"><span class="ic">🏠</span> Ev &amp; Ofis Taşımacılığı</a>
+      <a data-nav="list" onclick="toast('Sipariş listesi — mockup')"><span class="ic">📋</span> Sipariş Listesi<span style="margin-left:auto;background:#1e293b;border-radius:20px;padding:1px 8px;font-size:10.5px;font-weight:700">3</span></a>
+      <div class="sec">Operasyon (Admin)</div>
+      <a onclick="toast('Eşleştirme motoru — mockup')"><span class="ic">⚙️</span> Eşleştirme Motoru</a>
+      <a onclick="toast('Manuel kuyruk — mockup')"><span class="ic">🧑‍💼</span> Manuel Kuyruk<span style="margin-left:auto;background:#7c2d12;border-radius:20px;padding:1px 8px;font-size:10.5px;font-weight:700">2</span></a>
+      <a onclick="toast('Canlı harita — mockup')"><span class="ic">🗺️</span> Canlı Harita</a>
       <div class="sec">Tanımlar</div>
       <a onclick="toast('Araçlar — mockup')"><span class="ic">🚚</span> Araçlar</a>
       <a onclick="toast('Kuryeler — mockup')"><span class="ic">🧑‍✈️</span> Kuryeler</a>
-      <a onclick="toast('Müşteriler — mockup')"><span class="ic">🧑</span> Müşteriler</a>
       <a onclick="toast('Tarifeler — mockup')"><span class="ic">💵</span> Tarifeler</a>
-      <div class="sec">Sistem</div>
-      <a onclick="toast('Ayarlar — mockup')"><span class="ic">🔧</span> Ayarlar</a>
     </nav>
     <div class="foot">EFSO — Ekspres Sipariş Akışı<br>Kaynak: Kitap111.xlsx</div>
   </aside>
@@ -252,31 +251,11 @@
         <div class="actions"><button class="btn primary" id="b1" disabled onclick="goStep(2)">Devam →</button></div>
       </div>
 
-      <!-- STEP 2: ZAMANLAMA MODU -->
+      <!-- STEP 2: ZAMANLAMA MODU (hizmete göre filtreli) -->
       <div class="panel" id="p2">
-        <div class="h2">Zamanlama Modu</div>
-        <p class="sub">Teslimat hızını seçin. Mod, araç uygunluğunu ve fiyatı etkiler.</p>
-        <div class="pick c4">
-          <div class="opt" data-m="express" onclick="pickMod('express')">
-            <span class="badge">EN HIZLI</span>
-            <div class="em">⚡</div><div class="ti">Express</div>
-            <div class="de">Hemen Al · Hemen Teslim. Anında kurye ataması.</div>
-          </div>
-          <div class="opt" data-m="gunici" onclick="pickMod('gunici')">
-            <span class="badge">EKONOMİK</span>
-            <div class="em">☀️</div><div class="ti">Gün İçinde</div>
-            <div class="de">13:00'e kadar Moto/Van/Transit/Kamyonet → aynı gün 18:00. Kamyon/TIR mesafeye göre aynı/ertesi gün. Konsolidasyon ile uygun fiyat.</div>
-          </div>
-          <div class="opt" data-m="ertesi" onclick="pickMod('ertesi')">
-            <div class="em">🌙</div><div class="ti">Ertesi Gün</div>
-            <div class="de">Bugün oluşturun, gönderiniz ertesi gün teslim edilsin.</div>
-          </div>
-          <div class="opt" data-m="ileri" onclick="pickMod('ileri')">
-            <span class="badge">7/24</span>
-            <div class="em">📅</div><div class="ti">İleri Tarihli Randevulu</div>
-            <div class="de">Haftanın 7 günü, gece-gündüz. İstenen tarih-saatte alınır, istenen tarih-saatte teslim edilir.</div>
-          </div>
-        </div>
+        <div class="h2" id="modBaslik">Teslimat Türü</div>
+        <p class="sub" id="modSub">Teslimat hızını seçin. Mod, araç uygunluğunu ve fiyatı etkiler.</p>
+        <div class="pick" id="modGrid"></div>
         <div class="actions">
           <button class="btn ghost" onclick="goStep(1)">← Geri</button>
           <button class="btn primary" id="b2" disabled onclick="goStep(3)">Devam →</button>
@@ -381,24 +360,66 @@ const MODNAME = {express:'⚡ Express — Hemen Al Hemen Teslim', gunici:'☀️
 const ST = { hizmet:null, mod:null, arac:null, kap:null, respOk:false, selTmp:null, viaCapacity:false, suit:null };
 
 /* ============================= NAV / STEP ============================= */
+// Teslimat türleri + hizmete göre izinli set
+const MODES = {
+  express:{em:'⚡', ti:'Hızlı (Ekspres) Teslimat', badge:'EN HIZLI', de:'Hemen Al · Hemen Teslim. Anında kurye ataması.'},
+  gunici: {em:'☀️', ti:'Gün İçi Teslimat', badge:'EKONOMİK', de:"13:00'e kadar Moto/Van/Transit/Kamyonet → aynı gün 18:00. Kamyon/TIR mesafeye göre aynı/ertesi gün. Konsolidasyon ile uygun fiyat."},
+  ertesi: {em:'🌙', ti:'Ertesi Gün Teslimat', badge:'', de:'Bugün oluşturun, gönderiniz ertesi gün teslim edilsin.'},
+  ileri:  {em:'📅', ti:'Randevulu Teslimat', badge:'7/24', de:'Haftanın 7 günü, gece-gündüz. İstenen tarih-saatte alınır, istenen tarih-saatte teslim edilir.'},
+};
+const ALLOWED_MODES = { yolcu:['express','ileri'], yuk:['express','gunici','ertesi','ileri'], evdeneve:['ileri'] };
+const HIZMET_AD = {yuk:'📦 Yük Taşımacılığı', yolcu:'🚖 Yolcu Taşımacılığı', evdeneve:'🏠 Ev & Ofis Taşımacılığı'};
+
 function goStep(n){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('p'+n).classList.add('active');
   document.querySelectorAll('.stp').forEach(s=>{
     const sn=+s.dataset.s; s.classList.toggle('on',sn===n); s.classList.toggle('done',sn<n);
   });
+  if(n===2) renderModStep();
   if(n===3) renderVehStep();
   if(n===4) renderDetailStep();
   window.scrollTo(0,0);
 }
-function pickHizmet(h){
-  ST.hizmet=h; ST.arac=null;
+// Sol menüden hizmet seçimi → kısayol: hizmeti seç + teslimat türü adımına geç
+function navService(h){
+  ST.hizmet=h; ST.arac=null; ST.mod=null;
   document.querySelectorAll('#p1 .pick').forEach(o=>o.classList.toggle('sel',o.dataset.h===h));
+  setNavActive(h);
   document.getElementById('b1').disabled=false;
+  document.getElementById('crumb').textContent=HIZMET_AD[h]+' › Teslimat Türü';
+  goStep(2);
+}
+function setNavActive(h){ document.querySelectorAll('.nav a[data-nav]').forEach(a=>a.classList.toggle('on',a.dataset.nav===h)); }
+function pickHizmet(h){
+  ST.hizmet=h; ST.arac=null; ST.mod=null;
+  document.querySelectorAll('#p1 .pick').forEach(o=>o.classList.toggle('sel',o.dataset.h===h));
+  setNavActive(h);
+  document.getElementById('crumb').textContent=HIZMET_AD[h]+' › Teslimat Türü';
+  document.getElementById('b1').disabled=false;
+}
+// Adım 2: hizmete göre izinli teslimat türlerini render et
+function renderModStep(){
+  const allow = ALLOWED_MODES[ST.hizmet] || ['express','gunici','ertesi','ileri'];
+  document.getElementById('modBaslik').textContent = HIZMET_AD[ST.hizmet]+' — Teslimat Türü';
+  document.getElementById('modSub').textContent = allow.length===1
+    ? 'Bu hizmette tek teslimat türü vardır; otomatik seçildi.'
+    : 'Bu hizmet için sunulan teslimat türünü seçin.';
+  const g=document.getElementById('modGrid');
+  g.className = 'grid '+(allow.length>=4?'g4':(allow.length<=1?'g1':(allow.length===2?'g2':'g3')));
+  g.innerHTML = allow.map(m=>{
+    const d=MODES[m];
+    return `<div class="opt ${ST.mod===m?'sel':''}" data-m="${m}" onclick="pickMod('${m}')">
+      ${d.badge?`<span class="badge">${d.badge}</span>`:''}
+      <div class="em">${d.em}</div><div class="ti">${d.ti}</div><div class="de">${d.de}</div></div>`;
+  }).join('');
+  // tek mod → otomatik seç
+  if(allow.length===1){ pickMod(allow[0]); }
+  else { document.getElementById('b2').disabled = !(ST.mod && allow.includes(ST.mod)); }
 }
 function pickMod(m){
   ST.mod=m;
-  document.querySelectorAll('#p2 .opt').forEach(o=>o.classList.toggle('sel',o.dataset.m===m));
+  document.querySelectorAll('#modGrid .opt').forEach(o=>o.classList.toggle('sel',o.dataset.m===m));
   document.getElementById('b2').disabled=false;
   document.getElementById('modChip').textContent=MODNAME[m];
 }
@@ -746,8 +767,10 @@ function goSonuc(){
 function resetAll(){
   Object.assign(ST,{hizmet:null,mod:null,arac:null,kap:null,respOk:false,selTmp:null,viaCapacity:false,suit:null,bilmiyorum:false,kat:null,icerik:null});
   document.querySelectorAll('.opt,#p1 .pick').forEach(o=>o.classList.remove('sel'));
+  document.querySelectorAll('.nav a[data-nav]').forEach(a=>a.classList.remove('on'));
   document.getElementById('b1').disabled=true; document.getElementById('b2').disabled=true;
   document.getElementById('modChip').textContent='Mod seçilmedi';
+  document.getElementById('crumb').textContent='Hemen Al, Hemen Teslim (Ekspres)';
   goStep(1);
 }
 let tT; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2400); }
