@@ -556,14 +556,16 @@ function yukForm(isRandevu){
     </div>
     <div class="hint" style="margin-top:7px">Sistem; seçilen araç, noktalar, yükleme/teslim ve tacho sürelerine göre teslim penceresini denetler (kural 47).</div>
   </div>`:''}
-  <div id="yukPanels"></div>
-  <div style="margin:2px 0 14px"><button class="btn01" onclick="open01()">
+  <div id="yukPanels"></div>`;
+}
+function btn01Html(){
+  return `<div style="margin:0 0 14px"><button class="btn01" onclick="open01()">
     <div class="ic">01</div>
-    <div><div class="t1">Yük detaylarını bilmiyorum</div>
+    <div><div class="t1">Yük ölçülerini (en·boy·yükseklik) bilmiyorum</div>
     <div class="t2">Aracın KASA-KAPI-DS-KG detayını görüp sorumluluğu onaylayın; adet/ağırlık/ölçü ve kapasite kontrolü olmadan devam edin (alımda kurye belirler).</div></div>
   </button></div>`;
 }
-function renderYukPanels(){ const e=document.getElementById('yukPanels'); if(e) e.innerHTML = stopsPanel()+itemsPanel(); }
+function renderYukPanels(){ const e=document.getElementById('yukPanels'); if(e) e.innerHTML = stopsPanel()+btn01Html()+itemsPanel(); }
 
 /* ---- Adres otomatik tamamlama (Google benzeri: Photon API + yerel fallback + debounce) ---- */
 const AC_LOCAL=["Levent, Beşiktaş, İstanbul","Etiler, Beşiktaş, İstanbul","Maslak, Sarıyer, İstanbul","Taksim Meydanı, Beyoğlu, İstanbul","Şişli Merkez, Şişli, İstanbul","Mecidiyeköy, Şişli, İstanbul","Kadıköy Rıhtım, Kadıköy, İstanbul","Bağdat Caddesi, Kadıköy, İstanbul","Ataşehir, İstanbul","Ümraniye Merkez, Ümraniye, İstanbul","Üsküdar Meydanı, Üsküdar, İstanbul","Kartal, İstanbul","Bakırköy Çarşı, Bakırköy, İstanbul","Ataköy, Bakırköy, İstanbul","Florya, Bakırköy, İstanbul","Bağcılar Meydan, Bağcılar, İstanbul","Esenyurt, İstanbul","Beylikdüzü, İstanbul","Avcılar, İstanbul","Başakşehir, İstanbul","Eyüpsultan, İstanbul","Gaziosmanpaşa, İstanbul","Sultanahmet, Fatih, İstanbul","Eminönü, Fatih, İstanbul","Karaköy, Beyoğlu, İstanbul","İstanbul Havalimanı (IST), Arnavutköy","Sabiha Gökçen Havalimanı (SAW), Pendik","İkitelli OSB, Başakşehir, İstanbul","Dudullu OSB, Ümraniye, İstanbul","Tuzla Organize Sanayi, Tuzla, İstanbul","Pendik Merkez, Pendik, İstanbul","Şerifali, Ümraniye, İstanbul","Çekmeköy, İstanbul","Sancaktepe, İstanbul","Zeytinburnu, İstanbul","Güngören, İstanbul","Kağıthane, İstanbul"];
