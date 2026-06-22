@@ -180,6 +180,13 @@
   .btn.ghost.sm{background:#fff;border:1px solid var(--line);color:var(--slate)}
   .ichk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;cursor:pointer}
   .ichk input{width:15px;height:15px}
+  /* ---- Görsel kap cinsi seçimi (kriter simülasyonu) ---- */
+  .kapgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+  .kapcard{border:1.5px solid var(--line);border-radius:11px;padding:11px 6px;text-align:center;cursor:pointer;transition:.12s;background:#fff}
+  .kapcard:hover{border-color:var(--cyan-l)}
+  .kapcard.on{border-color:var(--cyan);background:#ecfdff;box-shadow:0 0 0 2px rgba(14,165,183,.18)}
+  .kapcard .e{font-size:23px;line-height:1}
+  .kapcard .l{font-size:11.5px;font-weight:600;margin-top:4px}
   /* ---- Adres autocomplete (Photon + yerel) ---- */
   .acwrap{position:relative}
   .ac-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.16);z-index:40;display:none;overflow:hidden}
@@ -738,8 +745,9 @@ function itemsPanel(){
     ${ST.items.map((it,ix)=>{ const olcuGiz=(veh().kapSet==='moto')||it.kap==='dosya'; return `
     <div class="stop"><div class="shead"><div class="pin a">📦</div><b>Ürün ${ix+1} — ${itemDesi(it)} desi / ${itemKg(it)} kg</b>
       <button class="btn sm ghost" style="margin-left:auto" onclick="delItem(${it.id})" title="Ürünü sil">🗑</button></div>
-      <div class="grid3">
-        <div><label class="fld">Kap cinsi</label><select class="field" onchange="uI(${it.id},'kap',this.value)">${ks.map(o=>`<option value="${o[0]}" ${it.kap===o[0]?'selected':''}>${o[2]}</option>`).join('')}</select></div>
+      <label class="fld">Kap cinsi</label>
+      <div class="kapgrid">${ks.map(o=>`<div class="kapcard ${it.kap===o[0]?'on':''}" onclick="uI(${it.id},'kap','${o[0]}')"><div class="e">${o[1]}</div><div class="l">${o[2]}</div></div>`).join('')}</div>
+      <div class="grid2" style="margin-top:10px">
         <div><label class="fld">Kategori</label><select class="field" onchange="uIq(${it.id},'kat',this.value)">${KAT_LIST.map(c=>`<option value="${c}" ${it.kat===c?'selected':''}>${c||'Kategori seçin…'}</option>`).join('')}</select></div>
         <div><label class="fld">İçerik (🔒 maskeli)</label><input class="field" value="${it.icerik}" onchange="uIq(${it.id},'icerik',this.value)" placeholder="örn. çiçek…"></div>
       </div>
@@ -754,13 +762,6 @@ function itemsPanel(){
         <div><label class="fld">Boy (cm)</label><input class="field" type="number" value="${it.boy}" onchange="uI(${it.id},'boy',this.value)"></div>
         <div><label class="fld">Yükseklik (cm)</label><input class="field" type="number" value="${it.yuk}" onchange="uI(${it.id},'yuk',this.value)"></div>
       </div>`}
-      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">
-        <label class="ichk"><input type="checkbox" ${it.kirilgan?'checked':''} onchange="uIq(${it.id},'kirilgan',this.checked)">🔻 Kırılgan</label>
-        <label class="ichk"><input type="checkbox" ${it.dik?'checked':''} onchange="uIq(${it.id},'dik',this.checked)">⬆️ Dik konulmalı</label>
-        <label class="ichk"><input type="checkbox" ${!it.ustuste?'checked':''} onchange="uIq(${it.id},'ustuste',!this.checked)">🚫 Üst üste konulamaz</label>
-        <label class="ichk"><input type="checkbox" ${it.soguk?'checked':''} onchange="uI(${it.id},'soguk',this.checked)">❄️ Soğuk zincir</label>
-        ${it.soguk?`<span class="ichk">Sıcaklık <input class="field" style="width:74px;padding:5px 8px" type="number" value="${it.sogukC}" onchange="uIq(${it.id},'sogukC',this.value)" placeholder="-18"> °C</span>`:''}
-      </div>
       <div class="grid2" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
         <div><label class="fld">📍 Hangi noktadan alınacak?</label><select class="field" onchange="uI(${it.id},'alim',Number(this.value))"><option value="">— Seçin —</option>${alimOpts(it)}</select></div>
         <div><label class="fld">🎯 Hangi noktaya teslim?</label><select class="field" onchange="uI(${it.id},'teslim',Number(this.value))"><option value="">— Seçin —</option>${teslimOpts(it)}</select></div>
