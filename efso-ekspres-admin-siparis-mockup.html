@@ -187,6 +187,16 @@
   .kapcard.on{border-color:var(--cyan);background:#ecfdff;box-shadow:0 0 0 2px rgba(14,165,183,.18)}
   .kapcard .e{font-size:23px;line-height:1}
   .kapcard .l{font-size:11.5px;font-weight:600;margin-top:4px}
+  /* ---- Detay modal: araç başlık + yeniden seç butonu ---- */
+  .vehhead{display:flex;align-items:center;gap:12px;background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:12px}
+  .vehemoji{width:54px;height:54px;border-radius:12px;background:#ecfdff;display:flex;align-items:center;justify-content:center;font-size:30px;flex:0 0 auto}
+  .vehname{font-size:16px;font-weight:800}
+  .vehsub{font-size:12px;color:var(--slate);margin-top:2px}
+  .reselbtn{width:100%;display:flex;align-items:center;gap:12px;border:1.5px solid var(--cyan-l);background:#ecfdff;border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--ink);font-family:inherit;margin-top:12px;text-align:left}
+  .reselbtn:hover{background:#d8f6fc;border-color:var(--cyan)}
+  .reselbtn .ic{font-size:20px;flex:0 0 auto}
+  .reselbtn .t1{display:block;font-weight:700;font-size:13px}
+  .reselbtn .t2{display:block;font-size:11.5px;color:var(--cyan-d);font-weight:600;margin-top:1px}
   /* ---- Adres autocomplete (Photon + yerel) ---- */
   .acwrap{position:relative}
   .ac-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.16);z-index:40;display:none;overflow:hidden}
@@ -334,8 +344,8 @@
   <div class="sheet">
     <div class="ttl" id="detModalTtl">🔎 Araç Detayı</div>
     <div id="detModalTop"></div>
-    <p class="lbl">🚚 <span id="dmName"></span> — En Detaylı Görünüm (Kasa · Kapı · DS · KG)</p>
-    <div class="photoset" id="dmPhotos"></div>
+    <div class="vehhead"><div class="vehemoji" id="dmEmoji">🚚</div><div><div class="vehname" id="dmName"></div><div class="vehsub" id="dmSub"></div></div></div>
+    <p class="lbl" style="margin-top:12px">📋 Kasa · Kapı · Ölçü · Kapasite</p>
     <div class="specgrid" id="dmSpecs"></div>
     <p class="lbl" style="margin-top:14px">⚠️ Araç Sorumluluk Bildirimi</p>
     <div class="legal" id="dmLegal"></div>
@@ -343,8 +353,10 @@
       <span class="box" id="dmBox">✓</span>
       <span>Araç detaylarını <b>gördüm</b>. Yükümün bu araca uygun olduğunu; uygun olmaması hâlinde alımda reddedilebileceğini ve doğabilecek ek ücret/iptal sorumluluğunun bana ait olduğunu kabul ediyorum.</span>
     </label>
-    <button class="btn ghost" style="width:100%;margin-top:11px" id="dmReselectBtn" onclick="openReselect()">🔄 İlk seçtiğim araç doğru değil — Yeniden araç seç</button>
-    <div id="dmReselect" style="display:none;margin-top:11px"></div>
+    <button class="reselbtn" onclick="openReselect()">
+      <span class="ic">🔄</span>
+      <span><span class="t1">İlk seçtiğim araç doğru değil</span><span class="t2">Yeniden araç seç →</span></span>
+    </button>
     <div class="actions" style="margin-top:14px">
       <button class="btn ghost" onclick="closeDet()">Vazgeç</button>
       <button class="btn primary" id="dmGo" disabled onclick="confirmDet()">Onayla → Kurye Aranıyor</button>
@@ -359,6 +371,18 @@
     <div class="msg" id="riskMsg"></div>
     <button class="mopt p" onclick="riskUpdate()"><div class="oic">📅</div><div><div class="ot">Tarih/saat bilgilerini güncellemek istiyorum</div><div class="od">Alış/teslim tarih-saatini düzenle. Adres ve kap bilgileri kaybolmaz.</div></div></button>
     <button class="mopt a" onclick="riskProceed()"><div class="oic">➡️</div><div><div class="ot">Verilen teslim tarih ve saatiyle ilerle</div><div class="od">Sistem planını göster; erken varışta bekleme ücreti müşteri ve taşıyıcıya yansır.</div></div></button>
+  </div>
+</div>
+
+<!-- YENİDEN ARAÇ SEÇ MODALI (ayrı ekran) -->
+<div class="scrim" id="reselScrim">
+  <div class="sheet" style="max-width:680px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <div class="ttl" style="margin:0;flex:1">🔄 Yeniden Araç Seç</div>
+      <button class="btn ghost sm" onclick="closeResel()">✕ Kapat</button>
+    </div>
+    <p style="margin:0 0 12px;font-size:12.5px;color:var(--slate)">Her aracın <b>kasa · kapı · ölçü · kapasite</b> bilgisini görerek seçin. Seçtikten sonra aracın detayını ve sorumluluk bildirimini onaylayıp <b>Kurye Aranıyor</b>'a geçersiniz.</p>
+    <div class="grid g3" id="reselGrid"></div>
   </div>
 </div>
 
@@ -863,19 +887,17 @@ function renderDetModal(mode, info){
   } else {
     top = `<div class="banner warn"><span>⚠️</span><div>Girdiğiniz yük (<b>${info.kg} kg · ${info.desi.toFixed(1)} desi${info.enUzun>50&&ST.arac==='moto'?' · '+info.enUzun+' cm kenar':''}</b>) seçtiğiniz <b>${VEH[ST.arac].name}</b> kapasitesine uymuyor. Yükünüze uygun aracın detayı aşağıdadır.</div></div>`;
   }
+  ST.capInfo=info;
   document.getElementById('detModalTop').innerHTML=top;
-  // fotoğraf + spec + sorumluluk
   fillVehVisual(v);
-  // reset
+  // reset onay
   document.getElementById('dmChk').classList.remove('on');
   document.getElementById('dmGo').disabled=true;
-  document.getElementById('dmReselect').style.display='none';
 }
 function fillVehVisual(v){
-  const ps=document.getElementById('dmPhotos'); ps.innerHTML='';
-  if(v.photo==='moto'){ ps.innerHTML=`<div class="ph" style="grid-column:1/5"><img src="${MOTO_SVG}" style="height:120px"><div class="cap">Moto kurye + taşıma çantası</div></div>`; }
-  else if(v.photo==='arac'){ ARAC_FOTO.forEach(p=>ps.innerHTML+=`<div class="ph"><img src="${p[0]}"><div class="cap">${p[1]}</div></div>`); }
-  else { ['Ön','Arka','Sol','Kasa İçi'].forEach(c=>ps.innerHTML+=`<div class="ph"><div style="height:78px;display:flex;align-items:center;justify-content:center;font-size:38px">${v.emoji}</div><div class="cap">${c}</div></div>`); }
+  document.getElementById('dmEmoji').textContent=v.emoji;
+  document.getElementById('dmName').textContent=v.name;
+  document.getElementById('dmSub').textContent=(v.sub?v.sub+' · ':'')+v.kg;
   document.getElementById('dmSpecs').innerHTML =
     spc('KASA / İÇ ÖLÇÜ',v.kasa)+spc('KAPI',v.kapi)+spc('DIŞ ÖLÇÜ (DS)',v.ds)+spc('KAPASİTE (KG)',v.kg);
   document.getElementById('dmLegal').innerHTML =
@@ -891,22 +913,26 @@ function toggleResp(){
 }
 function closeDet(){ document.getElementById('detScrim').classList.remove('show'); }
 
-/* yeniden araç seç (modal içinde) */
+/* yeniden araç seç — AYRI EKRAN (modal) */
 function openReselect(){
-  const box=document.getElementById('dmReselect');
-  const open=box.style.display!=='none';
-  if(open){ box.style.display='none'; return; }
-  box.style.display='block';
-  box.innerHTML = '<p class="lbl">Yeniden araç seç</p><div class="vgrid">'+
-    YUK_SIRA.map(k=>`<div class="vcard ${k===ST.modalVeh?'sel':''}" onclick="reselect('${k}')"><div class="vic">${VEH[k].emoji}</div><div><div class="vn">${VEH[k].name}</div><div class="vs">${VEH[k].kasa} · ${VEH[k].kg}</div></div></div>`).join('')+'</div>';
+  const g=document.getElementById('reselGrid');
+  g.innerHTML = YUK_SIRA.map(k=>{ const v=VEH[k];
+    return `<div class="pick ${k===ST.modalVeh?'sel':''}" onclick="reselectPick('${k}')">
+      <div class="selchk">✓</div>
+      <div class="emoji">${v.emoji}</div>
+      <h3 style="font-size:14px">${v.name}</h3>
+      <p>${v.sub||''}</p>
+      <div class="specs">${(v.specs||[]).map(s=>`<span class="spec">${s}</span>`).join('')}</div>
+      ${v.truckSkip?'<span class="pill gray" style="margin-top:8px">foto + sorumluluk onayı</span>':''}
+    </div>`; }).join('');
+  document.getElementById('reselScrim').classList.add('show');
 }
-function reselect(k){
-  ST.modalVeh=k;
-  // 01 modunda seçilen araç ana seçimi de günceller; sorumluluk yeniden onaylanır
-  ST.respOk=false;
-  const keepMode=ST.modalMode;
-  renderDetModal(keepMode, ST.capInfo);
-  toast(VEH[k].name+' seçildi — sorumluluğu tekrar onaylayın');
+function closeResel(){ document.getElementById('reselScrim').classList.remove('show'); }
+function reselectPick(k){
+  ST.modalVeh=k; ST.respOk=false;           // yeni araç → sorumluluk yeniden onaylanır
+  closeResel();
+  renderDetModal(ST.modalMode, ST.capInfo); // detay modalı yeni aracın detayıyla güncellenir
+  toast('🚚 '+VEH[k].name+' seçildi — detayını görüp sorumluluğu onaylayın');
 }
 function confirmDet(){
   if(!ST.respOk){ toast('Sorumluluk bildirimini onaylayın'); return; }
