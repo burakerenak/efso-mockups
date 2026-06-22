@@ -169,6 +169,17 @@
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 17px;border-radius:11px;font-size:13px;z-index:60;opacity:0;transition:.25s;max-width:80%;text-align:center;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .kapsetnote{font-size:11px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:8px;padding:4px 9px;display:inline-block;margin-bottom:9px}
+  /* ---- Nokta / Ürün kartları (birleşik platform) ---- */
+  .stop{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:#fcfdff}
+  .stop .shead{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .pin{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex:0 0 auto}
+  .pin.a{background:#dcfce7}.pin.u{background:#fef9c3}.pin.b{background:#fee2e2}
+  .fld{font-size:10.5px;color:var(--slate);font-weight:600;display:block;margin-bottom:3px}
+  .btn.sm{padding:7px 12px;font-size:12px;border-radius:9px;box-shadow:none}
+  .btn.sec{background:#ecfdff;color:var(--cyan-d);border:1px solid #a5f3fc}
+  .btn.ghost.sm{background:#fff;border:1px solid var(--line);color:var(--slate)}
+  .ichk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;cursor:pointer}
+  .ichk input{width:15px;height:15px}
   @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}.g4,.vgrid{grid-template-columns:1fr 1fr}.photoset,.specgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -383,7 +394,7 @@ function goStep(n){
 }
 // Sol menüden hizmet seçimi → kısayol: hizmeti seç + teslimat türü adımına geç
 function navService(h){
-  ST.hizmet=h; ST.arac=null; ST.mod=null;
+  ST.hizmet=h; ST.arac=null; ST.mod=null; ST.stops=null; ST.items=null;
   document.querySelectorAll('#p1 .pick').forEach(o=>o.classList.toggle('sel',o.dataset.h===h));
   setNavActive(h);
   document.getElementById('b1').disabled=false;
@@ -392,7 +403,7 @@ function navService(h){
 }
 function setNavActive(h){ document.querySelectorAll('.nav a[data-nav]').forEach(a=>a.classList.toggle('on',a.dataset.nav===h)); }
 function pickHizmet(h){
-  ST.hizmet=h; ST.arac=null; ST.mod=null;
+  ST.hizmet=h; ST.arac=null; ST.mod=null; ST.stops=null; ST.items=null;
   document.querySelectorAll('#p1 .pick').forEach(o=>o.classList.toggle('sel',o.dataset.h===h));
   setNavActive(h);
   document.getElementById('crumb').textContent=HIZMET_AD[h]+' › Teslimat Türü';
@@ -461,14 +472,14 @@ function veh(){ return (ST.hizmet==='yolcu'?YOLCU:VEH)[ST.arac]; }
 function renderDetailStep(){
   const isYolcu=ST.hizmet==='yolcu';
   const isRandevu=ST.mod==='ileri';
+  ST.bilmiyorum=false;
   document.getElementById('detBaslik').textContent = veh().name+' — '+(isRandevu?'Randevulu Teslimat':'Hemen Al, Hemen Teslim');
-  document.getElementById('detSub').textContent = isRandevu
-    ? 'Her alım–teslim çiftine bağlı kap ve adet/ağırlık girilir; sistem tacho ve süre penceresini kontrol eder.'
-    : 'Adres, kap, adet/ağırlık girin. Yük detayını bilmiyorsanız “01” butonunu kullanın.';
+  document.getElementById('detSub').textContent = isYolcu
+    ? 'Güzergah ve yolcu bilgisini girin.'
+    : 'Alım/teslim noktalarını ve ürünleri girin; her ürünü alım → teslim noktasıyla eşleştirin. Detay bilinmiyorsa “01” butonu.';
   document.getElementById('b4').textContent = isYolcu ? 'Yolcu Talebini Oluştur → Kurye Aranıyor' : 'Kapasiteyi Kontrol Et → Devam';
-  document.getElementById('detBody').innerHTML = isYolcu ? yolcuForm() : yukForm(isRandevu);
-  if(!isYolcu){ setKap(KAPSET[veh().kapSet][0][0]); }
-  updateMask();
+  if(isYolcu){ document.getElementById('detBody').innerHTML = yolcuForm(); }
+  else { document.getElementById('detBody').innerHTML = yukForm(isRandevu); renderYukPanels(); }
 }
 function yolcuForm(){
   return `<div class="card">
@@ -484,60 +495,133 @@ function yolcuForm(){
     <div class="hint" style="margin-top:8px">${veh().name} · ${veh().ds}. Sipariş formu alınacak ve uygun araca atanacaktır.</div>
   </div>`;
 }
+/* ---- YÜK: çoklu nokta + ürün eşleştirme (birleşik platformdan) ---- */
+let NSID=1, NIID=1;
+const KAT_LIST=['','Belge / Evrak','Yedek Parça','Tekstil / Giyim','Elektronik (kırılgan)','Gıda (ambalajlı)','Çiçek / Bitki','İnşaat / Hırdavat','Mobilya / Beyaz Eşya','Proje / Makine','Hediye / Çeşitli'];
+function defaultKap(){ return KAPSET[veh().kapSet][0][0]; }
+function freshRoute(){
+  ST.stops=[
+    {id:NSID++,type:'alim',addr:'',kisi:'',tel:'',firma:'',detay:false,ac:'08:00',ka:'18:00',bekleme:15},
+    {id:NSID++,type:'teslim',addr:'',kisi:'',tel:'',firma:'',detay:false,ac:'08:00',ka:'18:00',bekleme:15},
+  ];
+  ST.items=[{id:NIID++,kap:defaultKap(),kat:'',icerik:'',adet:1,kg:'',en:'',boy:'',yuk:'',kirilgan:false,dik:false,ustuste:true,soguk:false,sogukC:'',alim:ST.stops[0].id,teslim:ST.stops[1].id}];
+}
 function yukForm(isRandevu){
-  const ks=KAPSET[veh().kapSet];
-  return `
-  <div class="card">
-    <p class="lbl">📍 Adres Bilgileri (A-B / A-B + B-C) <span class="req">*</span></p>
-    ${addrBlock()}
-    ${isRandevu?`<div class="grid2" style="margin-top:10px">
+  if(!ST.stops || !ST.stops.length) freshRoute();
+  // araç değiştiyse ürün kaplarını uyarla
+  ST.items.forEach(it=>{ if(!KAPSET[veh().kapSet].some(o=>o[0]===it.kap)) it.kap=defaultKap(); });
+  return `${isRandevu?`<div class="card">
+    <p class="lbl">📅 Randevu Tarih & Saat <span class="req">*</span></p>
+    <div class="grid2">
       <div class="ig"><label>Alış tarih & saat</label><input class="field" id="fPickAt" type="datetime-local"></div>
       <div class="ig"><label>Teslim tarih & saat</label><input class="field" id="fDropAt" type="datetime-local"></div>
     </div>
-    <div class="hint" style="margin-top:7px">Kap ve adet/ağırlık her alım–teslim çiftine bağlı girilir (kural 47).</div>`:''}
-  </div>
-
-  <div class="card">
-    <span class="kapsetnote">${veh().kapSet==='moto'?'Moto Kurye kap setleri: Dosya · Koli · Diğer':'Kap setleri: Koli · Palet · Diğer'}</span>
-    <p class="lbl">📦 Kap Bilgileri <span class="req">*</span></p>
-    <div class="seg" id="kapSeg">
-      ${ks.map(o=>`<button data-kap="${o[0]}" onclick="setKap('${o[0]}')">${o[1]} ${o[2]}</button>`).join('')}
-    </div>
-    <div id="adetBlk" style="margin-top:13px">
-      <div class="grid2">
-        <div class="ig"><label>Adet</label><input class="field" id="fAdet" type="number" min="1" value="1" oninput="recalc()"></div>
-        <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" id="fKg" type="number" min="0" placeholder="0" oninput="recalc()"><span>kg</span></div></div>
+    <div class="hint" style="margin-top:7px">Sistem; seçilen araç, noktalar, yükleme/teslim ve tacho sürelerine göre teslim penceresini denetler (kural 47).</div>
+  </div>`:''}
+  <div id="yukPanels"></div>
+  <div style="margin:2px 0 14px"><button class="btn01" onclick="open01()">
+    <div class="ic">01</div>
+    <div><div class="t1">Yük detaylarını bilmiyorum</div>
+    <div class="t2">Aracın KASA-KAPI-DS-KG detayını görüp sorumluluğu onaylayın; adet/ağırlık/ölçü ve kapasite kontrolü olmadan devam edin (alımda kurye belirler).</div></div>
+  </button></div>`;
+}
+function renderYukPanels(){ const e=document.getElementById('yukPanels'); if(e) e.innerHTML = stopsPanel()+itemsPanel(); }
+function stopLabel(s){ const nm={alim:'Alım',ugrama:'Uğrama',teslim:'Teslim'}; return nm[s.type]+' '+(ST.stops.filter(x=>x.type===s.type).indexOf(s)+1); }
+function itemDesi(it){ if(veh().kapSet==='moto'||it.kap==='dosya') return 0; const d=(Number(it.en)*Number(it.boy)*Number(it.yuk))/3000; return Math.round((isNaN(d)?0:d)*(Number(it.adet)||1)); }
+function itemKg(it){ return (Number(it.kg)||0)*(Number(it.adet)||1); }
+function totDesi(){ return ST.items.reduce((t,it)=>t+itemDesi(it),0); }
+function totKg(){ return ST.items.reduce((t,it)=>t+itemKg(it),0); }
+function eslesmeHatalari(){
+  const e=[];
+  ST.items.forEach((it,ix)=>{ if(!it.alim) e.push('Ürün '+(ix+1)+' için alım noktası seçilmedi.'); if(!it.teslim) e.push('Ürün '+(ix+1)+' için teslim noktası seçilmedi.'); });
+  ST.stops.filter(s=>s.type==='alim').forEach(s=>{ if(!ST.items.some(it=>it.alim===s.id)) e.push(stopLabel(s)+' noktasından alınacak ürün atanmadı.'); });
+  ST.stops.filter(s=>s.type==='teslim').forEach(s=>{ if(!ST.items.some(it=>it.teslim===s.id)) e.push(stopLabel(s)+' noktasına teslim edilecek ürün atanmadı.'); });
+  return e;
+}
+function uS(id,k,v){ const s=ST.stops.find(x=>x.id===id); s[k]=v; renderYukPanels(); }
+function uSq(id,k,v){ const s=ST.stops.find(x=>x.id===id); s[k]=v; }
+function uI(id,k,v){ const it=ST.items.find(x=>x.id===id); it[k]=v; renderYukPanels(); }
+function uIq(id,k,v){ const it=ST.items.find(x=>x.id===id); it[k]=v; }
+function addStop(t){ ST.stops.push({id:NSID++,type:t,addr:'',kisi:'',tel:'',firma:'',detay:false,ac:'08:00',ka:'18:00',bekleme:15}); toast('+ '+{alim:'Alım',ugrama:'Uğrama',teslim:'Teslim'}[t]+' noktası'); renderYukPanels(); }
+function delStop(id){ const s=ST.stops.find(x=>x.id===id);
+  if(s.type==='alim'&&ST.stops.filter(x=>x.type==='alim').length<=1){ toast('En az 1 alım noktası gerekli'); return; }
+  if(s.type==='teslim'&&ST.stops.filter(x=>x.type==='teslim').length<=1){ toast('En az 1 teslim noktası gerekli'); return; }
+  ST.stops=ST.stops.filter(x=>x.id!==id);
+  ST.items.forEach(it=>{ if(it.alim===id)it.alim=null; if(it.teslim===id)it.teslim=null; }); renderYukPanels(); }
+function addItem(){ const al=ST.stops.find(s=>s.type==='alim'), te=ST.stops.find(s=>s.type==='teslim');
+  ST.items.push({id:NIID++,kap:defaultKap(),kat:'',icerik:'',adet:1,kg:'',en:'',boy:'',yuk:'',kirilgan:false,dik:false,ustuste:true,soguk:false,sogukC:'',alim:al?al.id:null,teslim:te?te.id:null}); renderYukPanels(); }
+function delItem(id){ if(ST.items.length<=1){ toast('En az 1 ürün kalmalı'); return; } ST.items=ST.items.filter(i=>i.id!==id); renderYukPanels(); }
+function stopsPanel(){
+  const tip={alim:{e:'🟢',c:'a'},ugrama:{e:'🟡',c:'u'},teslim:{e:'🔴',c:'b'}};
+  return `<div class="card">
+    <p class="lbl">📍 Alım / Teslim Noktaları (A-B / A-B + B-C · N nokta) <span class="req">*</span></p>
+    ${ST.stops.map(s=>{ const t=tip[s.type]; return `
+    <div class="stop"><div class="shead"><div class="pin ${t.c}">${t.e}</div><b>${stopLabel(s)}</b>
+      <button class="btn sm sec" style="margin-left:auto" onclick="uS(${s.id},'detay',${!s.detay})">${s.detay?'Detayı gizle':'Detay'}</button>
+      <button class="btn sm ghost" onclick="delStop(${s.id})" title="Noktayı sil">🗑</button></div>
+      <input class="field" value="${s.addr}" onchange="uSq(${s.id},'addr',this.value)" placeholder="Mahalle, cadde, no… (yaz → öneri gelsin)">
+      <div class="grid3" style="margin-top:9px">
+        <div><label class="fld">İlgili kişi <span class="req">*</span></label><input class="field" value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
+        <div><label class="fld">Telefon (maskelenir)</label><input class="field" value="${s.tel}" inputmode="tel" onchange="uSq(${s.id},'tel',this.value)" placeholder="05XX XXX XX XX"></div>
+        <div><label class="fld">Firma (ops.)</label><input class="field" value="${s.firma}" onchange="uSq(${s.id},'firma',this.value)" placeholder="örn. ABC Lojistik"></div>
       </div>
-      <div class="olcu" id="olcuWrap">
-        <div class="grid3">
-          <div class="ig"><label>En</label><div class="suf"><input class="field" id="fEn" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
-          <div class="ig"><label>Boy</label><div class="suf"><input class="field" id="fBoy" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
-          <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" id="fYuk" type="number" min="0" placeholder="0" oninput="recalc()"><span>cm</span></div></div>
-        </div>
-        <div class="hint" id="desiHint" style="margin-top:7px"></div>
-      </div>
+      ${s.detay?`<div class="grid3" style="margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)">
+        <div><label class="fld">Açılış</label><input class="field" type="time" value="${s.ac}" onchange="uSq(${s.id},'ac',this.value)"></div>
+        <div><label class="fld">Kapanış</label><input class="field" type="time" value="${s.ka}" onchange="uSq(${s.id},'ka',this.value)"></div>
+        <div><label class="fld">${s.type==='teslim'?'Boşaltma':'Yükleme'} bekleme (dk)</label><input class="field" type="number" value="${s.bekleme}" onchange="uSq(${s.id},'bekleme',Number(this.value))"></div>
+      </div>`:`<div class="hint" style="margin-top:7px">⏰ ${s.ac}–${s.ka} · bekleme ${s.bekleme} dk — düzenlemek için <b>Detay</b></div>`}
+    </div>`; }).join('')}
+    <div class="actions" style="margin-top:2px;gap:8px;flex-wrap:wrap">
+      <button class="btn sm sec" onclick="addStop('alim')">＋ Alım noktası</button>
+      <button class="btn sm sec" onclick="addStop('ugrama')">＋ Uğrama noktası</button>
+      <button class="btn sm sec" onclick="addStop('teslim')">＋ Teslim noktası</button>
     </div>
-
-    <p class="lbl" style="margin-top:14px">🏷️ Ürün Kategorisi <span class="req">*</span></p>
-    <select class="field" id="fKat">
-      <option value="">Kategori seçin…</option>
-      <option>Belge / Evrak</option><option>Yedek Parça</option><option>Tekstil / Giyim</option>
-      <option>Elektronik (kırılgan)</option><option>Gıda (ambalajlı)</option><option>Çiçek / Bitki</option>
-      <option>İnşaat / Hırdavat</option><option>Mobilya / Beyaz Eşya</option><option>Proje / Makine</option><option>Hediye / Çeşitli</option>
-    </select>
-    <div class="hint" style="margin-top:5px">Liste açık kaynaklı / standart kataloğdan beslenir.</div>
-
-    <p class="lbl" style="margin-top:14px">📝 Ürün İçeriği <span class="req">*</span> <span style="margin-left:auto;font-size:10px;color:var(--slate2);font-weight:600">🔒 maskeli</span></p>
-    <input class="field" id="fIcerik" placeholder="örn. çiçek, kitap, numune…" oninput="updateMask()">
-    <div class="maskrow"><span class="pill">Kuryeye görünen:</span><span class="pill masked" id="maskOut">•••••</span><span style="margin-left:auto">içerik gizlenir</span></div>
-  </div>
-
-  <div class="card" style="padding:0;border:none;background:none;margin-bottom:14px">
-    <button class="btn01" onclick="open01()">
-      <div class="ic">01</div>
-      <div><div class="t1">Yük detaylarını bilmiyorum</div>
-      <div class="t2">Açılan ekranda yalnız kap cinsi, kategori ve içerik istenir; aracın detayını görüp sorumluluğu onaylayarak devam edersiniz.</div></div>
-    </button>
+    <div class="hint" style="margin-top:9px">🧠 Adres profili hatırlanır; giriş kısıtı hard filter'dır. Sonraki bölümde her ürünü <b>alım → teslim noktasıyla</b> eşleştirin; eşleşmeyen nokta/ürün varsa sipariş ilerlemez (hatalı teslimat engeli). Telefonlar maskelenir.</div>
+  </div>`;
+}
+function itemsPanel(){
+  const ks=KAPSET[veh().kapSet];
+  const alimOpts=it=>ST.stops.filter(s=>s.type==='alim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.alim===s.id?'selected':''}>${stopLabel(s)}${s.addr?' — '+s.addr:''}</option>`).join('');
+  const teslimOpts=it=>ST.stops.filter(s=>s.type==='teslim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.teslim===s.id?'selected':''}>${stopLabel(s)}${s.addr?' — '+s.addr:''}</option>`).join('');
+  const errs=eslesmeHatalari();
+  return `<div class="card">
+    <p class="lbl">📦 Ürünler + Nokta Eşleştirme <span class="req">*</span> <span class="kapsetnote" style="margin:0 0 0 auto">${veh().kapSet==='moto'?'Dosya · Koli · Diğer':'Koli · Palet · Diğer'}</span></p>
+    ${ST.items.map((it,ix)=>{ const olcuGiz=(veh().kapSet==='moto')||it.kap==='dosya'; return `
+    <div class="stop"><div class="shead"><div class="pin a">📦</div><b>Ürün ${ix+1} — ${itemDesi(it)} desi / ${itemKg(it)} kg</b>
+      <button class="btn sm ghost" style="margin-left:auto" onclick="delItem(${it.id})" title="Ürünü sil">🗑</button></div>
+      <div class="grid3">
+        <div><label class="fld">Kap cinsi</label><select class="field" onchange="uI(${it.id},'kap',this.value)">${ks.map(o=>`<option value="${o[0]}" ${it.kap===o[0]?'selected':''}>${o[2]}</option>`).join('')}</select></div>
+        <div><label class="fld">Kategori</label><select class="field" onchange="uIq(${it.id},'kat',this.value)">${KAT_LIST.map(c=>`<option value="${c}" ${it.kat===c?'selected':''}>${c||'Kategori seçin…'}</option>`).join('')}</select></div>
+        <div><label class="fld">İçerik (🔒 maskeli)</label><input class="field" value="${it.icerik}" onchange="uIq(${it.id},'icerik',this.value)" placeholder="örn. çiçek…"></div>
+      </div>
+      <div class="grid3" style="margin-top:8px">
+        <div><label class="fld">Adet</label><input class="field" type="number" min="1" value="${it.adet}" onchange="uI(${it.id},'adet',Number(this.value))"></div>
+        <div><label class="fld">Ağırlık (kg/adet)</label><input class="field" type="number" value="${it.kg}" onchange="uI(${it.id},'kg',this.value)" placeholder="0"></div>
+        <div></div>
+      </div>
+      ${olcuGiz?`<div class="hint" style="margin-top:8px">${veh().kapSet==='moto'?'🛵 Moto Kurye — ölçü istenmez; kap, adet, ağırlık yeterli.':'📄 Dosya/Zarf — ölçü istenmez; adet+ağırlık yeterli.'}</div>`:`
+      <div class="grid3" style="margin-top:8px">
+        <div><label class="fld">En (cm)</label><input class="field" type="number" value="${it.en}" onchange="uI(${it.id},'en',this.value)"></div>
+        <div><label class="fld">Boy (cm)</label><input class="field" type="number" value="${it.boy}" onchange="uI(${it.id},'boy',this.value)"></div>
+        <div><label class="fld">Yükseklik (cm)</label><input class="field" type="number" value="${it.yuk}" onchange="uI(${it.id},'yuk',this.value)"></div>
+      </div>`}
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">
+        <label class="ichk"><input type="checkbox" ${it.kirilgan?'checked':''} onchange="uIq(${it.id},'kirilgan',this.checked)">🔻 Kırılgan</label>
+        <label class="ichk"><input type="checkbox" ${it.dik?'checked':''} onchange="uIq(${it.id},'dik',this.checked)">⬆️ Dik konulmalı</label>
+        <label class="ichk"><input type="checkbox" ${!it.ustuste?'checked':''} onchange="uIq(${it.id},'ustuste',!this.checked)">🚫 Üst üste konulamaz</label>
+        <label class="ichk"><input type="checkbox" ${it.soguk?'checked':''} onchange="uI(${it.id},'soguk',this.checked)">❄️ Soğuk zincir</label>
+        ${it.soguk?`<span class="ichk">Sıcaklık <input class="field" style="width:74px;padding:5px 8px" type="number" value="${it.sogukC}" onchange="uIq(${it.id},'sogukC',this.value)" placeholder="-18"> °C</span>`:''}
+      </div>
+      <div class="grid2" style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+        <div><label class="fld">📍 Hangi noktadan alınacak?</label><select class="field" onchange="uI(${it.id},'alim',Number(this.value))"><option value="">— Seçin —</option>${alimOpts(it)}</select></div>
+        <div><label class="fld">🎯 Hangi noktaya teslim?</label><select class="field" onchange="uI(${it.id},'teslim',Number(this.value))"><option value="">— Seçin —</option>${teslimOpts(it)}</select></div>
+      </div>
+    </div>`; }).join('')}
+    <div class="actions" style="margin-top:2px;gap:8px;flex-wrap:wrap">
+      <button class="btn sm sec" onclick="addItem()">＋ Ürün ekle</button>
+      <span style="margin-left:auto;align-self:center;font-size:11.5px;color:var(--slate)">Toplam <b>${totDesi()} desi / ${totKg()} kg</b> · ücrete esas max(desi,kg)=<b>${Math.max(totDesi(),totKg())}</b></span>
+    </div>
+    <div class="banner ${errs.length?'warn':'ok'}" style="margin-top:12px"><span>${errs.length?'🚫':'✅'}</span><div><b>${errs.length?'Eşleştirme eksik — sipariş bu haliyle ilerlemez:':'Nokta–ürün eşleştirmesi tamam (hatalı teslimat engeli aktif).'}</b>${errs.length?'<br>• '+errs.join('<br>• '):''}</div></div>
   </div>`;
 }
 function addrBlock(){
@@ -574,33 +658,29 @@ function onDevam4(){
     if(!addrOk()){ toast('Alım (A) ve teslim (B) adresi zorunlu'); return; }
     ST.viaCapacity=false; goSonuc(); return;
   }
-  if(!addrOk()){ toast('Alım (A) ve teslim (B) adresi zorunlu'); return; }
-  if(!catContentOk()){ toast('Ürün kategorisi ve içeriği zorunlu'); return; }
-
+  // YÜK: noktalar + ürünler
+  if(ST.stops.some(s=>!s.addr.trim())){ toast('Tüm noktaların adresini girin'); return; }
+  if(ST.stops.some(s=>!s.kisi.trim())){ toast('Her noktada ilgili kişi zorunlu'); return; }
+  const errs=eslesmeHatalari();
+  if(errs.length){ toast('Ürün–nokta eşleştirmesi eksik'); renderYukPanels(); return; }
+  if(ST.items.some(it=>!it.kat)){ toast('Her üründe kategori seçin'); return; }
+  if(ST.items.some(it=>!String(it.icerik).trim())){ toast('Her üründe içerik girin'); return; }
+  for(const it of ST.items){
+    if(itemKg(it)<=0){ toast('Her ürün için ağırlık girin'); return; }
+    if(!(veh().kapSet==='moto'||it.kap==='dosya') && (Number(it.en)<=0||Number(it.boy)<=0||Number(it.yuk)<=0)){ toast('Koli/Palet/Diğer için ölçü (en·boy·yükseklik) girin'); return; }
+  }
   // Randevulu mod: tacho/süre penceresi kontrolü (kural 47)
   if(ST.mod==='ileri'){
     if(!val('fPickAt')||!val('fDropAt')){ toast('Alış ve teslim tarih/saatini girin'); return; }
-    if(riskCheck()) return; // risk varsa modal açılır
+    if(riskCheck()) return;
   }
-
-  // Dosya → adet+ağırlık; diğer → adet+ağırlık+ölçü
-  if(ST.kap==='dosya'){
-    if(num('fKg')<=0){ toast('Dosya/Zarf için ağırlık girin'); return; }
-  } else {
-    if(num('fKg')<=0 || num('fEn')<=0 || num('fBoy')<=0 || num('fYuk')<=0){ toast('Ağırlık ve ölçü (en·boy·yükseklik) zorunlu'); return; }
-  }
-
-  // KAPASİTE KONTROLÜ — seçilen araca göre
-  const kg=num('fKg'), desi=calcDesi(), v=veh();
-  const enUzun=Math.max(num('fEn'),num('fBoy'),num('fYuk'));
-  const limitAsim = kg>v.maxKg || desi>v.maxDesi || (ST.arac==='moto' && enUzun>50);
-  if(limitAsim){
-    // UYGUN ARACIN KASA-KAPI-DS-KG sayfası açılır
-    ST.suit = suggestVehicle(kg,desi);
-    openCapacity(ST.suit, kg, desi, enUzun);
+  // KAPASİTE KONTROLÜ — toplam yük seçilen araca göre
+  const kg=totKg(), desi=totDesi(), v=veh();
+  if(kg>v.maxKg || desi>v.maxDesi){
+    ST.suit=suggestVehicle(kg,desi);
+    openCapacity(ST.suit, kg, desi, 0);
     return;
   }
-  // uygun → doğrudan kurye aranıyor
   ST.viaCapacity=false; goSonuc();
 }
 function suggestVehicle(kg,desi){
@@ -610,7 +690,7 @@ function suggestVehicle(kg,desi){
 
 /* ============================= 01 / KAPASİTE DETAY MODAL ============================= */
 function open01(){
-  if(!addrOk()){ toast('Önce alım (A) ve teslim (B) adresini girin'); return; }
+  if(ST.stops.some(s=>!s.addr.trim())){ toast('Önce noktaların adresini girin'); return; }
   ST.modalMode='01'; ST.respOk=false; ST.modalVeh=ST.arac;
   renderDetModal('01');
   document.getElementById('detScrim').classList.add('show');
@@ -627,16 +707,7 @@ function renderDetModal(mode, info){
   // üst alan
   let top='';
   if(mode==='01'){
-    top = `<div class="banner info"><span>ℹ️</span><div>Adet, ağırlık ve ölçü <b>bilinmiyor</b> — alımda kurye belirler. Açılan bu ekranda yalnız <b>kap cinsi, kategori ve içerik</b> istenir.</div></div>
-    <div class="card" style="margin-bottom:12px">
-      <p class="lbl">📦 Kap Cinsi <span class="req">*</span></p>
-      <div class="seg" id="dmKapSeg">${KAPSET[veh().kapSet].map(o=>`<button data-kap="${o[0]}" onclick="dmSetKap('${o[0]}')">${o[1]} ${o[2]}</button>`).join('')}</div>
-      <p class="lbl" style="margin-top:13px">🏷️ Ürün Kategorisi <span class="req">*</span></p>
-      <select class="field" id="dmKat"><option value="">Kategori seçin…</option><option>Belge / Evrak</option><option>Yedek Parça</option><option>Tekstil / Giyim</option><option>Elektronik (kırılgan)</option><option>Gıda (ambalajlı)</option><option>Çiçek / Bitki</option><option>İnşaat / Hırdavat</option><option>Mobilya / Beyaz Eşya</option><option>Proje / Makine</option><option>Hediye / Çeşitli</option></select>
-      <p class="lbl" style="margin-top:13px">📝 Ürün İçeriği <span class="req">*</span> <span style="margin-left:auto;font-size:10px;color:var(--slate2)">🔒 maskeli</span></p>
-      <input class="field" id="dmIcerik" placeholder="örn. çiçek, kitap…" oninput="dmMask()">
-      <div class="maskrow"><span class="pill">Kuryeye görünen:</span><span class="pill masked" id="dmMaskOut">•••••</span></div>
-    </div>`;
+    top = `<div class="banner info"><span>ℹ️</span><div>Adet, ağırlık ve ölçü <b>bilinmiyor</b> — alımda kurye belirler. Aşağıdaki <b>${veh().name}</b> detayını görüp sorumluluğu onaylayarak devam edebilirsiniz. Yanlış araçsa aşağıdan yeniden seçin.</div></div>`;
   } else {
     top = `<div class="banner warn"><span>⚠️</span><div>Girdiğiniz yük (<b>${info.kg} kg · ${info.desi.toFixed(1)} desi${info.enUzun>50&&ST.arac==='moto'?' · '+info.enUzun+' cm kenar':''}</b>) seçtiğiniz <b>${VEH[ST.arac].name}</b> kapasitesine uymuyor. Yükünüze uygun aracın detayı aşağıdadır.</div></div>`;
   }
@@ -647,8 +718,6 @@ function renderDetModal(mode, info){
   document.getElementById('dmChk').classList.remove('on');
   document.getElementById('dmGo').disabled=true;
   document.getElementById('dmReselect').style.display='none';
-  // 01'de kap önceden seçili gelsin
-  if(mode==='01'){ ST.dmKap=ST.kap||KAPSET[veh().kapSet][0][0]; setTimeout(()=>{ dmSetKap(ST.dmKap); document.getElementById('dmKat').value=val('fKat'); document.getElementById('dmIcerik').value=val('fIcerik'); dmMask(); },0); }
 }
 function fillVehVisual(v){
   const ps=document.getElementById('dmPhotos'); ps.innerHTML='';
@@ -690,14 +759,9 @@ function reselect(k){
 function confirmDet(){
   if(!ST.respOk){ toast('Sorumluluk bildirimini onaylayın'); return; }
   if(ST.modalMode==='01'){
-    if(!ST.dmKap){ toast('Kap cinsi seçin'); return; }
-    if(!document.getElementById('dmKat').value){ toast('Kategori seçin'); return; }
-    if(!document.getElementById('dmIcerik').value.trim()){ toast('İçerik girin'); return; }
-    ST.arac=ST.modalVeh; ST.kap=ST.dmKap; ST.bilmiyorum=true;
-    ST.kat=document.getElementById('dmKat').value; ST.icerik=document.getElementById('dmIcerik').value;
+    ST.arac=ST.modalVeh; ST.bilmiyorum=true;
   } else {
     ST.arac=ST.modalVeh; ST.bilmiyorum=false; // kapasiteden gelen uygun araç
-    ST.kat=val('fKat'); ST.icerik=val('fIcerik');
   }
   ST.viaCapacity=(ST.modalMode==='cap');
   closeDet();
@@ -708,7 +772,7 @@ function confirmDet(){
 function riskCheck(){
   // basit simülasyon: tahmini sefer süresi (mesafe + yükleme/boşaltma + tacho)
   const pick=new Date(val('fPickAt')), drop=new Date(val('fDropAt'));
-  const seferSaat = 4 + (Math.max(num('fKg'),1)>1000?3:1); // kaba tahmini saat
+  const seferSaat = 4 + (ST.stops.length-2) + (totKg()>1000?3:1); // kaba tahmini saat (nokta + ağırlık)
   const gerekenMs = seferSaat*3600*1000;
   const pencere = drop - pick;
   if(pencere < gerekenMs){
@@ -725,24 +789,26 @@ function riskProceed(){ document.getElementById('riskScrim').classList.remove('s
 
 /* ============================= SONUÇ: KURYE ARANIYOR ============================= */
 function goSonuc(){
-  const v=veh(), isYolcu=ST.hizmet==='yolcu';
-  const kat = ST.bilmiyorum?ST.kat:(val('fKat')||'—');
-  const icerik = ST.bilmiyorum?ST.icerik:(val('fIcerik')||'—');
-  let kapLine='—';
-  if(!isYolcu){
-    const kn={dosya:'Dosya / Zarf',koli:'Koli',palet:'Palet',diger:'Diğer'}[ST.kap]||'—';
-    if(ST.bilmiyorum) kapLine = kn+' · adet/ağırlık/ölçü: bilinmiyor (alımda kurye belirler)';
-    else { kapLine = kn+' · '+(num('fAdet')||1)+' adet · '+num('fKg')+' kg'; if(ST.kap!=='dosya') kapLine+=' · '+num('fEn')+'×'+num('fBoy')+'×'+num('fYuk')+' cm ('+calcDesi().toFixed(1)+' desi)'; }
-  }
-  let adr='A: '+val('adrA')+' → B: '+val('adrB'); if(document.getElementById('adrC')&&val('adrC')) adr+=' → C: '+val('adrC');
+  const isYolcu=ST.hizmet==='yolcu';
   const rows = [
     ['Hizmet', {yuk:'📦 Yük',yolcu:'🚕 Yolcu',evdeneve:'🏠 Evden Eve'}[ST.hizmet]],
     ['Zamanlama', MODNAME[ST.mod]],
     ['Araç', (VEH[ST.arac]||YOLCU[ST.arac]).emoji+' '+(VEH[ST.arac]||YOLCU[ST.arac]).name + (ST.viaCapacity?' (kapasiteye göre yönlendirildi)':'') + (ST.bilmiyorum?' (01: detay bilinmiyor)':'')],
-    ['Güzergah', adr],
   ];
-  if(isYolcu) rows.push(['Yolcu', (num('fPax')||1)+' kişi']);
-  else { rows.push(['Kap', kapLine]); rows.push(['Kategori', kat]); rows.push(['İçerik', '🔒 maskeli ('+icerik+')']); }
+  if(isYolcu){
+    let adr='A: '+val('adrA')+' → B: '+val('adrB'); if(document.getElementById('adrC')&&val('adrC')) adr+=' → C: '+val('adrC');
+    rows.push(['Güzergah', adr]);
+    rows.push(['Yolcu', (num('fPax')||1)+' kişi']);
+  } else {
+    rows.push(['Noktalar', ST.stops.map(s=>stopLabel(s)+': '+(s.addr||'—')).join(' · ')]);
+    if(ST.bilmiyorum){
+      rows.push(['Yük', 'Detay bilinmiyor (01) — adet/ağırlık/ölçü alımda kurye tarafından belirlenir']);
+    } else {
+      rows.push(['Ürünler', ST.items.length+' ürün · '+totDesi()+' desi / '+totKg()+' kg']);
+      rows.push(['Eşleştirme', ST.items.map((it,ix)=>{const a=ST.stops.find(s=>s.id===it.alim),t=ST.stops.find(s=>s.id===it.teslim);return 'Ürün'+(ix+1)+': '+(a?stopLabel(a):'?')+'→'+(t?stopLabel(t):'?');}).join(' · ')]);
+      rows.push(['Kategori/İçerik', ST.items.map(it=>(it.kat||'—')+' 🔒').join(' · ')]);
+    }
+  }
   if(ST.mod==='ileri' && document.getElementById('fPickAt')) rows.push(['Randevu', (val('fPickAt')||'—')+' → '+(val('fDropAt')||'—')]);
   if(ST.bilmiyorum||ST.viaCapacity) rows.push(['Sorumluluk','✅ Araç sorumluluk bildirimi onaylandı']);
 
@@ -765,7 +831,7 @@ function goSonuc(){
 
 /* ============================= RESET / TOAST ============================= */
 function resetAll(){
-  Object.assign(ST,{hizmet:null,mod:null,arac:null,kap:null,respOk:false,selTmp:null,viaCapacity:false,suit:null,bilmiyorum:false,kat:null,icerik:null});
+  Object.assign(ST,{hizmet:null,mod:null,arac:null,kap:null,respOk:false,selTmp:null,viaCapacity:false,suit:null,bilmiyorum:false,kat:null,icerik:null,stops:null,items:null});
   document.querySelectorAll('.opt,#p1 .pick').forEach(o=>o.classList.remove('sel'));
   document.querySelectorAll('.nav a[data-nav]').forEach(a=>a.classList.remove('on'));
   document.getElementById('b1').disabled=true; document.getElementById('b2').disabled=true;
