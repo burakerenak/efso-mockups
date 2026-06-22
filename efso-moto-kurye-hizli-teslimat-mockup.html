@@ -198,7 +198,7 @@
             <div class="ic">01</div>
             <div>
               <div class="t1" id="b01t1">Yük ölçülerini (en·boy·yükseklik) bilmiyorum</div>
-              <div class="t2" id="b01t2">Adet, ağırlık, kategori ve içeriği bir sonraki ekranda girersiniz — ölçü girmeden devam →</div>
+              <div class="t2" id="b01t2">Kategori ve içeriği bir sonraki ekranda girersiniz — adet/ağırlık/ölçü girmeden devam →</div>
             </div>
           </button>
         </div>
@@ -283,15 +283,11 @@
       </div>
       <div class="body">
         <!-- ÜST: ölçü hariç yük bilgileri — bilmiyorum modunda bile zorunlu -->
-        <div class="banner warn" style="margin-bottom:13px"><span>ℹ️</span><div>Ölçü (en·boy·yükseklik) <b>bilinmiyor</b> — alımda kurye ölçer. <b>Adet, ağırlık, kategori ve içeriği</b> yine de girmeniz gerekir.</div></div>
+        <div class="banner warn" style="margin-bottom:13px"><span>ℹ️</span><div>Ölçü, adet ve ağırlık <b>bilinmiyor</b> — alımda kurye belirler. <b>Ürün kategorisi ve içeriğini</b> yine de girmeniz gerekir.</div></div>
 
         <div class="card">
-          <p class="lbl">📦 Yük Bilgileri (ölçü hariç) <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--slate);background:#f1f5f9;border-radius:6px;padding:2px 6px" id="detKapChip">Kap: Dosya</span></p>
-          <div class="grid2">
-            <div class="ig"><label>Adet</label><input class="field" id="dAdet" type="number" min="1" value="1" inputmode="numeric"></div>
-            <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" id="dKg" type="number" min="0" placeholder="0" inputmode="decimal"><span>kg</span></div></div>
-          </div>
-          <p class="lbl" style="margin-top:13px">🏷️ Ürün Kategorisi <span class="req">*</span></p>
+          <p class="lbl">🏷️ Ürün Bilgileri <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--slate);background:#f1f5f9;border-radius:6px;padding:2px 6px" id="detKapChip">Kap: Dosya</span></p>
+          <p class="lbl" style="margin-top:2px">Ürün Kategorisi <span class="req">*</span></p>
           <select class="field" id="dKat">
             <option value="">Kategori seçin…</option>
             <option>Belge / Evrak</option>
@@ -496,8 +492,6 @@ function startBilmiyorum(){
   openVehicleDetail(S.vehicle||'moto','sayfa1');
 }
 function prefillDetailFields(){
-  document.getElementById('dAdet').value   = document.getElementById('fAdet').value || 1;
-  document.getElementById('dKg').value     = document.getElementById('fKg').value || '';
   document.getElementById('dKat').value    = document.getElementById('fKat').value || '';
   document.getElementById('dIcerik').value = document.getElementById('fIcerik').value || '';
   updateMaskD();
@@ -545,15 +539,14 @@ function toggleResp(){
   g.style.boxShadow = S.respOk? '0 6px 14px rgba(41,182,216,.35)':'none';
 }
 function confirmResp(){
-  // ölçü hariç yük bilgileri — bilmiyorum modunda da ZORUNLU
-  if(num('dKg')<=0){ toast('Ağırlık girin'); document.getElementById('dKg').focus(); return; }
+  // ürün bilgileri — bilmiyorum modunda da ZORUNLU (adet/ağırlık/ölçü alımda belirlenir)
   if(!val('dKat')){ toast('Ürün kategorisi seçin'); return; }
   if(!val('dIcerik')){ toast('Ürün içeriği girin'); return; }
   if(!S.respOk){ toast('Sorumluluk bildirimini onaylayın'); return; }
   S.respFor=S.vehicle; S.bilmiyorum=true;
   document.getElementById('vehChip').textContent = VEHICLES[S.vehicle].emoji+' '+VEHICLES[S.vehicle].name;
-  // fiyat (ağırlık üzerinden; ölçü bilinmiyor)
-  document.getElementById('priceTxt').textContent = priceFromKg(num('dKg'), num('dAdet')||1, S.kap==='diger'?15:0);
+  // ölçü/adet/ağırlık bilinmediği için taban tahmini fiyat
+  document.getElementById('priceTxt').textContent = '₺149';
   buildSummary(); show('pg-done');
   toast('✅ '+VEHICLES[S.vehicle].name+' onaylandı — siparişe devam');
 }
@@ -600,9 +593,7 @@ function recalc(){
 function mask(t){ return t? '•'.repeat(Math.min(Math.max(t.length,3),10)) : '•••••'; }
 function updateMask(){ document.getElementById('maskOut').textContent = mask(val('fIcerik')); }
 function updateMaskD(){ document.getElementById('maskOutD').textContent = mask(val('dIcerik')); }
-// Özet/fiyat için aktif kaynak (bilmiyorum → d-alanları, biliyorum → f-alanları)
-function loadAdet(){ return S.bilmiyorum ? (num('dAdet')||1) : (num('fAdet')||1); }
-function loadKg(){ return S.bilmiyorum ? num('dKg') : num('fKg'); }
+// Kategori/İçerik aktif kaynağı (bilmiyorum → d-alanları, biliyorum → f-alanları)
 function loadKat(){ return S.bilmiyorum ? val('dKat') : val('fKat'); }
 function loadIcerik(){ return S.bilmiyorum ? val('dIcerik') : val('fIcerik'); }
 
@@ -680,8 +671,8 @@ function addrText(){
 }
 function kapText(){
   const m=kapName(S.kap);
-  if(S.bilmiyorum) return m+' · '+loadAdet()+' adet · '+loadKg()+' kg · ölçü: bilinmiyor (alımda kurye ölçer)';
-  let t=m+' · '+loadAdet()+' adet · '+loadKg()+' kg';
+  if(S.bilmiyorum) return m+' · adet/ağırlık/ölçü: bilinmiyor (alımda kurye belirler)';
+  let t=m+' · '+(num('fAdet')||1)+' adet · '+num('fKg')+' kg';
   if(S.kap!=='dosya') t+=' · '+num('fEn')+'×'+num('fBoy')+'×'+num('fYuk')+' cm (E×B×Y · '+calcDesi().toFixed(1)+' desi)';
   return t;
 }
@@ -713,9 +704,9 @@ function buildRedirect(suit){
 
 /* ----------------------------- RESET / TOAST ----------------------------- */
 function resetAll(){
-  ['adrA','adrB','adrC','fKg','fBoy','fEn','fYuk','fIcerik','dKg','dIcerik'].forEach(i=>document.getElementById(i).value='');
+  ['adrA','adrB','adrC','fKg','fBoy','fEn','fYuk','fIcerik','dIcerik'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('fAdet').value=1; document.getElementById('fKat').value='';
-  document.getElementById('dAdet').value=1; document.getElementById('dKat').value='';
+  document.getElementById('dKat').value='';
   S.vehicle='moto'; S.bilmiyorum=false; S.kap='dosya'; S.respOk=false; S.respFor=null;
   document.getElementById('vehChip').textContent='🏍️ Moto Kurye';
   setKap('dosya'); applyBilmiyorumUI(); updateMask(); updateMaskD(); recalc(); toggleC(false); goMain();
