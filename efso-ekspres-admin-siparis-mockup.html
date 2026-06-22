@@ -707,7 +707,7 @@ function renderAddrMgr(){ const el=document.getElementById('addrMgrBody'); if(!e
     </div>`:`<div class="actions" style="margin-top:10px;gap:8px"><button class="btn sm sec" onclick="newAddrDraft()">＋ Yeni adres</button><span style="font-size:11.5px;color:var(--slate);align-self:center">${akt}/${MAX_AKTIF_ADRES} aktif · pasifler sayılmaz</span></div>`;
   el.innerHTML=rows+form; const t=document.getElementById('addrMgrTitle'); if(t) t.textContent='📍 Kayıtlı Adreslerim ('+akt+'/'+MAX_AKTIF_ADRES+' aktif)'; }
 function stopLabel(s){ const nm={alim:'Alım',ugrama:'Uğrama',teslim:'Teslim'}; return nm[s.type]+' '+(ST.stops.filter(x=>x.type===s.type).indexOf(s)+1); }
-function itemDesi(it){ if(isMoto()||it.kap==='dosya') return 0; const d=(Number(it.en)*Number(it.boy)*Number(it.yuk))/3000; return Math.round((isNaN(d)?0:d)*(Number(it.adet)||1)); }
+function itemDesi(it){ if(it.kap==='dosya') return 0; const d=(Number(it.en)*Number(it.boy)*Number(it.yuk))/3000; return Math.round((isNaN(d)?0:d)*(Number(it.adet)||1)); }
 function itemKg(it){ return (Number(it.kg)||0)*(Number(it.adet)||1); }
 function totDesi(){ return ST.items.reduce((t,it)=>t+itemDesi(it),0); }
 function totKg(){ return ST.items.reduce((t,it)=>t+itemKg(it),0); }
@@ -772,7 +772,7 @@ function itemsPanel(){
   const errs=eslesmeHatalari();
   return `<div class="card">
     <p class="lbl">📦 Ürünler + Nokta Eşleştirme <span class="req">*</span> <span class="kapsetnote" style="margin:0 0 0 auto">5 kap cinsi</span></p>
-    ${ST.items.map((it,ix)=>{ const olcuGiz=isMoto()||it.kap==='dosya'; return `
+    ${ST.items.map((it,ix)=>{ const olcuGiz=it.kap==='dosya'; return `
     <div class="stop"><div class="shead"><div class="pin a">📦</div><b>Ürün ${ix+1} — ${itemDesi(it)} desi / ${itemKg(it)} kg</b>
       <button class="btn sm ghost" style="margin-left:auto" onclick="delItem(${it.id})" title="Ürünü sil">🗑</button></div>
       <label class="fld">Kap cinsi</label>
@@ -786,7 +786,7 @@ function itemsPanel(){
         <div><label class="fld">Ağırlık (kg/adet)</label><input class="field" type="number" value="${it.kg}" onchange="uI(${it.id},'kg',this.value)" placeholder="0"></div>
         <div></div>
       </div>
-      ${olcuGiz?`<div class="hint" style="margin-top:8px">${isMoto()?'🛵 Moto Kurye — ölçü istenmez; kap, adet, ağırlık yeterli.':'📄 Dosya/Evrak — ölçü istenmez; adet+ağırlık yeterli.'}</div>`:`
+      ${olcuGiz?`<div class="hint" style="margin-top:8px">📄 Dosya/Evrak — ölçü istenmez; <b>Kategori, İçerik, Adet, Ağırlık</b> yeterli.</div>`:`
       <div class="grid3" style="margin-top:8px">
         <div><label class="fld">En (cm)</label><input class="field" type="number" value="${it.en}" onchange="uI(${it.id},'en',this.value)"></div>
         <div><label class="fld">Boy (cm)</label><input class="field" type="number" value="${it.boy}" onchange="uI(${it.id},'boy',this.value)"></div>
@@ -847,7 +847,7 @@ function onDevam4(){
   if(ST.items.some(it=>!String(it.icerik).trim())){ toast('Her üründe içerik girin'); return; }
   for(const it of ST.items){
     if(itemKg(it)<=0){ toast('Her ürün için ağırlık girin'); return; }
-    if(!(isMoto()||it.kap==='dosya') && (Number(it.en)<=0||Number(it.boy)<=0||Number(it.yuk)<=0)){ toast('Koli/Palet/Sandık/Big Bag için ölçü (en·boy·yükseklik) girin'); return; }
+    if(it.kap!=='dosya' && (Number(it.en)<=0||Number(it.boy)<=0||Number(it.yuk)<=0)){ toast('Dosya harici kaplarda ölçü (en·boy·yükseklik) zorunlu'); return; }
   }
   // Randevulu mod: tacho/süre penceresi kontrolü (kural 47)
   if(ST.mod==='ileri'){
