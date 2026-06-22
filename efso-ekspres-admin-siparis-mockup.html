@@ -180,6 +180,15 @@
   .btn.ghost.sm{background:#fff;border:1px solid var(--line);color:var(--slate)}
   .ichk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;cursor:pointer}
   .ichk input{width:15px;height:15px}
+  /* ---- Adres autocomplete (Photon + yerel) ---- */
+  .acwrap{position:relative}
+  .ac-list{position:absolute;left:0;right:0;top:calc(100% + 4px);background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 38px rgba(15,23,42,.16);z-index:40;display:none;overflow:hidden}
+  .ac-list.show{display:block}
+  .ac-item{display:flex;align-items:center;gap:9px;padding:9px 12px;font-size:12.5px;cursor:pointer}
+  .ac-item:hover{background:#ecfdff}
+  .ac-ic{font-size:13px}
+  .ac-tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ac-src{font-size:9.5px;font-weight:700;color:var(--slate2);background:#f1f5f9;border:1px solid var(--line);padding:1px 6px;border-radius:6px}
   @media(max-width:860px){.app{grid-template-columns:1fr}.sidebar{display:none}.g4,.vgrid{grid-template-columns:1fr 1fr}.photoset,.specgrid{grid-template-columns:1fr 1fr}}
 </style>
 </head>
@@ -526,6 +535,47 @@ function yukForm(isRandevu){
   </button></div>`;
 }
 function renderYukPanels(){ const e=document.getElementById('yukPanels'); if(e) e.innerHTML = stopsPanel()+itemsPanel(); }
+
+/* ---- Adres otomatik tamamlama (Google benzeri: Photon API + yerel fallback + debounce) ---- */
+const AC_LOCAL=["Levent, Beşiktaş, İstanbul","Etiler, Beşiktaş, İstanbul","Maslak, Sarıyer, İstanbul","Taksim Meydanı, Beyoğlu, İstanbul","Şişli Merkez, Şişli, İstanbul","Mecidiyeköy, Şişli, İstanbul","Kadıköy Rıhtım, Kadıköy, İstanbul","Bağdat Caddesi, Kadıköy, İstanbul","Ataşehir, İstanbul","Ümraniye Merkez, Ümraniye, İstanbul","Üsküdar Meydanı, Üsküdar, İstanbul","Kartal, İstanbul","Bakırköy Çarşı, Bakırköy, İstanbul","Ataköy, Bakırköy, İstanbul","Florya, Bakırköy, İstanbul","Bağcılar Meydan, Bağcılar, İstanbul","Esenyurt, İstanbul","Beylikdüzü, İstanbul","Avcılar, İstanbul","Başakşehir, İstanbul","Eyüpsultan, İstanbul","Gaziosmanpaşa, İstanbul","Sultanahmet, Fatih, İstanbul","Eminönü, Fatih, İstanbul","Karaköy, Beyoğlu, İstanbul","İstanbul Havalimanı (IST), Arnavutköy","Sabiha Gökçen Havalimanı (SAW), Pendik","İkitelli OSB, Başakşehir, İstanbul","Dudullu OSB, Ümraniye, İstanbul","Tuzla Organize Sanayi, Tuzla, İstanbul","Pendik Merkez, Pendik, İstanbul","Şerifali, Ümraniye, İstanbul","Çekmeköy, İstanbul","Sancaktepe, İstanbul","Zeytinburnu, İstanbul","Güngören, İstanbul","Kağıthane, İstanbul"];
+let acTimer=null, acReqId=0;
+function acSet(which,v){ const s=ST.stops.find(x=>x.id===Number(which.slice(2))); if(s) s.addr=v; }
+function acInput(which,q){
+  acSet(which,q);
+  const list=document.getElementById('aclist_'+which); if(!list) return;
+  if(!q||q.trim().length<2){ list.classList.remove('show'); list.innerHTML=''; return; }
+  renderAc(which, AC_LOCAL.filter(a=>a.toLocaleLowerCase('tr').includes(q.toLocaleLowerCase('tr'))).slice(0,6).map(a=>({label:a,src:'yerel'})));
+  clearTimeout(acTimer); const my=++acReqId;
+  acTimer=setTimeout(()=>acFetch(which,q,my),260);
+}
+async function acFetch(which,q,reqId){
+  try{
+    const url='https://photon.komoot.io/api/?lang=default&limit=6&lat=41.01&lon=28.97&q='+encodeURIComponent(q);
+    const r=await fetch(url); if(!r.ok) throw 0;
+    const j=await r.json(); if(reqId!==acReqId) return;
+    const items=(j.features||[]).map(f=>{ const p=f.properties||{};
+      const street=p.street?(p.street+(p.housenumber?' '+p.housenumber:'')):null;
+      const parts=[p.name,street,p.district,p.city||p.county,p.state,p.country].filter(Boolean);
+      return {label:[...new Set(parts)].join(', '), src:'harita'}; }).filter(x=>x.label);
+    if(items.length) renderAc(which,items);
+  }catch(e){}
+}
+function renderAc(which,items){
+  const list=document.getElementById('aclist_'+which); if(!list) return;
+  if(!items.length){ list.classList.remove('show'); list.innerHTML=''; return; }
+  list.innerHTML=items.map(it=>`<div class="ac-item" onmousedown="acPick('${which}',this)" data-v="${it.label.replace(/"/g,'&quot;')}"><span class="ac-ic">📍</span><span class="ac-tx">${it.label}</span><span class="ac-src">${it.src}</span></div>`).join('');
+  list.classList.add('show');
+}
+function acPick(which,el){
+  const v=el.getAttribute('data-v'); acSet(which,v);
+  const inp=document.getElementById('ac_'+which); if(inp) inp.value=v;
+  const l=document.getElementById('aclist_'+which); if(l){l.classList.remove('show');l.innerHTML='';}
+  toast('📍 Adres seçildi: '+v);
+}
+function acBlur(which){ setTimeout(()=>{const l=document.getElementById('aclist_'+which); if(l) l.classList.remove('show');},160); }
+function acField(which,val,placeholder){
+  return `<div class="acwrap"><input class="field ac-in" id="ac_${which}" autocomplete="off" placeholder="${placeholder}" value="${(val||'').replace(/"/g,'&quot;')}" oninput="acInput('${which}',this.value)" onfocus="acInput('${which}',this.value)" onblur="acBlur('${which}')"><div class="ac-list" id="aclist_${which}"></div></div>`;
+}
 function stopLabel(s){ const nm={alim:'Alım',ugrama:'Uğrama',teslim:'Teslim'}; return nm[s.type]+' '+(ST.stops.filter(x=>x.type===s.type).indexOf(s)+1); }
 function itemDesi(it){ if(veh().kapSet==='moto'||it.kap==='dosya') return 0; const d=(Number(it.en)*Number(it.boy)*Number(it.yuk))/3000; return Math.round((isNaN(d)?0:d)*(Number(it.adet)||1)); }
 function itemKg(it){ return (Number(it.kg)||0)*(Number(it.adet)||1); }
@@ -559,7 +609,8 @@ function stopsPanel(){
     <div class="stop"><div class="shead"><div class="pin ${t.c}">${t.e}</div><b>${stopLabel(s)}</b>
       <button class="btn sm sec" style="margin-left:auto" onclick="uS(${s.id},'detay',${!s.detay})">${s.detay?'Detayı gizle':'Detay'}</button>
       <button class="btn sm ghost" onclick="delStop(${s.id})" title="Noktayı sil">🗑</button></div>
-      <input class="field" value="${s.addr}" onchange="uSq(${s.id},'addr',this.value)" placeholder="Mahalle, cadde, no… (yaz → öneri gelsin)">
+      <label class="fld">Adres <span style="font-weight:400;color:var(--slate2)">— yazınca otomatik arama (Google/harita)</span></label>
+      ${acField('st'+s.id, s.addr, 'Mahalle, cadde, no… (yaz → öneri gelsin)')}
       <div class="grid3" style="margin-top:9px">
         <div><label class="fld">İlgili kişi <span class="req">*</span></label><input class="field" value="${s.kisi}" onchange="uSq(${s.id},'kisi',this.value)" placeholder="Ad Soyad"></div>
         <div><label class="fld">Telefon (maskelenir)</label><input class="field" value="${s.tel}" inputmode="tel" onchange="uSq(${s.id},'tel',this.value)" placeholder="05XX XXX XX XX"></div>
