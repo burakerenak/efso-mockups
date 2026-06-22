@@ -181,7 +181,8 @@
   .ichk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;cursor:pointer}
   .ichk input{width:15px;height:15px}
   /* ---- Görsel kap cinsi seçimi (kriter simülasyonu) ---- */
-  .kapgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+  .kapgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:4px}
+  @media(max-width:680px){.kapgrid{grid-template-columns:repeat(3,1fr)}}
   .kapcard{border:1.5px solid var(--line);border-radius:11px;padding:11px 6px;text-align:center;cursor:pointer;transition:.12s;background:#fff}
   .kapcard:hover{border-color:var(--cyan-l)}
   .kapcard.on{border-color:var(--cyan);background:#ecfdff;box-shadow:0 0 0 2px rgba(14,165,183,.18)}
@@ -353,7 +354,7 @@
       <span class="box" id="dmBox">✓</span>
       <span>Araç detaylarını <b>gördüm</b>. Yükümün bu araca uygun olduğunu; uygun olmaması hâlinde alımda reddedilebileceğini ve doğabilecek ek ücret/iptal sorumluluğunun bana ait olduğunu kabul ediyorum.</span>
     </label>
-    <button class="reselbtn" onclick="openReselect()">
+    <button class="reselbtn" id="dmReselBtn" onclick="openReselect()">
       <span class="ic">🔄</span>
       <span><span class="t1">İlk seçtiğim araç doğru değil</span><span class="t2">Yeniden araç seç →</span></span>
     </button>
@@ -424,6 +425,9 @@ const YOLCU = {
   vito:    {emoji:'🚐', name:'Mercedes Vito', sub:'D2 sözleşmeli · VIP', specs:['1-7 yolcu','VIP'], kasa:'D2 sözleşmeli', kapi:'Yan sürgü', ds:'1-7 yolcu · VIP', kg:'7 yolcu', maxPax:7},
   sprinter:{emoji:'🚌', name:'Mercedes Sprinter', sub:'D2 sözleşmeli · Grup', specs:['4-19 yolcu','Grup'], kasa:'D2 sözleşmeli', kapi:'Yan sürgü', ds:'4-19 yolcu · Grup', kg:'19 yolcu', maxPax:19},
 };
+// Kanonik 5 kap cinsi (tüm araçlarda)
+const KAP5=[['dosya','📄','Dosya / Evrak'],['koli','📦','Koli'],['palet','🟫','Palet'],['sandik','🧰','Sandık / Kasa'],['bigbag','🛍️','Big Bag']];
+function isMoto(){ return ST.arac==='moto'; }
 const KAPSET = { moto:[['dosya','📄','Dosya / Zarf'],['koli','📦','Koli'],['diger','🗃️','Diğer']],
                  std :[['koli','📦','Koli'],['palet','🟫','Palet'],['diger','🗃️','Diğer']] };
 const MODNAME = {express:'⚡ Express — Hemen Al Hemen Teslim', gunici:'☀️ Gün İçinde Teslimat', ertesi:'🌙 Ertesi Gün', ileri:'📅 İleri Tarihli Randevulu'};
@@ -559,7 +563,7 @@ function yolcuForm(){
 /* ---- YÜK: çoklu nokta + ürün eşleştirme (birleşik platformdan) ---- */
 let NSID=1, NIID=1;
 const KAT_LIST=['','Belge / Evrak','Yedek Parça','Tekstil / Giyim','Elektronik (kırılgan)','Gıda (ambalajlı)','Çiçek / Bitki','İnşaat / Hırdavat','Mobilya / Beyaz Eşya','Proje / Makine','Hediye / Çeşitli'];
-function defaultKap(){ return KAPSET[veh().kapSet][0][0]; }
+function defaultKap(){ return 'koli'; }
 function freshRoute(){
   ST.stops=[
     {id:NSID++,type:'alim',addr:'',kisi:'',tel:'',firma:'',detay:false,ac:'08:00',ka:'18:00',bekleme:15},
@@ -571,7 +575,7 @@ function freshRoute(){
 function yukForm(isRandevu){
   if(!ST.stops || !ST.stops.length) freshRoute();
   // araç değiştiyse ürün kaplarını uyarla
-  ST.items.forEach(it=>{ if(!KAPSET[veh().kapSet].some(o=>o[0]===it.kap)) it.kap=defaultKap(); });
+  ST.items.forEach(it=>{ if(!KAP5.some(o=>o[0]===it.kap)) it.kap=defaultKap(); });
   return `${isRandevu?`<div class="card">
     <p class="lbl">📅 Randevu Tarih & Saat <span class="req">*</span></p>
     <div class="grid2">
@@ -703,7 +707,7 @@ function renderAddrMgr(){ const el=document.getElementById('addrMgrBody'); if(!e
     </div>`:`<div class="actions" style="margin-top:10px;gap:8px"><button class="btn sm sec" onclick="newAddrDraft()">＋ Yeni adres</button><span style="font-size:11.5px;color:var(--slate);align-self:center">${akt}/${MAX_AKTIF_ADRES} aktif · pasifler sayılmaz</span></div>`;
   el.innerHTML=rows+form; const t=document.getElementById('addrMgrTitle'); if(t) t.textContent='📍 Kayıtlı Adreslerim ('+akt+'/'+MAX_AKTIF_ADRES+' aktif)'; }
 function stopLabel(s){ const nm={alim:'Alım',ugrama:'Uğrama',teslim:'Teslim'}; return nm[s.type]+' '+(ST.stops.filter(x=>x.type===s.type).indexOf(s)+1); }
-function itemDesi(it){ if(veh().kapSet==='moto'||it.kap==='dosya') return 0; const d=(Number(it.en)*Number(it.boy)*Number(it.yuk))/3000; return Math.round((isNaN(d)?0:d)*(Number(it.adet)||1)); }
+function itemDesi(it){ if(isMoto()||it.kap==='dosya') return 0; const d=(Number(it.en)*Number(it.boy)*Number(it.yuk))/3000; return Math.round((isNaN(d)?0:d)*(Number(it.adet)||1)); }
 function itemKg(it){ return (Number(it.kg)||0)*(Number(it.adet)||1); }
 function totDesi(){ return ST.items.reduce((t,it)=>t+itemDesi(it),0); }
 function totKg(){ return ST.items.reduce((t,it)=>t+itemKg(it),0); }
@@ -762,13 +766,13 @@ function stopsPanel(){
   </div>`;
 }
 function itemsPanel(){
-  const ks=KAPSET[veh().kapSet];
+  const ks=KAP5;
   const alimOpts=it=>ST.stops.filter(s=>s.type==='alim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.alim===s.id?'selected':''}>${stopLabel(s)}${s.addr?' — '+s.addr:''}</option>`).join('');
   const teslimOpts=it=>ST.stops.filter(s=>s.type==='teslim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.teslim===s.id?'selected':''}>${stopLabel(s)}${s.addr?' — '+s.addr:''}</option>`).join('');
   const errs=eslesmeHatalari();
   return `<div class="card">
-    <p class="lbl">📦 Ürünler + Nokta Eşleştirme <span class="req">*</span> <span class="kapsetnote" style="margin:0 0 0 auto">${veh().kapSet==='moto'?'Dosya · Koli · Diğer':'Koli · Palet · Diğer'}</span></p>
-    ${ST.items.map((it,ix)=>{ const olcuGiz=(veh().kapSet==='moto')||it.kap==='dosya'; return `
+    <p class="lbl">📦 Ürünler + Nokta Eşleştirme <span class="req">*</span> <span class="kapsetnote" style="margin:0 0 0 auto">5 kap cinsi</span></p>
+    ${ST.items.map((it,ix)=>{ const olcuGiz=isMoto()||it.kap==='dosya'; return `
     <div class="stop"><div class="shead"><div class="pin a">📦</div><b>Ürün ${ix+1} — ${itemDesi(it)} desi / ${itemKg(it)} kg</b>
       <button class="btn sm ghost" style="margin-left:auto" onclick="delItem(${it.id})" title="Ürünü sil">🗑</button></div>
       <label class="fld">Kap cinsi</label>
@@ -782,7 +786,7 @@ function itemsPanel(){
         <div><label class="fld">Ağırlık (kg/adet)</label><input class="field" type="number" value="${it.kg}" onchange="uI(${it.id},'kg',this.value)" placeholder="0"></div>
         <div></div>
       </div>
-      ${olcuGiz?`<div class="hint" style="margin-top:8px">${veh().kapSet==='moto'?'🛵 Moto Kurye — ölçü istenmez; kap, adet, ağırlık yeterli.':'📄 Dosya/Zarf — ölçü istenmez; adet+ağırlık yeterli.'}</div>`:`
+      ${olcuGiz?`<div class="hint" style="margin-top:8px">${isMoto()?'🛵 Moto Kurye — ölçü istenmez; kap, adet, ağırlık yeterli.':'📄 Dosya/Evrak — ölçü istenmez; adet+ağırlık yeterli.'}</div>`:`
       <div class="grid3" style="margin-top:8px">
         <div><label class="fld">En (cm)</label><input class="field" type="number" value="${it.en}" onchange="uI(${it.id},'en',this.value)"></div>
         <div><label class="fld">Boy (cm)</label><input class="field" type="number" value="${it.boy}" onchange="uI(${it.id},'boy',this.value)"></div>
@@ -843,7 +847,7 @@ function onDevam4(){
   if(ST.items.some(it=>!String(it.icerik).trim())){ toast('Her üründe içerik girin'); return; }
   for(const it of ST.items){
     if(itemKg(it)<=0){ toast('Her ürün için ağırlık girin'); return; }
-    if(!(veh().kapSet==='moto'||it.kap==='dosya') && (Number(it.en)<=0||Number(it.boy)<=0||Number(it.yuk)<=0)){ toast('Koli/Palet/Diğer için ölçü (en·boy·yükseklik) girin'); return; }
+    if(!(isMoto()||it.kap==='dosya') && (Number(it.en)<=0||Number(it.boy)<=0||Number(it.yuk)<=0)){ toast('Koli/Palet/Sandık/Big Bag için ölçü (en·boy·yükseklik) girin'); return; }
   }
   // Randevulu mod: tacho/süre penceresi kontrolü (kural 47)
   if(ST.mod==='ileri'){
@@ -890,6 +894,8 @@ function renderDetModal(mode, info){
   ST.capInfo=info;
   document.getElementById('detModalTop').innerHTML=top;
   fillVehVisual(v);
+  // kapasite modunda sistem zaten uygun araca yönlendirir → yeniden seç gizli
+  document.getElementById('dmReselBtn').style.display = mode==='01' ? 'flex' : 'none';
   // reset onay
   document.getElementById('dmChk').classList.remove('on');
   document.getElementById('dmGo').disabled=true;
