@@ -174,6 +174,27 @@ let SAVED=[];          // tanımlı araçlar
 let NID=1;
 let TEST={vehId:'', kap:'koli', adet:1, kg:'', en:'', boy:'', yuk:''};
 
+/* ---- Şablon (Master) kalıcılığı ---- */
+const TPL_KEY='efso_arac_templates';
+function loadTemplates(){ try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}'); Object.keys(o).forEach(k=>{ if(TYPES[k]) Object.assign(TYPES[k], o[k]); }); }catch(e){} }
+function saveTemplate(){
+  if(!F){ return; }
+  const t=TYPES[CUR];
+  t.kaps=[...F.kaps]; t.equip=[...F.equip]; t.methods=[...F.methods]; t.cond=[...F.cond];
+  t.maxKg=Number(F.maxKg)||t.maxKg; t.volM3=Number(F.volM3)||t.volM3;
+  t.kasa={en:Number(F.en)||t.kasa.en, boy:Number(F.boy)||t.kasa.boy, yuk:Number(F.yuk)||t.kasa.yuk};
+  t.kapi={en:Number(F.kapiEn)||t.kapi.en, yuk:Number(F.kapiYuk)||t.kapi.yuk};
+  try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}');
+    o[CUR]={kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,kasa:t.kasa,kapi:t.kapi};
+    localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){}
+  toast('💾 '+t.name+' şablonu kaydedildi (bu tipte yeni araçlara uygulanır)');
+  renderTList();
+}
+function resetTemplate(){
+  try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}'); delete o[CUR]; localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){}
+  toast('↺ '+TYPES[CUR].name+' şablonu fabrika değerine döndürüldü (sayfa yenilenince)');
+}
+
 /* ============================= SOL: TİP LİSTESİ ============================= */
 function renderTList(){
   document.getElementById('tlist').innerHTML = TKEYS.map(k=>{const t=TYPES[k];
@@ -211,7 +232,8 @@ function renderForm(){
   const volTxt = F.open?'açık kasa (hacim yok)':realVolM3().toFixed(2)+' m³';
   document.getElementById('formArea').innerHTML = `
   <div class="card">
-    <p class="lbl">2 · ${t.emoji} ${t.name} — Kriterler <span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">şablondan geldi · düzenlenebilir</span></p>
+    <p class="lbl">2 · Araç Tipi Şablonu (Master) — ${t.emoji} ${t.name} <span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">bu tipteki TÜM araçlar için standart</span></p>
+    <div class="banner info" style="margin:0 0 12px"><span>📋</span><div>Bu kriterler <b>araç tipinin şablonudur</b>. Düzenleyip <b>Şablonu Kaydet</b> deyin; bu tipte yeni tanımlanan araçlara otomatik gelir. (Gerçek araç ölçüleri aşağıda ayrıca girilir.)</div></div>
 
     <div class="secbox">
       <div class="st">📦 Taşınabilecek Yük (Kap) Cinsleri <span class="tag">araca uygun</span></div>
@@ -234,10 +256,14 @@ function renderForm(){
       <div class="ig"><label>Tip taşıma kapasitesi (şablon, kg)</label><div class="suf"><input class="field" type="number" value="${F.maxKg}" onchange="setF('maxKg',Number(this.value))"><span>kg</span></div></div>
       <div class="ig"><label>Tip hacim (şablon)</label><div class="suf"><input class="field" type="number" step="0.1" value="${F.volM3}" onchange="setF('volM3',Number(this.value))" ${F.open?'disabled':''}><span>m³</span></div></div>
     </div>
+    <div class="actions" style="margin-top:13px">
+      <button class="btn primary" onclick="saveTemplate()">💾 Şablonu Kaydet</button>
+      <button class="btn ghost" onclick="resetTemplate()">↺ Fabrika ayarı</button>
+    </div>
   </div>
 
   <div class="card">
-    <p class="lbl">3 · Gerçek Araç Bilgileri <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:2px 7px">kapasite kontrolü bu değerlerle</span></p>
+    <p class="lbl">3 · Gerçek Araç Kaydı <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:2px 7px">şablonu baz alır · kapasite kontrolü bu değerlerle</span></p>
     <div class="grid2">
       <div class="ig"><label>Plaka <span class="req">*</span></label><input class="field" value="${F.plaka}" oninput="F.plaka=this.value.toUpperCase()" placeholder="34 ABC 123"></div>
       <div class="ig"><label>Marka / Model</label><input class="field" value="${F.marka}" oninput="F.marka=this.value" placeholder="Ford Transit 350"></div>
@@ -398,7 +424,7 @@ function dispatchResult(){
 
 /* ============================= INIT ============================= */
 let tT; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2400); }
-renderTList(); renderSaved(); renderCapTest();
+loadTemplates(); renderTList(); renderSaved(); renderCapTest();
 </script>
 </body>
 </html>
