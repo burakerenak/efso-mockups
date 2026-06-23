@@ -81,6 +81,19 @@
   .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
   .pill.ok{background:var(--okbg);color:#15803d}.pill.err{background:var(--errbg);color:#b91c1c}.pill.gray{background:#f1f5f9;color:#475569}
   .empty{font-size:12.5px;color:var(--slate);padding:14px;text-align:center}
+  /* yeni cins + emoji + resim yükleme */
+  .addtype{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--cyan-l);background:#ecfdff;color:var(--cyan-d);border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;width:100%}
+  .addtype:hover{background:#d8f6fc}
+  .emojipick{display:flex;gap:6px;flex-wrap:wrap}
+  .emojipick .e{width:38px;height:38px;border-radius:9px;border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+  .emojipick .e.on{border-color:var(--cyan);background:#ecfdff}
+  .upbtn{display:inline-flex;align-items:center;gap:8px;border:1.5px dashed var(--cyan-l);background:#ecfdff;color:var(--cyan-d);border-radius:11px;padding:11px 15px;font-size:13px;font-weight:700;cursor:pointer}
+  .upbtn:hover{background:#d8f6fc}
+  .thumbs{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}
+  .thumb{position:relative;width:96px;height:72px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#f8fafc}
+  .thumb img{width:100%;height:100%;object-fit:cover}
+  .thumb .cap{position:absolute;bottom:0;left:0;right:0;background:rgba(15,23,42,.62);color:#fff;font-size:9px;text-align:center;padding:1px 0}
+  .thumb .rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(15,23,42,.75);color:#fff;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 17px;border-radius:11px;font-size:13px;z-index:60;opacity:0;transition:.25s;max-width:80%;text-align:center;pointer-events:none}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   @media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{display:none}.two{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
@@ -163,7 +176,7 @@ const TYPES = {
   tirsal:  {emoji:'🚛', name:'TIR Sal Dorse',    maxKg:25500, volM3:0,    kaps:['palet','sandik','bigbag'],       equip:['vinc','forklift'],    methods:['ustten','yandan'],       cond:['gabari'],       kasa:{en:245,boy:1360,yuk:0},  kapi:{en:0,yuk:0}, open:true},
   lowbed:  {emoji:'🚜', name:'TIR Lowbed',       maxKg:45000, volM3:0,    kaps:['bigbag'],                        equip:['rampa','vinc'],       methods:['rampadan','ustten'],     cond:['gabari'],       kasa:{en:300,boy:1300,yuk:0},  kapi:{en:0,yuk:0}, open:true},
 };
-const TKEYS=Object.keys(TYPES);
+let TKEYS=Object.keys(TYPES);
 const lab = (arr,id)=>{const x=arr.find(a=>a[0]===id);return x?x[2]:id;};
 const emo = (arr,id)=>{const x=arr.find(a=>a[0]===id);return x?x[1]:'';};
 
@@ -176,18 +189,19 @@ let TEST={vehId:'', kap:'koli', adet:1, kg:'', en:'', boy:'', yuk:''};
 
 /* ---- Şablon (Master) kalıcılığı ---- */
 const TPL_KEY='efso_arac_templates';
-function loadTemplates(){ try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}'); Object.keys(o).forEach(k=>{ if(TYPES[k]) Object.assign(TYPES[k], o[k]); }); }catch(e){} }
+function loadTemplates(){ try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}'); Object.keys(o).forEach(k=>{ if(TYPES[k]) Object.assign(TYPES[k], o[k]); else TYPES[k]=o[k]; }); TKEYS=Object.keys(TYPES); }catch(e){} }
 function saveTemplate(){
   if(!F){ return; }
+  if(TYPES[CUR].custom && !TYPES[CUR].name.trim()){ toast('Yeni cins için tip adı girin'); return; }
   const t=TYPES[CUR];
-  t.kaps=[...F.kaps]; t.equip=[...F.equip]; t.methods=[...F.methods]; t.cond=[...F.cond];
-  t.maxKg=Number(F.maxKg)||t.maxKg; t.volM3=Number(F.volM3)||t.volM3;
+  t.kaps=[...F.kaps]; t.equip=[...F.equip]; t.methods=[...F.methods]; t.cond=[...(F.cond||[])]; t.images=[...(F.images||[])];
+  t.maxKg=Number(F.maxKg)||t.maxKg; t.volM3=Number(F.volM3)||t.volM3; t.open=!!F.open;
   t.kasa={en:Number(F.en)||t.kasa.en, boy:Number(F.boy)||t.kasa.boy, yuk:Number(F.yuk)||t.kasa.yuk};
   t.kapi={en:Number(F.kapiEn)||t.kapi.en, yuk:Number(F.kapiYuk)||t.kapi.yuk};
   try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}');
-    o[CUR]={kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,kasa:t.kasa,kapi:t.kapi};
-    localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){}
-  toast('💾 '+t.name+' şablonu kaydedildi (bu tipte yeni araçlara uygulanır)');
+    o[CUR]={emoji:t.emoji,name:t.name,open:t.open,custom:!!t.custom,images:t.images,kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,kasa:t.kasa,kapi:t.kapi};
+    localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){ toast('Şablon kaydedildi (görseller büyük olduğundan tarayıcı hafızasında)'); renderTList(); return; }
+  toast('💾 '+(t.name||'Araç cinsi')+' şablonu kaydedildi (bu tipte yeni araçlara uygulanır)');
   renderTList();
 }
 function resetTemplate(){
@@ -200,20 +214,47 @@ function renderTList(){
   document.getElementById('tlist').innerHTML = TKEYS.map(k=>{const t=TYPES[k];
     return `<div class="tcard ${CUR===k?'on':''}" onclick="selectType('${k}')">
       <div class="e">${t.emoji}</div>
-      <div><div class="n">${t.name}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³'}</div></div>
-    </div>`;}).join('');
+      <div><div class="n">${t.name||'(adsız cins)'} ${t.custom?'<span class="pill gray" style="font-size:9px">özel</span>':''}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³'}${(t.images&&t.images.length)?' · 🖼️'+t.images.length:''}</div></div>
+    </div>`;}).join('')
+    + `<button class="addtype" onclick="addType()">＋ Yeni Araç Cinsi Ekle</button>`;
 }
 function selectType(k){
   CUR=k; const t=TYPES[k];
   // şablonu forma klonla (gerçek ölçüler şablon örnekle ön-dolu, kullanıcı değiştirir)
   F={ type:k, plaka:'', marka:'',
-      kaps:[...t.kaps], equip:[...t.equip], methods:[...t.methods], cond:[...t.cond],
+      kaps:[...t.kaps], equip:[...t.equip], methods:[...t.methods], cond:[...(t.cond||[])],
+      images:[...(t.images||[])],
       maxKg:t.maxKg, volM3:t.volM3,
       en:t.kasa.en||'', boy:t.kasa.boy||'', yuk:t.kasa.yuk||'',
       kapiEn:t.kapi.en||'', kapiYuk:t.kapi.yuk||'',
       dara:'', kapasite:t.maxKg, open:t.open };
   renderTList(); renderForm();
 }
+/* yeni araç cinsi ekle */
+function addType(){
+  let i=1; while(TYPES['custom'+i]) i++;
+  const k='custom'+i;
+  TYPES[k]={emoji:'🚚', name:'', maxKg:1000, volM3:10, kaps:[], equip:[], methods:[], cond:[], images:[], kasa:{en:200,boy:300,yuk:200}, kapi:{en:180,yuk:190}, open:false, custom:true};
+  TKEYS=Object.keys(TYPES);
+  selectType(k);
+  toast('Yeni araç cinsi — ad/ikon ve kriterleri girip 💾 Şablonu Kaydet deyin');
+}
+function deleteType(k){
+  if(!TYPES[k]||!TYPES[k].custom){ toast('Yalnız eklenen özel cinsler silinebilir'); return; }
+  delete TYPES[k]; TKEYS=Object.keys(TYPES);
+  try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}'); delete o[k]; localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){}
+  CUR=null; F=null;
+  document.getElementById('formArea').innerHTML='<div class="card"><div class="empty">← Soldan bir araç tipi seçin.</div></div>';
+  renderTList(); toast('🗑 Araç cinsi silindi');
+}
+/* resim yükleme */
+function onUpload(ev){
+  const files=[...ev.target.files]; if(!files.length) return;
+  let pending=files.length;
+  files.forEach(f=>{ const r=new FileReader(); r.onload=()=>{ F.images.push({src:r.result, name:f.name.slice(0,18)}); if(--pending===0) renderForm(); }; r.readAsDataURL(f); });
+  ev.target.value='';
+}
+function removeImg(i){ F.images.splice(i,1); renderForm(); }
 
 /* ============================= SAĞ: TANIMLAMA FORMU ============================= */
 function realVolM3(){ if(F.open) return 0; const v=(Number(F.en)*Number(F.boy)*Number(F.yuk))/1e6; return isNaN(v)?0:v; }
@@ -232,8 +273,28 @@ function renderForm(){
   const volTxt = F.open?'açık kasa (hacim yok)':realVolM3().toFixed(2)+' m³';
   document.getElementById('formArea').innerHTML = `
   <div class="card">
-    <p class="lbl">2 · Araç Tipi Şablonu (Master) — ${t.emoji} ${t.name} <span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">bu tipteki TÜM araçlar için standart</span></p>
+    <p class="lbl">2 · Araç Tipi Şablonu (Master) — ${t.emoji} ${t.name} ${t.custom?'<button class="btn ghost sm" style="margin-left:auto" onclick="deleteType(\''+CUR+'\')">🗑 Cinsi sil</button>':'<span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">bu tipteki TÜM araçlar için standart</span>'}</p>
     <div class="banner info" style="margin:0 0 12px"><span>📋</span><div>Bu kriterler <b>araç tipinin şablonudur</b>. Düzenleyip <b>Şablonu Kaydet</b> deyin; bu tipte yeni tanımlanan araçlara otomatik gelir. (Gerçek araç ölçüleri aşağıda ayrıca girilir.)</div></div>
+
+    <div class="secbox">
+      <div class="st">🏷️ Tip Kimliği</div>
+      <div class="grid2">
+        <div class="ig"><label>Tip adı</label><input class="field" value="${t.name}" oninput="TYPES['${CUR}'].name=this.value" onchange="renderTList()" placeholder="örn. Frigorifik Kamyon"></div>
+        <div class="ig"><label>Açık kasa mı?</label>
+          <select class="field" onchange="F.open=this.value==='1';TYPES['${CUR}'].open=F.open;renderForm()">
+            <option value="0" ${!F.open?'selected':''}>Kapalı kasa (hacim/kapı var)</option>
+            <option value="1" ${F.open?'selected':''}>Açık kasa (sal/lowbed)</option>
+          </select></div>
+      </div>
+      <label class="fld" style="margin-top:9px">İkon</label>
+      <div class="emojipick">${['🛵','🏍️','🛻','🚐','🚚','🚛','🚜','🚙','🚌'].map(e=>`<div class="e ${t.emoji===e?'on':''}" onclick="TYPES['${CUR}'].emoji='${e}';renderForm();renderTList()">${e}</div>`).join('')}</div>
+    </div>
+
+    <div class="secbox">
+      <div class="st">🖼️ Araç Görselleri <span class="tag">kullanıcı yükler</span></div>
+      <label class="upbtn">📤 Resim Yükle (KASA · KAPI · DS · KG)<input type="file" accept="image/*" multiple style="display:none" onchange="onUpload(event)"></label>
+      ${(F.images&&F.images.length)?`<div class="thumbs">${F.images.map((im,i)=>`<div class="thumb"><img src="${im.src}" alt="${im.name||''}"><button class="rm" onclick="removeImg(${i})">✕</button>${im.name?`<div class="cap">${im.name}</div>`:''}</div>`).join('')}</div>`:`<div class="hint" style="margin-top:8px">Henüz görsel yok — aracın kasa/kapı/iç/ölçü fotoğraflarını yükleyin (sipariş ekranında müşteriye gösterilir).</div>`}
+    </div>
 
     <div class="secbox">
       <div class="st">📦 Taşınabilecek Yük (Kap) Cinsleri <span class="tag">araca uygun</span></div>
@@ -246,10 +307,6 @@ function renderForm(){
     <div class="secbox">
       <div class="st">🔄 Yükleme Şekilleri <span class="tag">araç cinsine göre</span></div>
       <div class="chips">${chipRow(METHODS,F.methods,'methods')}</div>
-    </div>
-    <div class="secbox">
-      <div class="st">⚠️ Yük Koşulu Yetkinlikleri <span class="tag">opsiyonel</span></div>
-      <div class="chips">${chipRow(COND,F.cond,'cond')}</div>
     </div>
 
     <div class="grid2">
