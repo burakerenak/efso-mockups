@@ -210,7 +210,7 @@
           <div class="seg" id="kapSeg">
             <button data-kap="dosya" class="sel" onclick="setKap('dosya')"><span class="e">📄</span>Dosya / Zarf</button>
             <button data-kap="koli" onclick="setKap('koli')"><span class="e">📦</span>Koli</button>
-            <button data-kap="diger" onclick="setKap('diger')"><span class="e">🗃️</span>Diğer</button>
+            <button data-kap="ambalajsiz" onclick="setKap('ambalajsiz')"><span class="e">🪑</span>Ambalajsız / Parça</button>
           </div>
 
           <!-- Adet / Ağırlık — yalnız "biliyorum" (01 basılı değil) -->
@@ -482,7 +482,7 @@ function applyBilmiyorumUI(){
   refreshOlcu();
 }
 function val(id){ return document.getElementById(id).value.trim(); }
-function kapName(k){ return {dosya:'Dosya / Zarf',koli:'Koli',diger:'Diğer'}[k]; }
+function kapName(k){ return {dosya:'Dosya / Zarf',koli:'Koli',ambalajsiz:'Ambalajsız / Parça'}[k]; }
 
 /* ----------------------------- ARAÇ DETAY (Sayfa 1) ----------------------------- */
 // 01 butonu: "ölçüyü bilmiyorum" → adres kontrolü + alanları ön-doldur + Sayfa 1
@@ -587,7 +587,7 @@ function priceFromKg(kg, adet, kapExtra){ let b=149; b+=Math.round(kg*4)+(adet>1
 function recalc(){
   // ana ekran (biliyorum) fiyatı: max(kg,desi) + adet + kap etkisi (mockup)
   const kg=num('fKg'), desi=calcDesi(), adet=num('fAdet')||1;
-  let base=149 + Math.round(Math.max(kg,desi)*4) + (adet>1?(adet-1)*8:0) + (S.kap==='diger'?15:0);
+  let base=149 + Math.round(Math.max(kg,desi)*4) + (adet>1?(adet-1)*8:0) + (S.kap==='ambalajsiz'?15:0);
   document.getElementById('priceTxt').textContent='₺'+base;
 }
 function mask(t){ return t? '•'.repeat(Math.min(Math.max(t.length,3),10)) : '•••••'; }
@@ -615,7 +615,7 @@ function onDevam(){
 
   // Koli / Diğer → Adet + Ağırlık + Ölçü zorunlu
   if(num('fKg')<=0 || num('fBoy')<=0 || num('fEn')<=0 || num('fYuk')<=0){
-    toast('Koli/Diğer için ağırlık ve ölçü (en·boy·yükseklik) zorunlu'); return;
+    toast('Dosya harici için ağırlık ve ölçü (en·boy·yükseklik) zorunlu'); return;
   }
 
   // Moto Kurye standardına uygunluk

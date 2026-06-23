@@ -181,8 +181,8 @@
   .ichk{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#334155;cursor:pointer}
   .ichk input{width:15px;height:15px}
   /* ---- Görsel kap cinsi seçimi (kriter simülasyonu) ---- */
-  .kapgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:4px}
-  @media(max-width:680px){.kapgrid{grid-template-columns:repeat(3,1fr)}}
+  .kapgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+  @media(max-width:560px){.kapgrid{grid-template-columns:repeat(2,1fr)}}
   .kapcard{border:1.5px solid var(--line);border-radius:11px;padding:11px 6px;text-align:center;cursor:pointer;transition:.12s;background:#fff}
   .kapcard:hover{border-color:var(--cyan-l)}
   .kapcard.on{border-color:var(--cyan);background:#ecfdff;box-shadow:0 0 0 2px rgba(14,165,183,.18)}
@@ -433,11 +433,9 @@ const YOLCU = {
   vito:    {emoji:'🚐', name:'Mercedes Vito', sub:'D2 sözleşmeli · VIP', specs:['1-7 yolcu','VIP'], kasa:'D2 sözleşmeli', kapi:'Yan sürgü', ds:'1-7 yolcu · VIP', kg:'7 yolcu', maxPax:7},
   sprinter:{emoji:'🚌', name:'Mercedes Sprinter', sub:'D2 sözleşmeli · Grup', specs:['4-19 yolcu','Grup'], kasa:'D2 sözleşmeli', kapi:'Yan sürgü', ds:'4-19 yolcu · Grup', kg:'19 yolcu', maxPax:19},
 };
-// Kanonik 5 kap cinsi (tüm araçlarda)
-const KAP5=[['dosya','📄','Dosya / Evrak'],['koli','📦','Koli'],['palet','🟫','Palet'],['sandik','🧰','Sandık / Kasa'],['bigbag','🛍️','Big Bag']];
+// Kanonik kap cinsleri (tüm araçlarda): 5 standart + Ambalajsız/Parça Yük
+const KAP5=[['dosya','📄','Dosya / Evrak'],['koli','📦','Koli'],['palet','🟫','Palet'],['sandik','🧰','Sandık / Kasa'],['bigbag','🛍️','Big Bag'],['ambalajsiz','🪑','Ambalajsız / Parça Yük']];
 function isMoto(){ return ST.arac==='moto'; }
-const KAPSET = { moto:[['dosya','📄','Dosya / Zarf'],['koli','📦','Koli'],['diger','🗃️','Diğer']],
-                 std :[['koli','📦','Koli'],['palet','🟫','Palet'],['diger','🗃️','Diğer']] };
 const MODNAME = {express:'⚡ Express — Hemen Al Hemen Teslim', gunici:'☀️ Gün İçinde Teslimat', ertesi:'🌙 Ertesi Gün', ileri:'📅 İleri Tarihli Randevulu'};
 
 /* ============================= STATE ============================= */
@@ -789,7 +787,7 @@ function itemsPanel(){
   const teslimOpts=it=>ST.stops.filter(s=>s.type==='teslim'||s.type==='ugrama').map(s=>`<option value="${s.id}" ${it.teslim===s.id?'selected':''}>${stopLabel(s)}${s.addr?' — '+s.addr:''}</option>`).join('');
   const errs=eslesmeHatalari();
   return `<div class="card">
-    <p class="lbl">📦 Ürünler + Nokta Eşleştirme <span class="req">*</span> <span class="kapsetnote" style="margin:0 0 0 auto">5 kap cinsi</span></p>
+    <p class="lbl">📦 Ürünler + Nokta Eşleştirme <span class="req">*</span> <span class="kapsetnote" style="margin:0 0 0 auto">6 kap cinsi</span></p>
     ${ST.items.map((it,ix)=>{ const olcuGiz=it.kap==='dosya'; return `
     <div class="stop"><div class="shead"><div class="pin a">📦</div><b>Ürün ${ix+1} — ${itemDesi(it)} desi / ${itemKg(it)} kg</b>
       <button class="btn sm ghost" style="margin-left:auto" onclick="delItem(${it.id})" title="Ürünü sil">🗑</button></div>
