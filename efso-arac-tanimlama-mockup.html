@@ -136,7 +136,7 @@
 
       <!-- KAPASİTE TESTİ -->
       <div class="card">
-        <p class="lbl">🧪 Kapasite Testi — gerçek araç ölçülerine göre</p>
+        <p class="lbl">🧪 Atama (Eşleştirme) Simülasyonu — sipariş: tip kontrolü · atama: gerçek ölçü</p>
         <div id="capTest"></div>
       </div>
     </div>
@@ -308,60 +308,92 @@ function renderSaved(){
 }
 function delVehicle(id){ SAVED=SAVED.filter(v=>v.id!==id); if(TEST.vehId===id)TEST.vehId=''; renderSaved(); renderCapTest(); }
 
-/* ============================= KAPASİTE TESTİ ============================= */
+/* ============================= ATAMA SİMÜLASYONU (2 kademe) ============================= */
+function loadVol(){ return TEST.kap==='dosya'?0:((Number(TEST.en)*Number(TEST.boy)*Number(TEST.yuk))/1e6*(Number(TEST.adet)||1))||0; }
+function loadDesi(){ return TEST.kap==='dosya'?0:Math.round((Number(TEST.en)*Number(TEST.boy)*Number(TEST.yuk))/3000*(Number(TEST.adet)||1))||0; }
+// Tip (şablon) kontrolü — SİPARİŞ aşaması (gerçek araç henüz belli değil)
+function evalType(tk){
+  const t=TYPES[tk], kg=Number(TEST.kg)||0, vol=loadVol(); const fails=[];
+  if(!t.kaps.includes(TEST.kap)) fails.push('kap');
+  if(kg>t.maxKg) fails.push('ağırlık');
+  if(!t.open && TEST.kap!=='dosya' && vol>t.volM3*0.85) fails.push('hacim');
+  return {ok:!fails.length, fails};
+}
+// Gerçek araç ölçü kontrolü — ATAMA aşaması (kuryenin girdiği gerçek değerler)
+function evalVeh(v){
+  const kg=Number(TEST.kg)||0, vol=loadVol(); const fails=[];
+  if(!v.kaps.includes(TEST.kap)) fails.push(`${lab(KAPS,TEST.kap)} taşımaz`);
+  if(kg>Number(v.kapasite)) fails.push(`ağırlık ${kg.toLocaleString('tr')} > ${Number(v.kapasite).toLocaleString('tr')} kg`);
+  let slackVol=Infinity;
+  if(!v.open && TEST.kap!=='dosya'){
+    const kasaVol=v.volM3real*0.85; slackVol=kasaVol-vol;
+    if(vol>kasaVol) fails.push(`hacim ${vol.toFixed(2)} > ${kasaVol.toFixed(2)} m³`);
+    const en=Number(TEST.en),yuk=Number(TEST.yuk);
+    if(v.kapiEn&&v.kapiYuk){
+      const a=Math.min(en,yuk), b=Math.max(en,yuk);
+      const gecer=(a<=v.kapiEn&&b<=v.kapiYuk)||(b<=v.kapiEn&&a<=v.kapiYuk);
+      if(!gecer) fails.push(`kapıdan (${v.kapiEn}×${v.kapiYuk}) geçmez`);
+    }
+  }
+  return {ok:!fails.length, fails, slackKg:Number(v.kapasite)-kg, slackVol};
+}
 function renderCapTest(){
-  if(!SAVED.length){ document.getElementById('capTest').innerHTML='<div class="empty">Önce en az bir araç tanımlayın, sonra yükü bu araçta test edin.</div>'; return; }
-  const v=SAVED.find(x=>x.id===TEST.vehId)||SAVED[0]; TEST.vehId=v.id;
-  document.getElementById('capTest').innerHTML = `
-    <div class="grid2" style="margin-bottom:12px">
-      <div class="ig"><label>Test edilecek araç</label>
-        <select class="field" onchange="TEST.vehId=this.value;renderCapTest()">
-          ${SAVED.map(x=>`<option value="${x.id}" ${x.id===v.id?'selected':''}>${x.plaka} · ${TYPES[x.type].name} (${Number(x.kapasite).toLocaleString('tr')} kg)</option>`).join('')}
-        </select></div>
+  const wrap=document.getElementById('capTest');
+  wrap.innerHTML = `
+    <div class="banner info" style="margin:0 0 12px"><span>ℹ️</span><div><b>İki kademeli kontrol:</b> <b>Sipariş</b> aşamasında araç henüz belli değil → kontrol <b>araç tipi (şablon)</b> üzerinden. <b>Atama</b> aşamasında sistem, kuryelerin girdiği <b>gerçek ölçülere</b> bakarak yalnız uygun gerçek araçlara atar.</div></div>
+    <div class="grid3" style="margin-bottom:6px">
       <div class="ig"><label>Yük kap cinsi</label>
         <select class="field" onchange="TEST.kap=this.value;renderCapTest()">
           ${KAPS.map(k=>`<option value="${k[0]}" ${TEST.kap===k[0]?'selected':''}>${k[2]}</option>`).join('')}
         </select></div>
-    </div>
-    <div class="grid3" style="margin-bottom:6px">
       <div class="ig"><label>Adet</label><input class="field" type="number" min="1" value="${TEST.adet}" onchange="TEST.adet=Number(this.value);renderCapTest()"></div>
       <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" type="number" value="${TEST.kg}" onchange="TEST.kg=this.value;renderCapTest()"><span>kg</span></div></div>
-      <div class="ig"><label>—</label><div style="font-size:11px;color:var(--slate);padding:10px 0">${TEST.kap==='dosya'?'Dosya/Evrak: ölçü gerekmez':'Koli/Palet/Sandık/Big Bag: ölçü girin'}</div></div>
     </div>
     ${TEST.kap!=='dosya'?`<div class="grid3" style="margin-bottom:6px">
       <div class="ig"><label>En</label><div class="suf"><input class="field" type="number" value="${TEST.en}" onchange="TEST.en=this.value;renderCapTest()"><span>cm</span></div></div>
       <div class="ig"><label>Boy</label><div class="suf"><input class="field" type="number" value="${TEST.boy}" onchange="TEST.boy=this.value;renderCapTest()"><span>cm</span></div></div>
       <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" type="number" value="${TEST.yuk}" onchange="TEST.yuk=this.value;renderCapTest()"><span>cm</span></div></div>
-    </div>`:''}
-    ${capTestResult(v)}`;
+    </div>`:`<div class="hint" style="margin-bottom:6px">📄 Dosya/Evrak — ölçü gerekmez.</div>`}
+    ${dispatchResult()}`;
 }
-function capTestResult(v){
+function dispatchResult(){
   const kg=Number(TEST.kg)||0;
-  const adet=Number(TEST.adet)||1;
-  const desi = TEST.kap==='dosya'?0:Math.round((Number(TEST.en)*Number(TEST.boy)*Number(TEST.yuk))/3000*adet)||0;
-  const volM3 = TEST.kap==='dosya'?0:((Number(TEST.en)*Number(TEST.boy)*Number(TEST.yuk))/1e6*adet)||0;
-  if(kg<=0) return `<div class="banner info"><span>ℹ️</span><div>Yük ağırlığını girin; sistem bu aracın <b>gerçek</b> kapasitesine göre uygunluğu kontrol etsin.</div></div>`;
-  const fails=[];
-  // 1) uygun yük cinsi mi
-  if(!v.kaps.includes(TEST.kap)) fails.push(`Bu araç <b>${lab(KAPS,TEST.kap)}</b> taşımaya uygun değil (uygun: ${v.kaps.map(k=>lab(KAPS,k)).join(', ')}).`);
-  // 2) ağırlık
-  if(kg>Number(v.kapasite)) fails.push(`Ağırlık ${kg.toLocaleString('tr')} kg > kapasite ${Number(v.kapasite).toLocaleString('tr')} kg.`);
-  // 3) hacim (açık kasa hariç) — %85 istif faktörü
-  if(!v.open && TEST.kap!=='dosya'){
-    const kasaVol=v.volM3real*0.85;
-    if(volM3>kasaVol) fails.push(`Hacim ${volM3.toFixed(2)} m³ > kullanılabilir kasa ${kasaVol.toFixed(2)} m³ (%85 istif).`);
-    // 4) tek parça kapıdan geçer mi
-    const en=Number(TEST.en),boy=Number(TEST.boy),yuk=Number(TEST.yuk);
-    if(v.kapiEn&&v.kapiYuk){
-      const enKucuk=Math.min(en,yuk), buyuk=Math.max(en,yuk);
-      const gecer=(enKucuk<=v.kapiEn&&buyuk<=v.kapiYuk)||(buyuk<=v.kapiEn&&enKucuk<=v.kapiYuk);
-      if(!gecer) fails.push(`Parça (${en}×${yuk} cm kesit) kapıdan (${v.kapiEn}×${v.kapiYuk} cm) geçmez.`);
-    }
+  if(kg<=0) return `<div class="banner info" style="margin-top:10px"><span>👆</span><div>Yük ağırlığını (ve dosya harici için ölçüyü) girin; sistem önce uygun <b>tipi</b>, sonra uygun <b>gerçek araçları</b> bulsun.</div></div>`;
+
+  // AŞAMA 1 — tip kontrolü (sipariş)
+  const typeRows = TKEYS.map(tk=>{ const r=evalType(tk); return {tk,ok:r.ok}; });
+  const okTypes = typeRows.filter(r=>r.ok).map(r=>r.tk);
+  const stage1 = `<div class="secbox" style="margin-top:10px;background:#fff">
+    <div class="st">1️⃣ Sipariş aşaması — Tip (şablon) kapasite kontrolü <span class="tag">araç belli değil</span></div>
+    <div class="chips">${TKEYS.map(tk=>`<div class="chip ${okTypes.includes(tk)?'on':''}" style="cursor:default">${TYPES[tk].emoji} ${TYPES[tk].name} ${okTypes.includes(tk)?'✓':'✕'}</div>`).join('')}</div>
+    <div class="hint" style="margin-top:8px">${okTypes.length?`Sipariş <b>${okTypes.map(t=>TYPES[t].name).join(', ')}</b> tipine uygun (en küçüğü önerilir: <b>${TYPES[okTypes[0]].name}</b>).`:'Hiçbir standart tip yetmiyor — yük bölünmeli veya özel taşıma.'}</div>
+  </div>`;
+
+  // AŞAMA 2 — gerçek araç eşleştirmesi (atama)
+  let stage2;
+  if(!SAVED.length){
+    stage2 = `<div class="banner warn" style="margin-top:10px"><span>⚠️</span><div>Atama için <b>tanımlı gerçek araç yok</b>. Yukarıdan en az bir araç tanımlayın; atama o araçların gerçek ölçülerine göre yapılır.</div></div>`;
+  } else {
+    const evals = SAVED.map(v=>({v, r:evalVeh(v)}));
+    const uygun = evals.filter(e=>e.r.ok).sort((a,b)=>a.r.slackKg-b.r.slackKg); // en az boşluk = en iyi sığan
+    const elenen = evals.filter(e=>!e.r.ok);
+    stage2 = `<div class="secbox" style="margin-top:10px;background:#fff">
+      <div class="st">2️⃣ Atama aşaması — Gerçek araç eşleştirmesi <span class="tag">kuryenin gerçek ölçüleri</span></div>
+      ${uygun.length?`<div class="hint" style="margin-bottom:8px">✅ <b>${uygun.length}</b> uygun gerçek araç — sistem en iyi sığanı (en az boşluk) atar: <b>${uygun[0].v.plaka}</b>.</div>
+      <table><thead><tr><th>Sıra</th><th>Plaka</th><th>Tip</th><th>Kalan kap.</th><th>Kalan hacim</th><th></th></tr></thead><tbody>
+        ${uygun.map((e,i)=>`<tr>
+          <td>${i===0?'<b>1 (atanır)</b>':i+1}</td>
+          <td><b>${e.v.plaka}</b></td>
+          <td>${TYPES[e.v.type].emoji} ${TYPES[e.v.type].name}</td>
+          <td>${e.r.slackKg.toLocaleString('tr')} kg</td>
+          <td>${e.r.slackVol===Infinity?'—':e.r.slackVol.toFixed(2)+' m³'}</td>
+          <td>${i===0?'<span class="pill ok">ATANIR</span>':'<span class="pill gray">yedek</span>'}</td>
+        </tr>`).join('')}
+      </tbody></table>`:`<div class="banner err" style="margin:0"><span>🚫</span><div>Tanımlı gerçek araçlardan <b>hiçbiri</b> bu yüke uymuyor — atama yapılamaz (yük bölme / manuel kuyruk).</div></div>`}
+      ${elenen.length?`<div class="hint" style="margin-top:9px;color:var(--slate)">Elenenler: ${elenen.map(e=>`<b>${e.v.plaka}</b> (${e.r.fails.join(', ')})`).join(' · ')}</div>`:''}
+    </div>`;
   }
-  if(!fails.length){
-    return `<div class="banner ok"><span>✅</span><div><b>UYGUN</b> — ${v.plaka} bu yükü taşıyabilir. Yük: ${kg.toLocaleString('tr')} kg${TEST.kap!=='dosya'?` · ${volM3.toFixed(2)} m³ · ${desi} desi`:''}. Kalan: <b>${(Number(v.kapasite)-kg).toLocaleString('tr')} kg</b>${!v.open&&TEST.kap!=='dosya'?` · ${(v.volM3real-volM3).toFixed(2)} m³`:''}.</div></div>`;
-  }
-  return `<div class="banner err"><span>🚫</span><div><b>UYGUN DEĞİL</b><br>• ${fails.join('<br>• ')}</div></div>`;
+  return stage1+stage2;
 }
 
 /* ============================= INIT ============================= */
