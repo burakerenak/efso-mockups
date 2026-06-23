@@ -85,8 +85,11 @@
   .addtype{display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px dashed var(--cyan-l);background:#ecfdff;color:var(--cyan-d);border-radius:12px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;width:100%}
   .addtype:hover{background:#d8f6fc}
   .emojipick{display:flex;gap:6px;flex-wrap:wrap}
-  .emojipick .e{width:38px;height:38px;border-radius:9px;border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer}
-  .emojipick .e.on{border-color:var(--cyan);background:#ecfdff}
+  .emojipick .e{width:40px;height:40px;border-radius:9px;border:1.5px solid var(--line);background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer}
+  .emojipick .e:hover{border-color:var(--cyan-l)}
+  .emojipick .e.on{border-color:var(--cyan);background:#ecfdff;box-shadow:0 0 0 2px rgba(14,165,183,.18)}
+  .iconprev{width:54px;height:54px;border-radius:12px;background:#ecfdff;display:flex;align-items:center;justify-content:center;font-size:30px;flex:0 0 auto;border:1px solid #a5f3fc}
+  .iconprev img{width:40px;height:40px;object-fit:contain}
   .upbtn{display:inline-flex;align-items:center;gap:8px;border:1.5px dashed var(--cyan-l);background:#ecfdff;color:var(--cyan-d);border-radius:11px;padding:11px 15px;font-size:13px;font-weight:700;cursor:pointer}
   .upbtn:hover{background:#d8f6fc}
   .thumbs{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}
@@ -179,6 +182,13 @@ const TYPES = {
 let TKEYS=Object.keys(TYPES);
 const lab = (arr,id)=>{const x=arr.find(a=>a[0]===id);return x?x[2]:id;};
 const emo = (arr,id)=>{const x=arr.find(a=>a[0]===id);return x?x[1]:'';};
+// Genişletilmiş hazır ikon seti (emoji) — istenirse büyütülür
+const ICONS=['🛵','🏍️','🛺','🚲','🛴','🛻','🚐','🚚','🚛','🚜','🚙','🚗','🚕','🚖','🚌','🚎','🚍','🚒','🚑','🚓','🏎️','🚁','🚤','🛥️','🚢','✈️'];
+function iconTxt(t){ return t.iconImg?`<img src="${t.iconImg}" style="height:18px;width:18px;object-fit:contain;vertical-align:-3px">`:t.emoji; }
+function iconBig(t){ return t.iconImg?`<img src="${t.iconImg}" style="height:26px;width:26px;object-fit:contain">`:t.emoji; }
+function setEmojiIcon(e){ TYPES[CUR].emoji=e; TYPES[CUR].iconImg=null; renderForm(); renderTList(); }
+function onIconUpload(ev){ const f=ev.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{ TYPES[CUR].iconImg=r.result; renderForm(); renderTList(); }; r.readAsDataURL(f); ev.target.value=''; }
+function removeIconImg(){ TYPES[CUR].iconImg=null; renderForm(); renderTList(); }
 
 /* ============================= STATE ============================= */
 let CUR=null;          // seçili tip
@@ -194,13 +204,13 @@ function saveTemplate(){
   if(!F){ return; }
   if(TYPES[CUR].custom && !TYPES[CUR].name.trim()){ toast('Yeni cins için tip adı girin'); return; }
   const t=TYPES[CUR];
-  t.kaps=[...F.kaps]; t.equip=[...F.equip]; t.methods=[...F.methods]; t.cond=[...(F.cond||[])]; t.images=[...(F.images||[])];
+  t.kaps=[...F.kaps]; t.equip=[...F.equip]; t.methods=[...F.methods]; t.cond=[...(F.cond||[])];
   t.maxKg=Number(F.maxKg)||t.maxKg; t.volM3=Number(F.volM3)||t.volM3; t.open=!!F.open;
   t.kasa={en:Number(F.en)||t.kasa.en, boy:Number(F.boy)||t.kasa.boy, yuk:Number(F.yuk)||t.kasa.yuk};
   t.kapi={en:Number(F.kapiEn)||t.kapi.en, yuk:Number(F.kapiYuk)||t.kapi.yuk};
   try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}');
-    o[CUR]={emoji:t.emoji,name:t.name,open:t.open,custom:!!t.custom,images:t.images,kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,kasa:t.kasa,kapi:t.kapi};
-    localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){ toast('Şablon kaydedildi (görseller büyük olduğundan tarayıcı hafızasında)'); renderTList(); return; }
+    o[CUR]={emoji:t.emoji,iconImg:t.iconImg||null,name:t.name,open:t.open,custom:!!t.custom,kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,kasa:t.kasa,kapi:t.kapi};
+    localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){ toast('Şablon kaydedildi (özel ikon büyük olduğundan tarayıcı hafızasında)'); renderTList(); return; }
   toast('💾 '+(t.name||'Araç cinsi')+' şablonu kaydedildi (bu tipte yeni araçlara uygulanır)');
   renderTList();
 }
@@ -213,8 +223,8 @@ function resetTemplate(){
 function renderTList(){
   document.getElementById('tlist').innerHTML = TKEYS.map(k=>{const t=TYPES[k];
     return `<div class="tcard ${CUR===k?'on':''}" onclick="selectType('${k}')">
-      <div class="e">${t.emoji}</div>
-      <div><div class="n">${t.name||'(adsız cins)'} ${t.custom?'<span class="pill gray" style="font-size:9px">özel</span>':''}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³'}${(t.images&&t.images.length)?' · 🖼️'+t.images.length:''}</div></div>
+      <div class="e">${iconBig(t)}</div>
+      <div><div class="n">${t.name||'(adsız cins)'} ${t.custom?'<span class="pill gray" style="font-size:9px">özel</span>':''}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³'}</div></div>
     </div>`;}).join('')
     + `<button class="addtype" onclick="addType()">＋ Yeni Araç Cinsi Ekle</button>`;
 }
@@ -223,7 +233,6 @@ function selectType(k){
   // şablonu forma klonla (gerçek ölçüler şablon örnekle ön-dolu, kullanıcı değiştirir)
   F={ type:k, plaka:'', marka:'',
       kaps:[...t.kaps], equip:[...t.equip], methods:[...t.methods], cond:[...(t.cond||[])],
-      images:[...(t.images||[])],
       maxKg:t.maxKg, volM3:t.volM3,
       en:t.kasa.en||'', boy:t.kasa.boy||'', yuk:t.kasa.yuk||'',
       kapiEn:t.kapi.en||'', kapiYuk:t.kapi.yuk||'',
@@ -234,7 +243,7 @@ function selectType(k){
 function addType(){
   let i=1; while(TYPES['custom'+i]) i++;
   const k='custom'+i;
-  TYPES[k]={emoji:'🚚', name:'', maxKg:1000, volM3:10, kaps:[], equip:[], methods:[], cond:[], images:[], kasa:{en:200,boy:300,yuk:200}, kapi:{en:180,yuk:190}, open:false, custom:true};
+  TYPES[k]={emoji:'🚚', iconImg:null, name:'', maxKg:1000, volM3:10, kaps:[], equip:[], methods:[], cond:[], kasa:{en:200,boy:300,yuk:200}, kapi:{en:180,yuk:190}, open:false, custom:true};
   TKEYS=Object.keys(TYPES);
   selectType(k);
   toast('Yeni araç cinsi — ad/ikon ve kriterleri girip 💾 Şablonu Kaydet deyin');
@@ -247,14 +256,6 @@ function deleteType(k){
   document.getElementById('formArea').innerHTML='<div class="card"><div class="empty">← Soldan bir araç tipi seçin.</div></div>';
   renderTList(); toast('🗑 Araç cinsi silindi');
 }
-/* resim yükleme */
-function onUpload(ev){
-  const files=[...ev.target.files]; if(!files.length) return;
-  let pending=files.length;
-  files.forEach(f=>{ const r=new FileReader(); r.onload=()=>{ F.images.push({src:r.result, name:f.name.slice(0,18)}); if(--pending===0) renderForm(); }; r.readAsDataURL(f); });
-  ev.target.value='';
-}
-function removeImg(i){ F.images.splice(i,1); renderForm(); }
 
 /* ============================= SAĞ: TANIMLAMA FORMU ============================= */
 function realVolM3(){ if(F.open) return 0; const v=(Number(F.en)*Number(F.boy)*Number(F.yuk))/1e6; return isNaN(v)?0:v; }
@@ -273,7 +274,7 @@ function renderForm(){
   const volTxt = F.open?'açık kasa (hacim yok)':realVolM3().toFixed(2)+' m³';
   document.getElementById('formArea').innerHTML = `
   <div class="card">
-    <p class="lbl">2 · Araç Tipi Şablonu (Master) — ${t.emoji} ${t.name} ${t.custom?'<button class="btn ghost sm" style="margin-left:auto" onclick="deleteType(\''+CUR+'\')">🗑 Cinsi sil</button>':'<span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">bu tipteki TÜM araçlar için standart</span>'}</p>
+    <p class="lbl">2 · Araç Tipi Şablonu (Master) — ${iconTxt(t)} ${t.name} ${t.custom?'<button class="btn ghost sm" style="margin-left:auto" onclick="deleteType(\''+CUR+'\')">🗑 Cinsi sil</button>':'<span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">bu tipteki TÜM araçlar için standart</span>'}</p>
     <div class="banner info" style="margin:0 0 12px"><span>📋</span><div>Bu kriterler <b>araç tipinin şablonudur</b>. Düzenleyip <b>Şablonu Kaydet</b> deyin; bu tipte yeni tanımlanan araçlara otomatik gelir. (Gerçek araç ölçüleri aşağıda ayrıca girilir.)</div></div>
 
     <div class="secbox">
@@ -286,14 +287,17 @@ function renderForm(){
             <option value="1" ${F.open?'selected':''}>Açık kasa (sal/lowbed)</option>
           </select></div>
       </div>
-      <label class="fld" style="margin-top:9px">İkon</label>
-      <div class="emojipick">${['🛵','🏍️','🛻','🚐','🚚','🚛','🚜','🚙','🚌'].map(e=>`<div class="e ${t.emoji===e?'on':''}" onclick="TYPES['${CUR}'].emoji='${e}';renderForm();renderTList()">${e}</div>`).join('')}</div>
     </div>
 
     <div class="secbox">
-      <div class="st">🖼️ Araç Görselleri <span class="tag">kullanıcı yükler</span></div>
-      <label class="upbtn">📤 Resim Yükle (KASA · KAPI · DS · KG)<input type="file" accept="image/*" multiple style="display:none" onchange="onUpload(event)"></label>
-      ${(F.images&&F.images.length)?`<div class="thumbs">${F.images.map((im,i)=>`<div class="thumb"><img src="${im.src}" alt="${im.name||''}"><button class="rm" onclick="removeImg(${i})">✕</button>${im.name?`<div class="cap">${im.name}</div>`:''}</div>`).join('')}</div>`:`<div class="hint" style="margin-top:8px">Henüz görsel yok — aracın kasa/kapı/iç/ölçü fotoğraflarını yükleyin (sipariş ekranında müşteriye gösterilir).</div>`}
+      <div class="st">🎨 Araç İkonu <span class="tag">listede / ekranlarda görünür</span></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+        <div class="iconprev">${t.iconImg?`<img src="${t.iconImg}">`:`<span>${t.emoji}</span>`}</div>
+        <div class="hint">Seçili ikon. Hazır ikonlardan seçin ya da kendi ikonunuzu (PNG/SVG) yükleyin.${t.iconImg?' · <a onclick="removeIconImg()" style="color:var(--err);cursor:pointer;font-weight:600">✕ Özel ikonu kaldır</a>':''}</div>
+      </div>
+      <label class="fld">Hazır ikonlar</label>
+      <div class="emojipick">${ICONS.map(e=>`<div class="e ${(!t.iconImg&&t.emoji===e)?'on':''}" onclick="setEmojiIcon('${e}')">${e}</div>`).join('')}</div>
+      <label class="upbtn" style="margin-top:10px">📤 Özel İkon Yükle (PNG/SVG)<input type="file" accept="image/*" style="display:none" onchange="onIconUpload(event)"></label>
     </div>
 
     <div class="secbox">
@@ -381,7 +385,7 @@ function renderSaved(){
     <thead><tr><th>Plaka</th><th>Tip</th><th>Kapasite</th><th>Gerçek Kasa</th><th>Uygun Yük</th><th>Ekipman</th><th></th></tr></thead>
     <tbody>${SAVED.map(v=>`<tr>
       <td><b>${v.plaka}</b><div style="font-size:10.5px;color:var(--slate)">${v.marka||'—'}</div></td>
-      <td>${TYPES[v.type].emoji} ${TYPES[v.type].name}</td>
+      <td>${iconTxt(TYPES[v.type])} ${TYPES[v.type].name}</td>
       <td>${Number(v.kapasite).toLocaleString('tr')} kg<div style="font-size:10.5px;color:var(--slate)">${v.open?'açık':v.volM3real.toFixed(2)+' m³ · '+v.desi+' desi'}</div></td>
       <td>${v.open?'açık kasa':v.en+'×'+v.boy+'×'+v.yuk+' cm'}</td>
       <td>${v.kaps.map(k=>emo(KAPS,k)).join(' ')}</td>
@@ -448,7 +452,7 @@ function dispatchResult(){
   const okTypes = typeRows.filter(r=>r.ok).map(r=>r.tk);
   const stage1 = `<div class="secbox" style="margin-top:10px;background:#fff">
     <div class="st">1️⃣ Sipariş aşaması — Tip (şablon) kapasite kontrolü <span class="tag">araç belli değil</span></div>
-    <div class="chips">${TKEYS.map(tk=>`<div class="chip ${okTypes.includes(tk)?'on':''}" style="cursor:default">${TYPES[tk].emoji} ${TYPES[tk].name} ${okTypes.includes(tk)?'✓':'✕'}</div>`).join('')}</div>
+    <div class="chips">${TKEYS.map(tk=>`<div class="chip ${okTypes.includes(tk)?'on':''}" style="cursor:default">${iconTxt(TYPES[tk])} ${TYPES[tk].name} ${okTypes.includes(tk)?'✓':'✕'}</div>`).join('')}</div>
     <div class="hint" style="margin-top:8px">${okTypes.length?`Sipariş <b>${okTypes.map(t=>TYPES[t].name).join(', ')}</b> tipine uygun (en küçüğü önerilir: <b>${TYPES[okTypes[0]].name}</b>).`:'Hiçbir standart tip yetmiyor — yük bölünmeli veya özel taşıma.'}</div>
   </div>`;
 
