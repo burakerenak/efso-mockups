@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EFSO Admin — Araç Tanımlama (Master) Mockup</title>
+<style>
+  :root{
+    --cyan:#0ea5b7;--cyan-d:#0b7e8c;--cyan-l:#29b6d8;--ink:#0f172a;--slate:#64748b;--slate2:#94a3b8;
+    --line:#e2e8f0;--bg:#f1f5f9;--card:#fff;--ok:#16a34a;--okbg:#dcfce7;--warn:#d97706;--warnbg:#fef3c7;
+    --err:#dc2626;--errbg:#fee2e2;--side:#0b1220;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+  /* sidebar */
+  .sidebar{background:var(--side);color:#cbd5e1;display:flex;flex-direction:column;padding:14px 12px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px;border-bottom:1px solid #1e293b;margin-bottom:10px}
+  .brand .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--cyan-l),var(--cyan-d));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+  .brand b{color:#fff;font-size:15px;display:block;line-height:1}.brand span{font-size:10.5px;color:#64748b}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav .sec{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#475569;margin:12px 8px 4px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:#cbd5e1;text-decoration:none;font-size:13px;cursor:pointer}
+  .nav a:hover{background:#1e293b}.nav a.on{background:linear-gradient(135deg,var(--cyan),var(--cyan-d));color:#fff;font-weight:600}
+  .nav a .ic{width:18px;text-align:center}
+  .sidebar .foot{margin-top:auto;font-size:10.5px;color:#475569;padding:10px 8px;border-top:1px solid #1e293b}
+  /* main */
+  .main{display:flex;flex-direction:column;min-width:0}
+  .topbar{height:56px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 22px;position:sticky;top:0;z-index:10}
+  .topbar h1{font-size:15.5px;margin:0;font-weight:700}.topbar .crumb{font-size:12px;color:var(--slate)}
+  .topbar .ava{margin-left:auto;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan-l),var(--cyan-d));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+  .content{padding:22px;max-width:1180px;width:100%}
+  .h2{font-size:18px;font-weight:800;margin:0 0 3px}
+  .sub{color:var(--slate);font-size:13px;margin:0 0 16px}
+  .two{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--slate);margin:0 0 10px;display:flex;align-items:center;gap:6px}
+  .req{color:var(--err)}
+  .hint{font-size:11.5px;color:var(--slate);line-height:1.45}
+  .field{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 11px;font-size:13.5px;font-family:inherit;background:#f8fafc;outline:none}
+  .field:focus{border-color:var(--cyan);background:#fff;box-shadow:0 0 0 3px rgba(14,165,183,.13)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+  .ig{display:flex;flex-direction:column;gap:4px}.ig label{font-size:10.5px;color:var(--slate);font-weight:600}
+  .suf{position:relative}.suf span{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--slate2)}
+  /* tip listesi */
+  .tlist{display:flex;flex-direction:column;gap:7px}
+  .tcard{display:flex;align-items:center;gap:11px;border:1.5px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;background:#fff}
+  .tcard:hover{border-color:var(--cyan-l)}.tcard.on{border-color:var(--cyan);background:#ecfdff}
+  .tcard .e{width:42px;height:42px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto}
+  .tcard.on .e{background:#cffafe}
+  .tcard .n{font-size:13.5px;font-weight:700}.tcard .s{font-size:10.5px;color:var(--slate);margin-top:1px}
+  /* chip toggles */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:#f8fafc;border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:600;color:var(--slate);cursor:pointer;user-select:none}
+  .chip:hover{border-color:var(--cyan-l)}
+  .chip.on{border-color:var(--cyan);background:#ecfdff;color:var(--cyan-d)}
+  .chip .x{font-size:14px}
+  .secbox{border:1px dashed var(--line);border-radius:12px;padding:13px;margin-bottom:12px;background:#fcfdff}
+  .secbox .st{font-size:12px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:7px}
+  .secbox .st .tag{margin-left:auto;font-size:9.5px;font-weight:700;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px}
+  /* kapasite özet */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .kpi{background:#f8fafc;border:1px solid var(--line);border-radius:11px;padding:11px}
+  .kpi .k{font-size:9.5px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em}
+  .kpi .v{font-size:17px;font-weight:800;margin-top:3px}
+  .kpi .d{font-size:10px;color:var(--slate2);margin-top:1px}
+  .banner{border-radius:11px;padding:11px 13px;font-size:12px;line-height:1.5;display:flex;gap:9px;margin-top:4px}
+  .banner.ok{background:var(--okbg);color:#14532d}.banner.warn{background:var(--warnbg);color:#7c2d12}.banner.err{background:var(--errbg);color:#991b1b}.banner.info{background:#e0f2fe;color:#075985}
+  /* butonlar */
+  .btn{border:none;border-radius:11px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn.primary{background:var(--cyan);color:#fff;box-shadow:0 6px 14px rgba(14,165,183,.3)}
+  .btn.primary:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed}
+  .btn.ghost{background:#fff;border:1.5px solid var(--line);color:var(--slate)}
+  .btn.sm{padding:8px 13px;font-size:12.5px;border-radius:9px;box-shadow:none}
+  .actions{display:flex;gap:10px;margin-top:6px}
+  /* tablo */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--slate);padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+  tr:hover td{background:#fafdff}
+  .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .pill.ok{background:var(--okbg);color:#15803d}.pill.err{background:var(--errbg);color:#b91c1c}.pill.gray{background:#f1f5f9;color:#475569}
+  .empty{font-size:12.5px;color:var(--slate);padding:14px;text-align:center}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#0f172a;color:#fff;padding:11px 17px;border-radius:11px;font-size:13px;z-index:60;opacity:0;transition:.25s;max-width:80%;text-align:center;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media(max-width:900px){.app{grid-template-columns:1fr}.sidebar{display:none}.two{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">EF</div><div><b>EFSO Admin</b><span>Operasyon Paneli</span></div></div>
+    <nav class="nav">
+      <div class="sec">Operasyon</div>
+      <a><span class="ic">📊</span> Dashboard</a>
+      <a><span class="ic">➕</span> Sipariş Oluştur</a>
+      <a><span class="ic">⚙️</span> Eşleştirme</a>
+      <div class="sec">Tanımlar</div>
+      <a class="on"><span class="ic">🚚</span> Araç Tanımlama</a>
+      <a><span class="ic">🧑‍✈️</span> Kuryeler</a>
+      <a><span class="ic">💵</span> Tarifeler</a>
+    </nav>
+    <div class="foot">EFSO — Araç Master + Kapasite Kontrolü</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div><h1>Araç Tanımlama</h1><div class="crumb">Tanımlar › Araç Master · şablon → gerçek araç → kapasite</div></div>
+      <div class="ava">BE</div>
+    </div>
+
+    <div class="content">
+      <div class="h2">Araç Tanımlama (Master)</div>
+      <p class="sub">Araç tipini seçin → kriterler (kapasite, uygun yük cinsleri, ekipman kısıtları, yükleme şekilleri, yük koşulları) <b>şablondan otomatik gelir</b> → aracın <b>gerçek ölçülerini</b> girin → kapasite kontrolü gerçek değerlerle çalışır.</p>
+
+      <div class="two">
+        <!-- SOL: araç tipi seçimi -->
+        <div class="card" style="margin:0">
+          <p class="lbl">1 · Araç Tipi Seç</p>
+          <div class="tlist" id="tlist"></div>
+        </div>
+
+        <!-- SAĞ: tanımlama formu -->
+        <div>
+          <div id="formArea">
+            <div class="card"><div class="empty">← Soldan bir araç tipi seçin; kriterler otomatik gelsin.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TANIMLI ARAÇLAR -->
+      <div class="card" style="margin-top:6px">
+        <p class="lbl">🚚 Tanımlı Araçlar <span id="savedCount" style="margin-left:auto;font-weight:600;color:var(--slate2)"></span></p>
+        <div id="savedTable"></div>
+      </div>
+
+      <!-- KAPASİTE TESTİ -->
+      <div class="card">
+        <p class="lbl">🧪 Kapasite Testi — gerçek araç ölçülerine göre</p>
+        <div id="capTest"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================= MASTER VERİ ============================= */
+const KAPS=[['dosya','📄','Dosya / Evrak'],['koli','📦','Koli'],['palet','🟫','Palet'],['sandik','🧰','Sandık / Kasa'],['bigbag','🛍️','Big Bag']];
+const EQUIP=[['elle','🙌','Elle taşıma'],['transpalet','🛒','Transpalet'],['forklift','🚜','Forklift'],['lift','⬆️','Kuyruk lifti'],['vinc','🏗️','Vinç'],['rampa','📐','Rampa']];
+const METHODS=[['canta','🎒','Çanta'],['arkadan','⬅️','Arkadan'],['yandan','↔️','Yandan'],['ustten','⬇️','Üstten'],['rampadan','📐','Rampadan']];
+const COND=[['adr','☣️','ADR (tehlikeli)'],['frigo','❄️','Frigorifik'],['dik','⬆️','Devrilmez/dik'],['istif','🧱','İstiflenebilir'],['gabari','🚧','Gabari/ağır']];
+
+// 9 kanonik araç tipi — şablon (default kriterler + örnek kasa ölçüsü)
+const TYPES = {
+  moto:    {emoji:'🛵', name:'Moto Kurye',      maxKg:5,     volM3:0.05, kaps:['dosya','koli'],                 equip:['elle'],               methods:['canta'],                 cond:[],               kasa:{en:45,boy:35,yuk:30}, kapi:{en:35,yuk:30}, open:false},
+  courier: {emoji:'🚐', name:'Van Ford Courier', maxKg:600,   volM3:4.5,  kaps:['dosya','koli','palet'],          equip:['elle','transpalet'],  methods:['arkadan','yandan'],      cond:['istif'],        kasa:{en:120,boy:180,yuk:120}, kapi:{en:110,yuk:115}, open:false},
+  transit: {emoji:'🚐', name:'Van Ford Transit', maxKg:1200,  volM3:8.5,  kaps:['koli','palet','sandik'],         equip:['elle','transpalet'],  methods:['arkadan','yandan'],      cond:['istif'],        kasa:{en:170,boy:280,yuk:170}, kapi:{en:150,yuk:160}, open:false},
+  kamyonet:{emoji:'🚚', name:'Kamyonet',         maxKg:1400,  volM3:16.8, kaps:['koli','palet','sandik','bigbag'],equip:['transpalet','forklift'],methods:['arkadan'],             cond:['istif'],        kasa:{en:180,boy:320,yuk:180}, kapi:{en:170,yuk:175}, open:false},
+  kliftsiz:{emoji:'🚛', name:'Kamyon Liftsiz',   maxKg:7000,  volM3:42,   kaps:['koli','palet','sandik','bigbag'],equip:['forklift','elle'],    methods:['arkadan'],               cond:['istif','gabari'],kasa:{en:240,boy:600,yuk:240}, kapi:{en:230,yuk:235}, open:false},
+  kliftli: {emoji:'🚛', name:'Kamyon Liftli',    maxKg:7000,  volM3:42,   kaps:['koli','palet','sandik','bigbag'],equip:['lift','forklift'],    methods:['arkadan'],               cond:['istif'],        kasa:{en:240,boy:600,yuk:240}, kapi:{en:230,yuk:235}, open:false},
+  tirtente:{emoji:'🚛', name:'TIR Tenteli',      maxKg:25500, volM3:91.6, kaps:['koli','palet','sandik','bigbag'],equip:['forklift'],           methods:['yandan','arkadan','ustten'],cond:['istif','gabari'],kasa:{en:245,boy:1360,yuk:270}, kapi:{en:245,yuk:265}, open:false},
+  tirsal:  {emoji:'🚛', name:'TIR Sal Dorse',    maxKg:25500, volM3:0,    kaps:['palet','sandik','bigbag'],       equip:['vinc','forklift'],    methods:['ustten','yandan'],       cond:['gabari'],       kasa:{en:245,boy:1360,yuk:0},  kapi:{en:0,yuk:0}, open:true},
+  lowbed:  {emoji:'🚜', name:'TIR Lowbed',       maxKg:45000, volM3:0,    kaps:['bigbag'],                        equip:['rampa','vinc'],       methods:['rampadan','ustten'],     cond:['gabari'],       kasa:{en:300,boy:1300,yuk:0},  kapi:{en:0,yuk:0}, open:true},
+};
+const TKEYS=Object.keys(TYPES);
+const lab = (arr,id)=>{const x=arr.find(a=>a[0]===id);return x?x[2]:id;};
+const emo = (arr,id)=>{const x=arr.find(a=>a[0]===id);return x?x[1]:'';};
+
+/* ============================= STATE ============================= */
+let CUR=null;          // seçili tip
+let F=null;            // form (şablondan klonlanır + gerçek)
+let SAVED=[];          // tanımlı araçlar
+let NID=1;
+let TEST={vehId:'', kap:'koli', adet:1, kg:'', en:'', boy:'', yuk:''};
+
+/* ============================= SOL: TİP LİSTESİ ============================= */
+function renderTList(){
+  document.getElementById('tlist').innerHTML = TKEYS.map(k=>{const t=TYPES[k];
+    return `<div class="tcard ${CUR===k?'on':''}" onclick="selectType('${k}')">
+      <div class="e">${t.emoji}</div>
+      <div><div class="n">${t.name}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³'}</div></div>
+    </div>`;}).join('');
+}
+function selectType(k){
+  CUR=k; const t=TYPES[k];
+  // şablonu forma klonla (gerçek ölçüler şablon örnekle ön-dolu, kullanıcı değiştirir)
+  F={ type:k, plaka:'', marka:'',
+      kaps:[...t.kaps], equip:[...t.equip], methods:[...t.methods], cond:[...t.cond],
+      maxKg:t.maxKg, volM3:t.volM3,
+      en:t.kasa.en||'', boy:t.kasa.boy||'', yuk:t.kasa.yuk||'',
+      kapiEn:t.kapi.en||'', kapiYuk:t.kapi.yuk||'',
+      dara:'', kapasite:t.maxKg, open:t.open };
+  renderTList(); renderForm();
+}
+
+/* ============================= SAĞ: TANIMLAMA FORMU ============================= */
+function realVolM3(){ if(F.open) return 0; const v=(Number(F.en)*Number(F.boy)*Number(F.yuk))/1e6; return isNaN(v)?0:v; }
+function realDesi(){ if(F.open) return 0; const d=(Number(F.en)*Number(F.boy)*Number(F.yuk))/3000; return isNaN(d)?0:d; }
+function chipRow(master, selected, kind){
+  return master.map(m=>`<div class="chip ${selected.includes(m[0])?'on':''}" onclick="toggleChip('${kind}','${m[0]}')"><span class="x">${m[1]}</span>${m[2]}</div>`).join('');
+}
+function toggleChip(kind,id){
+  const arr=F[kind]; const i=arr.indexOf(id);
+  if(i>=0) arr.splice(i,1); else arr.push(id);
+  renderForm();
+}
+function setF(k,v){ F[k]=v; if(['en','boy','yuk','open'].includes(k)) renderForm(); }
+function renderForm(){
+  const t=TYPES[CUR];
+  const volTxt = F.open?'açık kasa (hacim yok)':realVolM3().toFixed(2)+' m³';
+  document.getElementById('formArea').innerHTML = `
+  <div class="card">
+    <p class="lbl">2 · ${t.emoji} ${t.name} — Kriterler <span style="margin-left:auto;font-size:9.5px;color:var(--cyan-d);background:#ecfdff;border:1px solid #a5f3fc;border-radius:6px;padding:2px 7px">şablondan geldi · düzenlenebilir</span></p>
+
+    <div class="secbox">
+      <div class="st">📦 Taşınabilecek Yük (Kap) Cinsleri <span class="tag">araca uygun</span></div>
+      <div class="chips">${chipRow(KAPS,F.kaps,'kaps')}</div>
+    </div>
+    <div class="secbox">
+      <div class="st">🛠️ Yükleme/Boşaltma Ekipman Kısıtları <span class="tag">gerekli ekipman</span></div>
+      <div class="chips">${chipRow(EQUIP,F.equip,'equip')}</div>
+    </div>
+    <div class="secbox">
+      <div class="st">🔄 Yükleme Şekilleri <span class="tag">araç cinsine göre</span></div>
+      <div class="chips">${chipRow(METHODS,F.methods,'methods')}</div>
+    </div>
+    <div class="secbox">
+      <div class="st">⚠️ Yük Koşulu Yetkinlikleri <span class="tag">opsiyonel</span></div>
+      <div class="chips">${chipRow(COND,F.cond,'cond')}</div>
+    </div>
+
+    <div class="grid2">
+      <div class="ig"><label>Tip taşıma kapasitesi (şablon, kg)</label><div class="suf"><input class="field" type="number" value="${F.maxKg}" onchange="setF('maxKg',Number(this.value))"><span>kg</span></div></div>
+      <div class="ig"><label>Tip hacim (şablon)</label><div class="suf"><input class="field" type="number" step="0.1" value="${F.volM3}" onchange="setF('volM3',Number(this.value))" ${F.open?'disabled':''}><span>m³</span></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="lbl">3 · Gerçek Araç Bilgileri <span class="req">*</span> <span style="margin-left:auto;font-size:9.5px;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:2px 7px">kapasite kontrolü bu değerlerle</span></p>
+    <div class="grid2">
+      <div class="ig"><label>Plaka <span class="req">*</span></label><input class="field" value="${F.plaka}" oninput="F.plaka=this.value.toUpperCase()" placeholder="34 ABC 123"></div>
+      <div class="ig"><label>Marka / Model</label><input class="field" value="${F.marka}" oninput="F.marka=this.value" placeholder="Ford Transit 350"></div>
+    </div>
+    <p class="lbl" style="margin:14px 0 8px">Gerçek Kasa İç Ölçüsü ${F.open?'(açık kasa — yükseklik 0)':''}</p>
+    <div class="grid3">
+      <div class="ig"><label>En</label><div class="suf"><input class="field" type="number" value="${F.en}" onchange="setF('en',Number(this.value))"><span>cm</span></div></div>
+      <div class="ig"><label>Boy (uzunluk)</label><div class="suf"><input class="field" type="number" value="${F.boy}" onchange="setF('boy',Number(this.value))"><span>cm</span></div></div>
+      <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" type="number" value="${F.yuk}" onchange="setF('yuk',Number(this.value))" ${F.open?'disabled':''}><span>cm</span></div></div>
+    </div>
+    <div class="grid3" style="margin-top:10px">
+      <div class="ig"><label>Kapı genişliği</label><div class="suf"><input class="field" type="number" value="${F.kapiEn}" onchange="F.kapiEn=Number(this.value)" ${F.open?'disabled':''}><span>cm</span></div></div>
+      <div class="ig"><label>Kapı yüksekliği</label><div class="suf"><input class="field" type="number" value="${F.kapiYuk}" onchange="F.kapiYuk=Number(this.value)" ${F.open?'disabled':''}><span>cm</span></div></div>
+      <div class="ig"><label>Gerçek taşıma kapasitesi <span class="req">*</span></label><div class="suf"><input class="field" type="number" value="${F.kapasite}" onchange="setF('kapasite',Number(this.value))"><span>kg</span></div></div>
+    </div>
+
+    <p class="lbl" style="margin:16px 0 8px">Kapasite Özeti (gerçek)</p>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Taşıma Kapasitesi</div><div class="v">${Number(F.kapasite||0).toLocaleString('tr')} kg</div><div class="d">tip limiti ${F.maxKg.toLocaleString('tr')} kg</div></div>
+      <div class="kpi"><div class="k">Kasa Hacmi</div><div class="v">${volTxt}</div><div class="d">tip ${F.open?'—':F.volM3+' m³'}</div></div>
+      <div class="kpi"><div class="k">Desi</div><div class="v">${F.open?'—':Math.round(realDesi()).toLocaleString('tr')}</div><div class="d">hacim/3000</div></div>
+      <div class="kpi"><div class="k">Kapı</div><div class="v">${F.open?'—':(F.kapiEn||'—')+'×'+(F.kapiYuk||'—')}</div><div class="d">en × yük (cm)</div></div>
+    </div>
+    ${capacityNote()}
+    <div class="actions" style="margin-top:14px">
+      <button class="btn ghost" onclick="selectType(CUR)">↺ Şablona dön</button>
+      <button class="btn primary" onclick="saveVehicle()">💾 Aracı Tanımla / Kaydet</button>
+    </div>
+  </div>`;
+}
+function capacityNote(){
+  const msgs=[]; let cls='ok';
+  if(!F.kaps.length){ msgs.push('En az bir uygun yük cinsi seçin.'); cls='err'; }
+  if(Number(F.kapasite)<=0){ msgs.push('Gerçek taşıma kapasitesi (kg) girilmeli.'); cls='err'; }
+  if(!F.open && (Number(F.en)<=0||Number(F.boy)<=0||Number(F.yuk)<=0)){ msgs.push('Gerçek kasa iç ölçüsü (en·boy·yükseklik) girilmeli.'); cls='err'; }
+  if(cls!=='err'){
+    if(Number(F.kapasite) > F.maxKg*1.25){ msgs.push('Gerçek kapasite, tip şablon limitinin %25 üstünde — tip seçimi doğru mu?'); cls='warn'; }
+    if(!F.open && realVolM3() > F.volM3*1.25){ msgs.push('Gerçek hacim, tip şablon hacminin %25 üstünde.'); cls='warn'; }
+  }
+  if(!msgs.length) return `<div class="banner ok"><span>✅</span><div>Tanımlama geçerli — gerçek değerler tutarlı; kapasite kontrolü bu araçla yapılabilir.</div></div>`;
+  return `<div class="banner ${cls}"><span>${cls==='err'?'🚫':'⚠️'}</span><div>${msgs.join('<br>')}</div></div>`;
+}
+function saveVehicle(){
+  if(!F.kaps.length){ toast('En az bir uygun yük cinsi seçin'); return; }
+  if(!F.plaka.trim()){ toast('Plaka zorunlu'); return; }
+  if(Number(F.kapasite)<=0){ toast('Gerçek taşıma kapasitesi girin'); return; }
+  if(!F.open && (Number(F.en)<=0||Number(F.boy)<=0||Number(F.yuk)<=0)){ toast('Gerçek kasa ölçüsü girin'); return; }
+  SAVED.push({ id:'V'+(NID++), ...JSON.parse(JSON.stringify(F)), volM3real:realVolM3(), desi:Math.round(realDesi()) });
+  toast('✅ '+F.plaka+' tanımlandı');
+  renderSaved(); renderCapTest();
+}
+
+/* ============================= TANIMLI ARAÇLAR ============================= */
+function renderSaved(){
+  document.getElementById('savedCount').textContent = SAVED.length?SAVED.length+' araç':'';
+  if(!SAVED.length){ document.getElementById('savedTable').innerHTML='<div class="empty">Henüz tanımlı araç yok. Yukarıda bir tip seçip gerçek ölçülerle kaydedin.</div>'; return; }
+  document.getElementById('savedTable').innerHTML = `<table>
+    <thead><tr><th>Plaka</th><th>Tip</th><th>Kapasite</th><th>Gerçek Kasa</th><th>Uygun Yük</th><th>Ekipman</th><th></th></tr></thead>
+    <tbody>${SAVED.map(v=>`<tr>
+      <td><b>${v.plaka}</b><div style="font-size:10.5px;color:var(--slate)">${v.marka||'—'}</div></td>
+      <td>${TYPES[v.type].emoji} ${TYPES[v.type].name}</td>
+      <td>${Number(v.kapasite).toLocaleString('tr')} kg<div style="font-size:10.5px;color:var(--slate)">${v.open?'açık':v.volM3real.toFixed(2)+' m³ · '+v.desi+' desi'}</div></td>
+      <td>${v.open?'açık kasa':v.en+'×'+v.boy+'×'+v.yuk+' cm'}</td>
+      <td>${v.kaps.map(k=>emo(KAPS,k)).join(' ')}</td>
+      <td>${v.equip.map(e=>emo(EQUIP,e)).join(' ')||'—'}</td>
+      <td><button class="btn ghost sm" onclick="delVehicle('${v.id}')">🗑</button></td>
+    </tr>`).join('')}</tbody></table>`;
+}
+function delVehicle(id){ SAVED=SAVED.filter(v=>v.id!==id); if(TEST.vehId===id)TEST.vehId=''; renderSaved(); renderCapTest(); }
+
+/* ============================= KAPASİTE TESTİ ============================= */
+function renderCapTest(){
+  if(!SAVED.length){ document.getElementById('capTest').innerHTML='<div class="empty">Önce en az bir araç tanımlayın, sonra yükü bu araçta test edin.</div>'; return; }
+  const v=SAVED.find(x=>x.id===TEST.vehId)||SAVED[0]; TEST.vehId=v.id;
+  document.getElementById('capTest').innerHTML = `
+    <div class="grid2" style="margin-bottom:12px">
+      <div class="ig"><label>Test edilecek araç</label>
+        <select class="field" onchange="TEST.vehId=this.value;renderCapTest()">
+          ${SAVED.map(x=>`<option value="${x.id}" ${x.id===v.id?'selected':''}>${x.plaka} · ${TYPES[x.type].name} (${Number(x.kapasite).toLocaleString('tr')} kg)</option>`).join('')}
+        </select></div>
+      <div class="ig"><label>Yük kap cinsi</label>
+        <select class="field" onchange="TEST.kap=this.value;renderCapTest()">
+          ${KAPS.map(k=>`<option value="${k[0]}" ${TEST.kap===k[0]?'selected':''}>${k[2]}</option>`).join('')}
+        </select></div>
+    </div>
+    <div class="grid3" style="margin-bottom:6px">
+      <div class="ig"><label>Adet</label><input class="field" type="number" min="1" value="${TEST.adet}" onchange="TEST.adet=Number(this.value);renderCapTest()"></div>
+      <div class="ig"><label>Ağırlık (toplam)</label><div class="suf"><input class="field" type="number" value="${TEST.kg}" onchange="TEST.kg=this.value;renderCapTest()"><span>kg</span></div></div>
+      <div class="ig"><label>—</label><div style="font-size:11px;color:var(--slate);padding:10px 0">${TEST.kap==='dosya'?'Dosya/Evrak: ölçü gerekmez':'Koli/Palet/Sandık/Big Bag: ölçü girin'}</div></div>
+    </div>
+    ${TEST.kap!=='dosya'?`<div class="grid3" style="margin-bottom:6px">
+      <div class="ig"><label>En</label><div class="suf"><input class="field" type="number" value="${TEST.en}" onchange="TEST.en=this.value;renderCapTest()"><span>cm</span></div></div>
+      <div class="ig"><label>Boy</label><div class="suf"><input class="field" type="number" value="${TEST.boy}" onchange="TEST.boy=this.value;renderCapTest()"><span>cm</span></div></div>
+      <div class="ig"><label>Yükseklik</label><div class="suf"><input class="field" type="number" value="${TEST.yuk}" onchange="TEST.yuk=this.value;renderCapTest()"><span>cm</span></div></div>
+    </div>`:''}
+    ${capTestResult(v)}`;
+}
+function capTestResult(v){
+  const kg=Number(TEST.kg)||0;
+  const adet=Number(TEST.adet)||1;
+  const desi = TEST.kap==='dosya'?0:Math.round((Number(TEST.en)*Number(TEST.boy)*Number(TEST.yuk))/3000*adet)||0;
+  const volM3 = TEST.kap==='dosya'?0:((Number(TEST.en)*Number(TEST.boy)*Number(TEST.yuk))/1e6*adet)||0;
+  if(kg<=0) return `<div class="banner info"><span>ℹ️</span><div>Yük ağırlığını girin; sistem bu aracın <b>gerçek</b> kapasitesine göre uygunluğu kontrol etsin.</div></div>`;
+  const fails=[];
+  // 1) uygun yük cinsi mi
+  if(!v.kaps.includes(TEST.kap)) fails.push(`Bu araç <b>${lab(KAPS,TEST.kap)}</b> taşımaya uygun değil (uygun: ${v.kaps.map(k=>lab(KAPS,k)).join(', ')}).`);
+  // 2) ağırlık
+  if(kg>Number(v.kapasite)) fails.push(`Ağırlık ${kg.toLocaleString('tr')} kg > kapasite ${Number(v.kapasite).toLocaleString('tr')} kg.`);
+  // 3) hacim (açık kasa hariç) — %85 istif faktörü
+  if(!v.open && TEST.kap!=='dosya'){
+    const kasaVol=v.volM3real*0.85;
+    if(volM3>kasaVol) fails.push(`Hacim ${volM3.toFixed(2)} m³ > kullanılabilir kasa ${kasaVol.toFixed(2)} m³ (%85 istif).`);
+    // 4) tek parça kapıdan geçer mi
+    const en=Number(TEST.en),boy=Number(TEST.boy),yuk=Number(TEST.yuk);
+    if(v.kapiEn&&v.kapiYuk){
+      const enKucuk=Math.min(en,yuk), buyuk=Math.max(en,yuk);
+      const gecer=(enKucuk<=v.kapiEn&&buyuk<=v.kapiYuk)||(buyuk<=v.kapiEn&&enKucuk<=v.kapiYuk);
+      if(!gecer) fails.push(`Parça (${en}×${yuk} cm kesit) kapıdan (${v.kapiEn}×${v.kapiYuk} cm) geçmez.`);
+    }
+  }
+  if(!fails.length){
+    return `<div class="banner ok"><span>✅</span><div><b>UYGUN</b> — ${v.plaka} bu yükü taşıyabilir. Yük: ${kg.toLocaleString('tr')} kg${TEST.kap!=='dosya'?` · ${volM3.toFixed(2)} m³ · ${desi} desi`:''}. Kalan: <b>${(Number(v.kapasite)-kg).toLocaleString('tr')} kg</b>${!v.open&&TEST.kap!=='dosya'?` · ${(v.volM3real-volM3).toFixed(2)} m³`:''}.</div></div>`;
+  }
+  return `<div class="banner err"><span>🚫</span><div><b>UYGUN DEĞİL</b><br>• ${fails.join('<br>• ')}</div></div>`;
+}
+
+/* ============================= INIT ============================= */
+let tT; function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('show'),2400); }
+renderTList(); renderSaved(); renderCapTest();
+</script>
+</body>
+</html>
