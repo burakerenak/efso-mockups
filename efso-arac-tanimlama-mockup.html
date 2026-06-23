@@ -205,11 +205,11 @@ function saveTemplate(){
   if(TYPES[CUR].custom && !TYPES[CUR].name.trim()){ toast('Yeni cins için tip adı girin'); return; }
   const t=TYPES[CUR];
   t.kaps=[...F.kaps]; t.equip=[...F.equip]; t.methods=[...F.methods]; t.cond=[...(F.cond||[])];
-  t.maxKg=Number(F.maxKg)||t.maxKg; t.volM3=Number(F.volM3)||t.volM3; t.open=!!F.open;
+  t.maxKg=Number(F.maxKg)||t.maxKg; t.volM3=Number(F.volM3)||t.volM3; t.maxDesi=Number(F.maxDesi)||t.maxDesi; t.open=!!F.open;
   t.kasa={en:Number(F.en)||t.kasa.en, boy:Number(F.boy)||t.kasa.boy, yuk:Number(F.yuk)||t.kasa.yuk};
   t.kapi={en:Number(F.kapiEn)||t.kapi.en, yuk:Number(F.kapiYuk)||t.kapi.yuk};
   try{ const o=JSON.parse(localStorage.getItem(TPL_KEY)||'{}');
-    o[CUR]={emoji:t.emoji,iconImg:t.iconImg||null,name:t.name,open:t.open,custom:!!t.custom,kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,kasa:t.kasa,kapi:t.kapi};
+    o[CUR]={emoji:t.emoji,iconImg:t.iconImg||null,name:t.name,open:t.open,custom:!!t.custom,kaps:t.kaps,equip:t.equip,methods:t.methods,cond:t.cond,maxKg:t.maxKg,volM3:t.volM3,maxDesi:t.maxDesi,kasa:t.kasa,kapi:t.kapi};
     localStorage.setItem(TPL_KEY,JSON.stringify(o)); }catch(e){ toast('Şablon kaydedildi (özel ikon büyük olduğundan tarayıcı hafızasında)'); renderTList(); return; }
   toast('💾 '+(t.name||'Araç cinsi')+' şablonu kaydedildi (bu tipte yeni araçlara uygulanır)');
   renderTList();
@@ -224,7 +224,7 @@ function renderTList(){
   document.getElementById('tlist').innerHTML = TKEYS.map(k=>{const t=TYPES[k];
     return `<div class="tcard ${CUR===k?'on':''}" onclick="selectType('${k}')">
       <div class="e">${iconBig(t)}</div>
-      <div><div class="n">${t.name||'(adsız cins)'} ${t.custom?'<span class="pill gray" style="font-size:9px">özel</span>':''}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³'}</div></div>
+      <div><div class="n">${t.name||'(adsız cins)'} ${t.custom?'<span class="pill gray" style="font-size:9px">özel</span>':''}</div><div class="s">${t.maxKg.toLocaleString('tr')} kg · ${t.open?'açık kasa':t.volM3+' m³ · '+(t.maxDesi!=null?t.maxDesi:Math.round((t.volM3||0)*333.333)).toLocaleString('tr')+' desi'}</div></div>
     </div>`;}).join('')
     + `<button class="addtype" onclick="addType()">＋ Yeni Araç Cinsi Ekle</button>`;
 }
@@ -233,7 +233,7 @@ function selectType(k){
   // şablonu forma klonla (gerçek ölçüler şablon örnekle ön-dolu, kullanıcı değiştirir)
   F={ type:k, plaka:'', marka:'',
       kaps:[...t.kaps], equip:[...t.equip], methods:[...t.methods], cond:[...(t.cond||[])],
-      maxKg:t.maxKg, volM3:t.volM3,
+      maxKg:t.maxKg, volM3:t.volM3, maxDesi:(t.maxDesi!=null?t.maxDesi:Math.round((t.volM3||0)*1e6/3000)),
       en:t.kasa.en||'', boy:t.kasa.boy||'', yuk:t.kasa.yuk||'',
       kapiEn:t.kapi.en||'', kapiYuk:t.kapi.yuk||'',
       dara:'', kapasite:t.maxKg, open:t.open };
@@ -268,7 +268,7 @@ function toggleChip(kind,id){
   if(i>=0) arr.splice(i,1); else arr.push(id);
   renderForm();
 }
-function setF(k,v){ F[k]=v; if(['en','boy','yuk','open'].includes(k)) renderForm(); }
+function setF(k,v){ F[k]=v; if(k==='volM3'){ F.maxDesi=Math.round((Number(v)||0)*1e6/3000); } if(['en','boy','yuk','open','volM3'].includes(k)) renderForm(); }
 function renderForm(){
   const t=TYPES[CUR];
   const volTxt = F.open?'açık kasa (hacim yok)':realVolM3().toFixed(2)+' m³';
@@ -313,10 +313,12 @@ function renderForm(){
       <div class="chips">${chipRow(METHODS,F.methods,'methods')}</div>
     </div>
 
-    <div class="grid2">
-      <div class="ig"><label>Tip taşıma kapasitesi (şablon, kg)</label><div class="suf"><input class="field" type="number" value="${F.maxKg}" onchange="setF('maxKg',Number(this.value))"><span>kg</span></div></div>
-      <div class="ig"><label>Tip hacim (şablon)</label><div class="suf"><input class="field" type="number" step="0.1" value="${F.volM3}" onchange="setF('volM3',Number(this.value))" ${F.open?'disabled':''}><span>m³</span></div></div>
+    <div class="grid3">
+      <div class="ig"><label>Tip taşıma kapasitesi (kg)</label><div class="suf"><input class="field" type="number" value="${F.maxKg}" onchange="setF('maxKg',Number(this.value))"><span>kg</span></div></div>
+      <div class="ig"><label>Tip hacim</label><div class="suf"><input class="field" type="number" step="0.1" value="${F.volM3}" onchange="setF('volM3',Number(this.value))" ${F.open?'disabled':''}><span>m³</span></div></div>
+      <div class="ig"><label>Tip desi (maks)</label><div class="suf"><input class="field" type="number" value="${F.maxDesi}" onchange="setF('maxDesi',Number(this.value))" ${F.open?'disabled':''}><span>desi</span></div></div>
     </div>
+    <div class="hint" style="margin-top:6px">Desi, hacimden otomatik türetilir (m³ × 333,3) — gerekirse elle değiştirebilirsiniz. Ücrete esas = max(desi, kg).</div>
     <div class="actions" style="margin-top:13px">
       <button class="btn primary" onclick="saveTemplate()">💾 Şablonu Kaydet</button>
       <button class="btn ghost" onclick="resetTemplate()">↺ Fabrika ayarı</button>
@@ -345,7 +347,7 @@ function renderForm(){
     <div class="kpis">
       <div class="kpi"><div class="k">Taşıma Kapasitesi</div><div class="v">${Number(F.kapasite||0).toLocaleString('tr')} kg</div><div class="d">tip limiti ${F.maxKg.toLocaleString('tr')} kg</div></div>
       <div class="kpi"><div class="k">Kasa Hacmi</div><div class="v">${volTxt}</div><div class="d">tip ${F.open?'—':F.volM3+' m³'}</div></div>
-      <div class="kpi"><div class="k">Desi</div><div class="v">${F.open?'—':Math.round(realDesi()).toLocaleString('tr')}</div><div class="d">hacim/3000</div></div>
+      <div class="kpi"><div class="k">Desi (gerçek)</div><div class="v">${F.open?'—':Math.round(realDesi()).toLocaleString('tr')}</div><div class="d">tip ${F.open?'—':Number(F.maxDesi||0).toLocaleString('tr')} desi</div></div>
       <div class="kpi"><div class="k">Kapı</div><div class="v">${F.open?'—':(F.kapiEn||'—')+'×'+(F.kapiYuk||'—')}</div><div class="d">en × yük (cm)</div></div>
     </div>
     ${capacityNote()}
