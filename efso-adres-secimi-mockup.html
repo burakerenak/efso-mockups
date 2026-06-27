@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>EFSO · Yeni Ekspres Sipariş — Adres Seçimi (Çalışır Mockup)</title>
+
+<!-- Leaflet (harita) — anahtar gerektirmez -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+  :root{
+    --green:#5fb709; --green-d:#4f9a06; --ink:#16261c; --muted:#7b8a80;
+    --line:#e6eae7; --bg:#f4f6f4; --card:#ffffff; --pin:#16261c;
+    --pickup:#2563eb; --drop:#5fb709; --warn-bg:#fef9c3; --warn-fg:#a16207;
+    --radius:16px; --shadow:0 8px 30px rgba(16,32,24,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;cursor:pointer}
+  .app{max-width:460px;margin:0 auto;min-height:100%;background:var(--bg);position:relative;overflow:hidden}
+
+  /* ---- Sipariş ekranı ---- */
+  .topbar{background:var(--green);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;font-weight:700}
+  .topbar .back{background:rgba(255,255,255,.2);border:0;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;line-height:1}
+  .screen{padding:16px 16px 110px}
+  .h1{font-size:20px;font-weight:800;margin:6px 2px 2px}
+  .sub{color:var(--muted);font-size:13px;margin:0 2px 16px}
+
+  .route{position:relative;padding-left:26px;margin-bottom:8px}
+  .route:before{content:"";position:absolute;left:8px;top:24px;bottom:24px;width:2px;background:repeating-linear-gradient(var(--line) 0 6px,transparent 6px 12px)}
+
+  .addr-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 14px;margin-bottom:14px;position:relative;box-shadow:0 1px 2px rgba(16,32,24,.04);transition:.15s}
+  .addr-card:hover{border-color:#cfe0bd}
+  .addr-card .dot{position:absolute;left:-26px;top:18px;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line)}
+  .addr-card.pickup .dot{background:var(--pickup)}
+  .addr-card.drop .dot{background:var(--drop)}
+  .addr-card .tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .addr-card.pickup .tag{background:#e8f0fe;color:var(--pickup)}
+  .addr-card.drop .tag{background:#eef7e1;color:var(--green-d)}
+  .addr-empty{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;margin-top:10px;font-weight:600}
+  .addr-empty .plus{width:30px;height:30px;border-radius:9px;background:var(--bg);display:grid;place-items:center;font-size:18px;color:var(--ink)}
+  .addr-filled{margin-top:9px}
+  .addr-line{font-weight:700;font-size:14px;line-height:1.35}
+  .addr-detail{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+  .chip{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;color:#4a5750;font-weight:600}
+  .chip b{color:var(--ink)}
+  .edit{position:absolute;right:12px;top:12px;background:var(--bg);border:1px solid var(--line);border-radius:9px;font-size:12px;font-weight:700;padding:5px 10px;color:#41504a}
+
+  .cta-bar{position:fixed;left:0;right:0;bottom:0;max-width:460px;margin:0 auto;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(180deg,rgba(244,246,244,0),var(--bg) 24%)}
+  .cta{width:100%;border:0;border-radius:14px;background:var(--green);color:#fff;font-weight:800;font-size:16px;padding:15px;box-shadow:0 6px 16px rgba(95,183,9,.35)}
+  .cta:disabled{background:#c7d3c8;box-shadow:none;color:#fff}
+
+  /* ---- Harita / Picker modal ---- */
+  .picker{position:fixed;inset:0;max-width:460px;margin:0 auto;background:#fff;display:none;flex-direction:column;z-index:50}
+  .picker.open{display:flex}
+  #map{flex:1;width:100%;background:#dfe6e0}
+  .leaflet-container{font-family:inherit}
+
+  .map-top{position:absolute;top:0;left:0;right:0;z-index:1000;padding:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+  .search-wrap{pointer-events:auto;background:#fff;border-radius:13px;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px;padding:0 12px;height:48px}
+  .search-wrap .ico{font-size:17px;color:var(--muted)}
+  .search-wrap input{border:0;outline:0;flex:1;font-size:15px;height:100%;background:transparent}
+  .search-wrap .x{border:0;background:#eef1ee;border-radius:8px;width:26px;height:26px;color:#5a665f;font-size:14px;display:none}
+  .pk-back{pointer-events:auto;align-self:flex-start;background:#fff;border:0;width:42px;height:42px;border-radius:50%;box-shadow:var(--shadow);font-size:20px}
+  .suggest{pointer-events:auto;background:#fff;border-radius:13px;box-shadow:var(--shadow);overflow:hidden;max-height:46vh;overflow-y:auto;display:none}
+  .suggest.show{display:block}
+  .sug{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+  .sug:last-child{border-bottom:0}
+  .sug:hover{background:#f6f9f3}
+  .sug .pin{color:var(--green-d);font-size:15px;margin-top:1px}
+  .sug .t{font-weight:700;line-height:1.25}
+  .sug .s{color:var(--muted);font-size:12px;margin-top:1px}
+  .sug-empty{padding:14px;color:var(--muted);font-size:13px;text-align:center}
+
+  /* sabit merkez pin */
+  .center-pin{position:absolute;left:50%;top:50%;transform:translate(-50%,-100%);z-index:800;pointer-events:none;transition:transform .12s}
+  .center-pin svg{filter:drop-shadow(0 6px 5px rgba(0,0,0,.28))}
+  .center-pin.lift{transform:translate(-50%,-115%)}
+  .pin-shadow{position:absolute;left:50%;top:50%;width:14px;height:6px;border-radius:50%;background:rgba(0,0,0,.22);transform:translate(-50%,-1px);z-index:790}
+  .locate{position:absolute;right:14px;z-index:900;background:#fff;border:0;width:46px;height:46px;border-radius:50%;box-shadow:var(--shadow);font-size:20px;display:grid;place-items:center}
+
+  /* alt sheet */
+  .sheet{background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(16,32,24,.12);z-index:1000;max-height:74vh;display:flex;flex-direction:column}
+  .sheet .grab{width:42px;height:5px;border-radius:3px;background:#dfe4e0;margin:9px auto 4px}
+  .sheet-scroll{overflow-y:auto;padding:6px 18px 4px}
+  .sheet-title{font-size:18px;font-weight:800;margin:6px 0 2px;display:flex;align-items:center;gap:8px}
+  .sheet-title .badge{font-size:11px;font-weight:800;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .sheet-title .badge.pickup{background:#e8f0fe;color:var(--pickup)}
+  .sheet-title .badge.drop{background:#eef7e1;color:var(--green-d)}
+  .formatted{color:#33403a;font-size:14px;line-height:1.4;border-bottom:1px solid var(--line);padding:6px 0 12px;margin-bottom:12px;min-height:20px}
+  .formatted .ld{display:inline-block;width:60%;height:13px;border-radius:6px;background:#eef1ee;animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.5}}
+
+  .auto-note{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--green-d);font-weight:700;margin:0 0 8px}
+  .grid{display:grid;gap:10px}
+  .grid.g3{grid-template-columns:1fr 1fr 1fr}
+  .grid.g2{grid-template-columns:1fr 1fr}
+  .fld label{display:block;font-size:11.5px;font-weight:700;color:#566;margin:0 0 5px}
+  .fld label .auto{color:var(--green-d);font-size:10px;background:#eef7e1;border-radius:5px;padding:1px 5px;margin-left:4px}
+  .fld input{width:100%;border:1px solid var(--line);background:#fafbfa;border-radius:10px;padding:11px 12px;font-size:14px;outline:0}
+  .fld input:focus{border-color:var(--green);background:#fff}
+  .fld input::placeholder{color:#aeb8b2}
+  .section-gap{height:12px}
+  .sub-h{font-size:12px;font-weight:800;color:#8a968f;text-transform:uppercase;letter-spacing:.4px;margin:14px 2px 8px}
+
+  .sheet-cta{padding:12px 18px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);background:#fff}
+  .sheet-cta button{width:100%;border:0;border-radius:13px;background:var(--green);color:#fff;font-weight:800;font-size:16px;padding:15px;box-shadow:0 6px 16px rgba(95,183,9,.32)}
+  .sheet-cta button:disabled{background:#c7d3c8;box-shadow:none}
+
+  .toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);background:#16261c;color:#fff;font-size:13px;font-weight:600;padding:10px 16px;border-radius:10px;z-index:2000;opacity:0;transition:.25s;max-width:90%}
+  .toast.show{opacity:1}
+  .demo-note{font-size:11px;color:var(--muted);text-align:center;padding:4px 16px 14px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ SİPARİŞ EKRANI ============ -->
+  <div id="orderScreen">
+    <div class="topbar"><button class="back" title="Geri">‹</button> Yeni Ekspres Sipariş</div>
+    <div class="screen">
+      <div class="h1">Adresler</div>
+      <p class="sub">Alış ve teslim noktasını haritadan veya aramayla seçin.</p>
+
+      <div class="route">
+        <!-- Alış -->
+        <div class="addr-card pickup" id="card-pickup" onclick="openPicker('pickup')">
+          <span class="dot"></span>
+          <span class="tag">● Alış (Çıkış)</span>
+          <div class="addr-empty" id="empty-pickup"><span class="plus">+</span> Alış adresi seçin</div>
+          <div class="addr-filled" id="filled-pickup" style="display:none"></div>
+          <button class="edit" id="edit-pickup" style="display:none" onclick="event.stopPropagation();openPicker('pickup')">Düzenle</button>
+        </div>
+
+        <!-- Teslim -->
+        <div class="addr-card drop" id="card-drop" onclick="openPicker('drop')">
+          <span class="dot"></span>
+          <span class="tag">▾ Teslim (Varış)</span>
+          <div class="addr-empty" id="empty-drop"><span class="plus">+</span> Teslim adresi seçin</div>
+          <div class="addr-filled" id="filled-drop" style="display:none"></div>
+          <button class="edit" id="edit-drop" style="display:none" onclick="event.stopPropagation();openPicker('drop')">Düzenle</button>
+        </div>
+      </div>
+
+      <p class="demo-note">Bu çalışır bir mockup'tır. Harita: OpenStreetMap, arama/geocode: Nominatim (ücretsiz, anahtarsız). Üretimde Google Places / HERE kullanılacaktır.</p>
+    </div>
+
+    <div class="cta-bar">
+      <button class="cta" id="continueBtn" disabled onclick="onContinue()">Devam Et</button>
+    </div>
+  </div>
+
+  <!-- ============ ADRES SEÇİCİ (HARİTA) ============ -->
+  <div class="picker" id="picker">
+    <div id="map"></div>
+
+    <div class="pin-shadow" id="pinShadow"></div>
+    <div class="center-pin" id="centerPin">
+      <svg width="40" height="52" viewBox="0 0 40 52"><path d="M20 0C9 0 0 9 0 20c0 13 20 32 20 32s20-19 20-32C40 9 31 0 20 0z" fill="#16261c"/><circle cx="20" cy="19.5" r="7" fill="#fff"/></svg>
+    </div>
+
+    <div class="map-top">
+      <button class="pk-back" onclick="closePicker()">‹</button>
+      <div class="search-wrap">
+        <span class="ico">🔍</span>
+        <input id="searchInput" type="text" placeholder="Adres, cadde veya yer arayın…" autocomplete="off" />
+        <button class="x" id="searchClear" onclick="clearSearch()">✕</button>
+      </div>
+      <div class="suggest" id="suggest"></div>
+    </div>
+
+    <button class="locate" id="locateBtn" title="Konumumu bul" onclick="locateMe()" style="bottom:calc(74vh + 14px)">◎</button>
+
+    <!-- Alt sheet -->
+    <div class="sheet" id="sheet">
+      <div class="grab"></div>
+      <div class="sheet-scroll">
+        <div class="sheet-title" id="sheetTitle"><span class="badge pickup">Alış</span> Çıkış adresi</div>
+        <div class="formatted" id="formatted"><span class="ld"></span></div>
+
+        <div class="auto-note">✓ Ülke, il, şehir ve mahalle bilgisi seçilen konumdan otomatik alınır — ayrıca girmenize gerek yok.</div>
+
+        <div class="sub-h">Bina detayı</div>
+        <div class="grid g3">
+          <div class="fld"><label>Bina / Apt No</label><input id="f_building" placeholder="13" inputmode="text"></div>
+          <div class="fld"><label>Kat</label><input id="f_floor" placeholder="4" inputmode="numeric"></div>
+          <div class="fld"><label>Daire / Kapı No</label><input id="f_door" placeholder="9" inputmode="text"></div>
+        </div>
+        <div class="section-gap"></div>
+        <div class="fld"><label>Adres tarifi (kuryeye not)</label><input id="f_note" placeholder="Örn. Mavi kapı, zili 2 kez çalın"></div>
+        <div style="height:8px"></div>
+      </div>
+      <div class="sheet-cta">
+        <button id="confirmBtn" onclick="confirmAddress()">Onayla</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ============================================================
+   EFSO Adres Seçimi — çalışır mockup mantığı
+   Harita: Leaflet + OSM · Geocode/Arama: Nominatim (ücretsiz)
+   ÜRETİM NOTU: searchPlaces() ve reverseGeocode() içindeki Nominatim
+   çağrıları, backend proxy (Google Places / HERE) ile değiştirilecek.
+   Sözleşme (dönen alanlar) aynıdır: { lat,lng,formatted,country,countryCode,
+   state,city,neighborhood,street,postal }
+   ============================================================ */
+
+var state = { which:'pickup', map:null, lastReverseAt:0, reverseTimer:null,
+              searchTimer:null, data:{ pickup:null, drop:null } };
+
+var TITLES = { pickup:{badge:'pickup', tag:'Alış', title:'Çıkış adresi'},
+               drop:{badge:'drop', tag:'Teslim', title:'Teslim adresi'} };
+
+/* ---------- Picker aç/kapa ---------- */
+function openPicker(which){
+  state.which = which;
+  document.getElementById('picker').classList.add('open');
+  var st = TITLES[which];
+  document.getElementById('sheetTitle').innerHTML =
+     '<span class="badge '+st.badge+'">'+st.tag+'</span> '+st.title;
+
+  if(!state.map){ initMap(); }
+  setTimeout(function(){ state.map.invalidateSize(); }, 60);
+
+  var existing = state.data[which];
+  if(existing){
+    state.map.setView([existing.lat, existing.lng], 17);
+    fillFields(existing);                 // mevcut değerleri geri yükle
+  } else {
+    // ilk seçim için makul global başlangıç
+    var start = state.data.pickup || {lat:41.0151,lng:29.0096}; // İstanbul örnek
+    state.map.setView([start.lat, start.lng], existing?17:13);
+    reverseGeocode(start.lat, start.lng); // başlangıç adresini doldur
+  }
+}
+function closePicker(){ document.getElementById('picker').classList.remove('open'); hideSuggest(); }
+
+/* ---------- Harita ---------- */
+function initMap(){
+  state.map = L.map('map', { zoomControl:false, attributionControl:true })
+               .setView([41.0151,29.0096], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(state.map);
+  L.control.zoom({position:'bottomleft'}).addTo(state.map);
+
+  var pin = document.getElementById('centerPin');
+  state.map.on('movestart', function(){ pin.classList.add('lift'); });
+  state.map.on('moveend', function(){
+    pin.classList.remove('lift');
+    var c = state.map.getCenter();
+    scheduleReverse(c.lat, c.lng);
+  });
+}
+
+/* hareket sonrası reverse geocode (debounce + Nominatim hız limiti) */
+function scheduleReverse(lat,lng){
+  clearTimeout(state.reverseTimer);
+  document.getElementById('formatted').innerHTML='<span class="ld"></span>';
+  state.reverseTimer = setTimeout(function(){ reverseGeocode(lat,lng); }, 650);
+}
+
+/* ---------- Geocode çağrıları (ÜRETİMDE backend proxy ile değişecek) ---------- */
+function reverseGeocode(lat,lng){
+  var url='https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&accept-language=tr&lat='+lat+'&lon='+lng;
+  fetch(url,{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();})
+    .then(function(d){ var a = normalize(d, lat, lng); fillFields(a); })
+    .catch(function(){ /* sessiz geç */ });
+}
+
+function searchPlaces(q){
+  var url='https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&accept-language=tr&q='+encodeURIComponent(q);
+  return fetch(url,{headers:{'Accept':'application/json'}}).then(function(r){return r.json();});
+}
+
+/* Nominatim/Google/HERE -> EFSO ortak adres modeli */
+function normalize(d, lat, lng){
+  var a = (d && d.address) || {};
+  return {
+    lat: lat!=null?lat:parseFloat(d.lat),
+    lng: lng!=null?lng:parseFloat(d.lon),
+    formatted: d.display_name || '',
+    country: a.country || '',
+    countryCode: (a.country_code||'').toUpperCase(),
+    state: a.state || a.region || a.province || '',
+    city: a.city || a.town || a.village || a.municipality || a.county || a.state_district || '',
+    neighborhood: a.neighbourhood || a.suburb || a.quarter || a.city_district || a.residential || '',
+    street: [a.road, a.house_number].filter(Boolean).join(' '),
+    postal: a.postcode || ''
+  };
+}
+
+/* ---------- Alanları doldur ---------- */
+function fillFields(a){
+  document.getElementById('formatted').textContent = a.formatted || '(adres çözümlenemedi)';
+  // Ülke/il/şehir/mahalle/cadde/posta ARKA PLANDA saklanır — ekranda gösterilmez (sade UI).
+  // Üretimde bu nesne sipariş "stop" kaydıyla birlikte veritabanına yazılır.
+  state._resolved = {
+    country:a.country, countryCode:a.countryCode, state:a.state, city:a.city,
+    neighborhood:a.neighborhood, street:a.street, postal:a.postal, formatted:a.formatted
+  };
+  state._coords = {lat:a.lat, lng:a.lng};
+  // bina detayları yalnız mevcut kaydı düzenlerken geri yüklenir
+  if(a.building!==undefined){ set('f_building',a.building); set('f_floor',a.floor);
+     set('f_door',a.door); set('f_note',a.note); }
+  validateConfirm();
+}
+function set(id,v){ var e=document.getElementById(id); if(e && v!==undefined) e.value=v||''; }
+function get(id){ return document.getElementById(id).value.trim(); }
+
+function validateConfirm(){
+  var ok = state._coords && state._resolved && !!state._resolved.country;
+  document.getElementById('confirmBtn').disabled = !ok;
+}
+
+/* ---------- Arama (autocomplete) ---------- */
+document.getElementById('searchInput').addEventListener('input', function(e){
+  var q=e.target.value.trim();
+  document.getElementById('searchClear').style.display = q?'block':'none';
+  clearTimeout(state.searchTimer);
+  if(q.length<3){ hideSuggest(); return; }
+  state.searchTimer=setTimeout(function(){ runSearch(q); }, 320);
+});
+function runSearch(q){
+  searchPlaces(q).then(function(list){
+    var box=document.getElementById('suggest');
+    if(!list || !list.length){ box.innerHTML='<div class="sug-empty">Sonuç bulunamadı</div>'; box.classList.add('show'); return; }
+    state._sug = list.map(function(d){ return normalize(d, parseFloat(d.lat), parseFloat(d.lon)); });
+    box.innerHTML = state._sug.map(function(a,i){
+      var main=(a.street || a.neighborhood || a.city || a.formatted.split(',')[0]);
+      var sec=[a.neighborhood,a.city,a.state,a.country].filter(Boolean).join(', ');
+      return '<div class="sug" onclick="pickSuggestion('+i+')">'+
+             '<span class="pin">📍</span><div><div class="t">'+esc(main)+'</div><div class="s">'+esc(sec)+'</div></div></div>';
+    }).join('');
+    box.classList.add('show');
+  });
+}
+function pickSuggestion(i){
+  var a=(state._sug||[])[i]; if(!a) return;
+  hideSuggest();
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchClear').style.display='none';
+  state.map.setView([a.lat,a.lng],17);
+  fillFields(a);   // moveend tetiklenecek ama arama sonucu daha doğru; reverse'i bastırmak için işaretle
+}
+function clearSearch(){ document.getElementById('searchInput').value=''; document.getElementById('searchClear').style.display='none'; hideSuggest(); }
+function hideSuggest(){ document.getElementById('suggest').classList.remove('show'); }
+
+/* ---------- Konumumu bul ---------- */
+function locateMe(){
+  if(!navigator.geolocation){ toast('Cihaz konum desteklemiyor'); return; }
+  toast('Konum alınıyor…');
+  navigator.geolocation.getCurrentPosition(function(p){
+    state.map.setView([p.coords.latitude,p.coords.longitude],17);
+  }, function(){ toast('Konuma erişilemedi'); });
+}
+
+/* ---------- Onayla ---------- */
+function confirmAddress(){
+  var r = state._resolved || {};
+  var a = {
+    lat:state._coords.lat, lng:state._coords.lng,
+    formatted:r.formatted || document.getElementById('formatted').textContent,
+    // arka plandan (geocode) gelenler — DB'ye yazılacak
+    country:r.country||'', countryCode:r.countryCode||'', state:r.state||'', city:r.city||'',
+    neighborhood:r.neighborhood||'', street:r.street||'', postal:r.postal||'',
+    // kullanıcının girdiği detaylar
+    building:get('f_building'), floor:get('f_floor'), door:get('f_door'), note:get('f_note')
+  };
+  state.data[state.which]=a;
+  renderCard(state.which);
+  closePicker();
+  toast((state.which==='pickup'?'Alış':'Teslim')+' adresi kaydedildi ✓');
+  refreshContinue();
+}
+
+/* ---------- Sipariş ekranı kartını güncelle ---------- */
+function renderCard(which){
+  var a=state.data[which];
+  document.getElementById('empty-'+which).style.display='none';
+  document.getElementById('edit-'+which).style.display='block';
+  var f=document.getElementById('filled-'+which); f.style.display='block';
+  var detail=[a.building && ('Bina '+a.building), a.floor && ('Kat '+a.floor), a.door && ('Daire '+a.door)].filter(Boolean).join(' · ');
+  var line = [a.street, a.neighborhood].filter(Boolean).join(', ') || a.formatted.split(',').slice(0,2).join(',');
+  var sub = [a.neighborhood, a.city, a.country].filter(Boolean).join(', '); // arka plan bilgisi, küçük/sade
+  f.innerHTML =
+    '<div class="addr-line">'+esc(line)+'</div>'+
+    (sub?'<div class="addr-detail">'+esc(sub)+'</div>':'')+
+    (detail?'<div class="addr-detail">'+esc(detail)+(a.note?' · "'+esc(a.note)+'"':'')+'</div>':'');
+}
+
+function refreshContinue(){
+  var ok = state.data.pickup && state.data.drop;
+  document.getElementById('continueBtn').disabled=!ok;
+}
+function onContinue(){
+  toast('Devam: Araç & yük adımına geçilecek (mockup)');
+}
+
+/* ---------- yardımcılar ---------- */
+function esc(s){ return (s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+var toastT;
+function toast(msg){ var el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){el.classList.remove('show');},2200); }
+
+// arama kutusu dışına tıklanınca öneriyi kapat
+document.getElementById('map').addEventListener('click', hideSuggest);
+</script>
+</body>
+</html>
